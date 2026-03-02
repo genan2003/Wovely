@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@300;400;600;700&display=swap');
+
+.product-dashboard {
+  font-family: 'Nunito', sans-serif;
+  color: #3e4a3d;
+  background-color: #fcfbfa; /* Soft off-white */
+  padding-bottom: 5rem;
+  min-height: 100vh;
+}
+
+.wovely-title {
+  font-family: 'Playfair Display', serif;
+  color: #2b3a28; /* Deep forest green */
+  letter-spacing: -0.5px;
+}
+
+.wovely-subtitle {
+  color: #7b8e78; /* Soft muted green */
+  font-weight: 300;
+}
+
+.product-card {
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background-color: white;
+  border: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+.card-img-container {
+  height: 280px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s ease;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05);
+}
+
+.eco-badge {
+  background-color: #e0f2df;
+  color: #2b542c;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.8em;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.handmade-badge {
+  background-color: #fdf2e9;
+  color: #d35400;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.8em;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.product-title {
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.product-price {
+  color: #2b3a28;
+  font-size: 1.2rem;
+}
+
+.shipping-icon {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.buy-btn {
+  border-color: #2b3a28;
+  color: #2b3a28;
+  transition: all 0.2s;
+}
+
+.buy-btn:hover {
+  background-color: #2b3a28;
+  color: white;
+}
+
+.brand-footer {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 1rem;
+}

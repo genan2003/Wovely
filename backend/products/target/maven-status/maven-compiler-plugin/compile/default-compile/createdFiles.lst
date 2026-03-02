@@ -1,0 +1,5 @@
+com\wovely\products\models\Product.class
+com\wovely\products\security\WebSecurityConfig.class
+com\wovely\products\repository\ProductRepository.class
+com\wovely\products\WovelyProductsApplication.class
+com\wovely\products\controllers\ProductController.class

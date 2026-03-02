@@ -5,10 +5,10 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 
 @Component({
-    selector: 'app-login',
-    standalone: true,
-    imports: [CommonModule, ReactiveFormsModule],
-    template: `
+  selector: 'app-login',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  template: `
     <div class="col-md-12">
       <div class="card card-container auth-form-container">
         <!-- Optional Wovely branding image here -->
@@ -68,7 +68,7 @@ import { Router } from '@angular/router';
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .auth-form-container {
       max-width: 400px;
       margin: 2rem auto;
@@ -81,35 +81,35 @@ import { Router } from '@angular/router';
       margin-bottom: 1.5rem;
     }
   `],
-    changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
-    private authService = inject(AuthService);
-    private router = inject(Router);
-    private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private fb = inject(FormBuilder);
 
-    form = this.fb.nonNullable.group({
-        username: ['', Validators.required],
-        password: ['', Validators.required]
+  form = this.fb.nonNullable.group({
+    username: ['', Validators.required],
+    password: ['', Validators.required]
+  });
+
+  isLoginFailed = signal(false);
+  errorMessage = signal('');
+
+  onSubmit(): void {
+    if (this.form.invalid) return;
+
+    const { username, password } = this.form.getRawValue();
+
+    this.authService.login(username, password).subscribe({
+      next: () => {
+        this.isLoginFailed.set(false);
+        this.router.navigate(['/products']);
+      },
+      error: err => {
+        this.errorMessage.set(err.error?.message || 'Unknown error occurred');
+        this.isLoginFailed.set(true);
+      }
     });
-
-    isLoginFailed = signal(false);
-    errorMessage = signal('');
-
-    onSubmit(): void {
-        if (this.form.invalid) return;
-
-        const { username, password } = this.form.getRawValue();
-
-        this.authService.login(username, password).subscribe({
-            next: () => {
-                this.isLoginFailed.set(false);
-                this.router.navigate(['/profile']);
-            },
-            error: err => {
-                this.errorMessage.set(err.error?.message || 'Unknown error occurred');
-                this.isLoginFailed.set(true);
-            }
-        });
-    }
+  }
 }
