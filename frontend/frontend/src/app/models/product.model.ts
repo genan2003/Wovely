@@ -9,4 +9,5 @@ export interface Product {
     co2EmissionScore: string;
     shippingMethod: string;
     isHandmade: boolean;
+    status?: string;
 }

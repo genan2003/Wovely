@@ -21,9 +21,9 @@ public class ProductController {
     try {
       List<Product> products;
       if (category == null) {
-        products = productRepository.findAll();
+        products = productRepository.findByStatus("APPROVED");
       } else {
-        products = productRepository.findByCategory(category);
+        products = productRepository.findByStatusAndCategory("APPROVED", category);
       }
 
       if (products.isEmpty()) {
@@ -31,7 +31,7 @@ public class ProductController {
       }
       return new ResponseEntity<>(products, HttpStatus.OK);
     } catch (Exception e) {
-      return new ResponseEntity<List<Product>>(HttpStatus.INTERNAL_SERVER_ERROR);
+      return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

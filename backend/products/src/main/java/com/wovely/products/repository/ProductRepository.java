@@ -7,4 +7,6 @@ import com.wovely.products.models.Product;
 public interface ProductRepository extends MongoRepository<Product, String> {
   List<Product> findByCategory(String category);
   List<Product> findBySellerId(String sellerId);
+  List<Product> findByStatus(String status);
+  List<Product> findByStatusAndCategory(String status, String category);
 }

@@ -17,6 +17,7 @@ public class Product {
   private String co2EmissionScore; // Low, Medium, High
   private String shippingMethod; // e.g., Carbon Neutral Courier
   private boolean isHandmade;
+  private String status = "PENDING"; // PENDING, APPROVED, REJECTED, NEEDS_CHANGES
 
   public Product() {
   }
@@ -31,6 +32,7 @@ public class Product {
     this.co2EmissionScore = co2EmissionScore;
     this.shippingMethod = shippingMethod;
     this.isHandmade = isHandmade;
+    this.status = "PENDING";
   }
 
   public String getId() {
@@ -111,5 +113,13 @@ public class Product {
 
   public void setHandmade(boolean handmade) {
     isHandmade = handmade;
+  }
+
+  public String getStatus() {
+    return status;
+  }
+
+  public void setStatus(String status) {
+    this.status = status;
   }
 }

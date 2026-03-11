@@ -32,6 +32,12 @@ public class User {
     @DBRef
     private Set<Role> roles = new HashSet<>();
 
+    private int strikes = 0;
+    
+    private EAccountStatus accountStatus = EAccountStatus.ACTIVE;
+    
+    private java.util.Date suspendedUntil;
+
     public User() {
     }
 
@@ -39,6 +45,8 @@ public class User {
         this.username = username;
         this.email = email;
         this.password = password;
+        this.strikes = 0;
+        this.accountStatus = EAccountStatus.ACTIVE;
     }
 
     public String getId() {
@@ -79,5 +87,29 @@ public class User {
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
+    }
+
+    public int getStrikes() {
+        return strikes;
+    }
+
+    public void setStrikes(int strikes) {
+        this.strikes = strikes;
+    }
+
+    public EAccountStatus getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(EAccountStatus accountStatus) {
+        this.accountStatus = accountStatus;
+    }
+
+    public java.util.Date getSuspendedUntil() {
+        return suspendedUntil;
+    }
+
+    public void setSuspendedUntil(java.util.Date suspendedUntil) {
+        this.suspendedUntil = suspendedUntil;
     }
 }

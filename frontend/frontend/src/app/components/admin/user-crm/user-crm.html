@@ -1,0 +1,61 @@
+@if (selectedUser()) {
+  <!-- Detailed Profile View -->
+  <app-user-profile 
+    [user]="selectedUser()!" 
+    (close)="closeProfile()">
+  </app-user-profile>
+} @else {
+  <!-- Users Data Table View -->
+  <div class="crm-container">
+    <div class="crm-header">
+      <h2>User Database</h2>
+      <p>Search, manage, and monitor all marketplace users.</p>
+    </div>
+
+    <div class="table-card">
+      <table class="wovely-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Roles</th>
+            <th>Strikes</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+            <tr>
+              <td class="fw-medium">{{ user.username }}</td>
+              <td>{{ user.email }}</td>
+              <td>
+                <span class="role-badge">{{ user.roles.includes('ROLE_ADMIN') ? 'Admin' : 'User' }}</span>
+              </td>
+              <td>
+                <span class="strike-count" [class.high-strikes]="user.strikes > 0">
+                  {{ user.strikes }}
+                </span>
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="user.accountStatus.toLowerCase()">
+                  {{ user.accountStatus }}
+                </span>
+                @if (user.accountStatus === 'SUSPENDED' && user.suspendedUntil) {
+                    <div class="suspend-date">Until {{ user.suspendedUntil | date:'shortDate' }}</div>
+                }
+              </td>
+              <td>
+                <button class="btn btn-view" (click)="viewProfile(user)">View Profile</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="text-center empty-row">No users found.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

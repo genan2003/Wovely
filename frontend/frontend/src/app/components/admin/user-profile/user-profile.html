@@ -1,0 +1,112 @@
+<div class="profile-container">
+  <div class="profile-header">
+    <button class="btn btn-back" (click)="close.emit()">
+      <span class="icon">&larr;</span> Back to CRM
+    </button>
+    <h2>User Profile: <strong>{{ user.username }}</strong></h2>
+  </div>
+
+  <div class="profile-layout">
+    <!-- Left Column: User Info & Penalty Controls -->
+    <div class="profile-sidebar">
+      <!-- User Details Card -->
+      <div class="card info-card">
+        <h3>Account Details</h3>
+        <div class="info-row">
+          <span class="label">User ID</span>
+          <span class="value">{{ user.id }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Email</span>
+          <span class="value">{{ user.email }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Roles</span>
+          <span class="value">{{ user.roles.join(', ') }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Status</span>
+          <span class="value status-badge" [ngClass]="user.accountStatus.toLowerCase()">
+            {{ user.accountStatus }}
+          </span>
+        </div>
+        @if (user.accountStatus === 'SUSPENDED') {
+          <div class="info-row">
+            <span class="label">Suspended Until</span>
+            <span class="value text-warning">{{ user.suspendedUntil | date:'medium' }}</span>
+          </div>
+        }
+        <div class="info-row">
+          <span class="label">Strikes</span>
+          <span class="value text-danger fw-bold">{{ user.strikes }}</span>
+        </div>
+      </div>
+
+      <!-- Penalty Control Panel -->
+      <div class="card penalty-card">
+        <h3>Penalty Controls</h3>
+        <p class="help-text">Take administrative action against this user. Actions apply immediately.</p>
+        
+        <div class="action-buttons">
+           <button class="btn btn-warning" (click)="issueStrike()">
+             ⚠️ Issue Strike (+1)
+           </button>
+           
+           @if (user.accountStatus !== 'SUSPENDED') {
+             <button class="btn btn-suspend" (click)="suspendUser(7)">
+               ⏳ Suspend (7 Days)
+             </button>
+           }
+           
+           @if (user.accountStatus !== 'BANNED') {
+             <button class="btn btn-danger" (click)="banUser()">
+               ⛔ Permanently Ban
+             </button>
+           }
+           
+           @if (user.accountStatus !== 'ACTIVE') {
+             <hr class="divider"/>
+             <button class="btn btn-success" (click)="restoreUser()">
+               🔄 Restore Account to Active
+             </button>
+           }
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: User's Ad History -->
+    <div class="profile-main">
+      <div class="card history-card">
+        <h3>Listing History</h3>
+        <p class="help-text">All ads submitted by this seller.</p>
+        
+        @if (isLoadingAds()) {
+           <div class="loading">Loading seller history...</div>
+        } @else if (userAds().length === 0) {
+           <div class="empty-state">
+             <div class="icon">📦</div>
+             <h4>No Ads Found</h4>
+             <p>This user has not listed any items yet.</p>
+           </div>
+        } @else {
+           <div class="seller-ads-list">
+             @for (ad of userAds(); track ad.id) {
+               <div class="seller-ad-item">
+                  <div class="ad-thumbnail">
+                    <img [src]="ad.imageUrl || 'assets/placeholder.jpg'" alt="{{ ad.name }}"/>
+                  </div>
+                  <div class="ad-info">
+                    <h4>{{ ad.name }}</h4>
+                    <p class="ad-price">${{ ad.price }}</p>
+                  </div>
+                  <div class="ad-status">
+                    <span class="status-badge" [ngClass]="ad.status?.toLowerCase()">{{ ad.status }}</span>
+                  </div>
+               </div>
+             }
+           </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

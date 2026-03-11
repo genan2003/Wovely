@@ -1,0 +1,97 @@
+<div class="admin-container">
+  <div class="admin-header">
+    <h1>Marketplace Moderation Hub</h1>
+    <p>Review and maintain platform quality. Manage pending ads directly from the queue.</p>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'ads'" (click)="activeTab.set('ads')">
+      Ad Approval Queue
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
+      User CRM & Penalties
+    </button>
+  </div>
+
+  @if (activeTab() === 'ads') {
+    @if (pendingAds().length === 0) {
+      <div class="empty-state">
+        <div class="icon">✨</div>
+        <h3>All caught up!</h3>
+        <p>There are no new product listings waiting for your review.</p>
+      </div>
+    } @else {
+      <div class="ads-grid">
+        @for (ad of pendingAds(); track ad.id) {
+          <div class="ad-card">
+            <div class="ad-image-wrapper">
+               <img [src]="ad.imageUrl || 'assets/placeholder.jpg'" alt="Ad Image" class="ad-img"/>
+               <span class="status-badge">PENDING</span>
+            </div>
+            <div class="ad-content">
+               <h3 class="ad-title">{{ ad.name }}</h3>
+               <p class="ad-desc">{{ ad.description }}</p>
+               <div class="ad-meta">
+                 <span class="price">${{ ad.price }}</span>
+                 <span class="category">{{ ad.category }}</span>
+               </div>
+               
+               <div class="ad-actions">
+                  <button class="btn btn-approve" (click)="ad.id && approveAd(ad.id)">Approve</button>
+                  <button class="btn btn-reject" (click)="ad.id && rejectAd(ad.id)">Reject</button>
+               </div>
+               <div class="secondary-actions">
+                  <button class="btn btn-outline" (click)="ad.id && requestChanges(ad.id)">Request Changes</button>
+                  <button class="btn btn-edit" (click)="openEditModal(ad)">Edit Listing</button>
+               </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Modal for Content Editing -->
+    @if (isEditing()) {
+      <div class="modal-overlay">
+        <div class="modal-content glass-panel">
+          <div class="modal-header">
+             <h2>Edit Listing Content</h2>
+             <button class="close-btn" (click)="closeEditModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+             <form class="edit-form">
+                <div class="form-group">
+                   <label>Title</label>
+                   <input type="text" [(ngModel)]="editForm().name" name="name" class="form-control"/>
+                </div>
+                <div class="form-group">
+                   <label>Description</label>
+                   <textarea [(ngModel)]="editForm().description" name="description" class="form-control" rows="4"></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group half">
+                     <label>Price ($)</label>
+                     <input type="number" [(ngModel)]="editForm().price" name="price" class="form-control"/>
+                  </div>
+                  <div class="form-group half">
+                     <label>Category</label>
+                     <input type="text" [(ngModel)]="editForm().category" name="category" class="form-control"/>
+                  </div>
+                </div>
+                <div class="form-group">
+                   <label>Image URL</label>
+                   <input type="text" [(ngModel)]="editForm().imageUrl" name="imageUrl" class="form-control"/>
+                </div>
+             </form>
+          </div>
+          <div class="modal-footer">
+             <button class="btn btn-outline" (click)="closeEditModal()">Cancel</button>
+             <button class="btn btn-primary" (click)="saveEdits()">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    }
+  } @else if (activeTab() === 'users') {
+    <app-user-crm></app-user-crm>
+  }
+</div>

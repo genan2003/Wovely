@@ -1,5 +1,8 @@
 com\wovely\products\models\Product.class
-com\wovely\products\security\WebSecurityConfig.class
 com\wovely\products\repository\ProductRepository.class
+com\wovely\products\security\JwtUtils.class
+com\wovely\products\controllers\AdminProductController.class
 com\wovely\products\WovelyProductsApplication.class
 com\wovely\products\controllers\ProductController.class
+com\wovely\products\security\WebSecurityConfig.class
+com\wovely\products\security\AuthTokenFilter.class

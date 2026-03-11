@@ -25,14 +25,18 @@ public class UserDetailsImpl implements UserDetails {
     private String password;
 
     private Collection<? extends GrantedAuthority> authorities;
+    private com.wovely.wovely.models.EAccountStatus accountStatus;
+    private java.util.Date suspendedUntil;
 
     public UserDetailsImpl(String id, String username, String email, String password,
-            Collection<? extends GrantedAuthority> authorities) {
+            Collection<? extends GrantedAuthority> authorities, com.wovely.wovely.models.EAccountStatus accountStatus, java.util.Date suspendedUntil) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
+        this.accountStatus = accountStatus;
+        this.suspendedUntil = suspendedUntil;
     }
 
     public static UserDetailsImpl build(User user) {
@@ -45,7 +49,9 @@ public class UserDetailsImpl implements UserDetails {
                 user.getUsername(), 
                 user.getEmail(),
                 user.getPassword(), 
-                authorities);
+                authorities,
+                user.getAccountStatus(),
+                user.getSuspendedUntil());
     }
 
     @Override
@@ -78,6 +84,14 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
+        if (accountStatus == com.wovely.wovely.models.EAccountStatus.BANNED) {
+            return false;
+        }
+        if (accountStatus == com.wovely.wovely.models.EAccountStatus.SUSPENDED) {
+            if (suspendedUntil != null && suspendedUntil.after(new java.util.Date())) {
+                return false;
+            }
+        }
         return true;
     }
 
