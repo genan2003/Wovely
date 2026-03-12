@@ -1,5 +1,10 @@
 # Wovely
 
+## Members
+* Chințoiu Vlăduț-Andrei - vladut.chintoiu@stud.fils.upb.ro
+* Fekete Anna-Maria - anna_maria.fekete@stud.fils.upb.ro
+* Omer Genan - genan.omer@stud.fils.upb.ro
+
 ## Description 
 Wovely is a web application designed to provide users with a space in which they can sell or buy hand-made goods. The web app ensures careful stock management, wallet capabilities, a review system and different delivery options, which can present a carbon-emission free mode.
 
