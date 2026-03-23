@@ -1,0 +1,366 @@
+<div class="order-resolution-container">
+  <div class="order-header">
+    <h1>Order Override & Resolution Engine</h1>
+    <p>Search, view, and manage orders with manual intervention capabilities</p>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="search-bar">
+    <div class="search-inputs">
+      <select [(ngModel)]="searchType" class="search-type-select">
+        <option value="all">All Fields</option>
+        <option value="buyer">Buyer Name/ID</option>
+        <option value="seller">Seller Name/ID</option>
+        <option value="orderNumber">Order Number</option>
+      </select>
+      <input 
+        type="text" 
+        [(ngModel)]="searchQuery" 
+        placeholder="Search orders..." 
+        class="search-input"
+        (keyup.enter)="searchOrders()"
+      />
+      <button class="btn btn-search" (click)="searchOrders()">Search</button>
+      <button class="btn btn-outline" (click)="loadAllOrders()">Reset</button>
+    </div>
+
+    <div class="status-filters">
+      <span class="filter-label">Filter by Status:</span>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'all'"
+        (click)="filterByStatus('all')"
+      >
+        All
+      </button>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'PENDING'"
+        (click)="filterByStatus('PENDING')"
+      >
+        Pending
+      </button>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'PROCESSING'"
+        (click)="filterByStatus('PROCESSING')"
+      >
+        Processing
+      </button>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'SHIPPED'"
+        (click)="filterByStatus('SHIPPED')"
+      >
+        Shipped
+      </button>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'DISPUTED'"
+        (click)="filterByStatus('DISPUTED')"
+      >
+        Disputed
+      </button>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'CANCELLED'"
+        (click)="filterByStatus('CANCELLED')"
+      >
+        Cancelled
+      </button>
+      <button 
+        class="status-filter-btn" 
+        [class.active]="statusFilter() === 'REFUNDED'"
+        (click)="filterByStatus('REFUNDED')"
+      >
+        Refunded
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading orders...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-state">
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (filteredOrders().length === 0) {
+    <div class="empty-state">
+      <div class="icon">📦</div>
+      <h3>No orders found</h3>
+      <p>There are no orders matching your current search criteria.</p>
+    </div>
+  } @else {
+    <div class="orders-layout">
+      <!-- Orders List -->
+      <div class="orders-list-panel">
+        <h2>Orders ({{ filteredOrders().length }})</h2>
+        <div class="orders-list">
+          @for (order of filteredOrders(); track order.id) {
+            <div 
+              class="order-list-item" 
+              [class.selected]="selectedOrder()?.id === order.id"
+              (click)="selectOrder(order)"
+            >
+              <div class="order-list-header">
+                <span class="order-number">{{ order.orderNumber }}</span>
+                <span class="order-status {{ getStatusClass(order.status) }}">{{ order.status }}</span>
+              </div>
+              <div class="order-list-details">
+                <div class="order-parties">
+                  <span class="party-label">Buyer:</span> {{ order.buyerName }}
+                </div>
+                <div class="order-parties">
+                  <span class="party-label">Seller:</span> {{ order.sellerName }}
+                </div>
+                <div class="order-meta">
+                  <span class="order-total">${{ order.totalAmount }}</span>
+                  <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+                </div>
+                @if (order.isDisputed) {
+                  <span class="dispute-badge">⚠ Disputed</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Order Details Panel -->
+      @if (selectedOrder()) {
+        <div class="order-details-panel">
+          <div class="details-header">
+            <h2>Order Details</h2>
+            <button class="close-btn" (click)="closeOrderDetails()">&times;</button>
+          </div>
+
+          <div class="details-content">
+            <div class="detail-section">
+              <h3>Order Information</h3>
+              <div class="detail-row">
+                <span class="detail-label">Order Number:</span>
+                <span class="detail-value">{{ selectedOrder()!.orderNumber }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="order-status {{ getStatusClass(selectedOrder()!.status) }}">
+                  {{ selectedOrder()!.status }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Created:</span>
+                <span class="detail-value">{{ formatDate(selectedOrder()!.createdAt) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Last Updated:</span>
+                <span class="detail-value">{{ formatDate(selectedOrder()!.updatedAt) }}</span>
+              </div>
+              @if (selectedOrder()!.trackingNumber) {
+                <div class="detail-row">
+                  <span class="detail-label">Tracking Number:</span>
+                  <span class="detail-value">{{ selectedOrder()!.trackingNumber }}</span>
+                </div>
+              }
+              @if (selectedOrder()!.shippingAddress) {
+                <div class="detail-row">
+                  <span class="detail-label">Shipping Address:</span>
+                  <span class="detail-value">{{ selectedOrder()!.shippingAddress }}</span>
+                </div>
+              }
+            </div>
+
+            <div class="detail-section">
+              <h3>Parties</h3>
+              <div class="detail-row">
+                <span class="detail-label">Buyer:</span>
+                <span class="detail-value">{{ selectedOrder()!.buyerName }} (ID: {{ selectedOrder()!.buyerId }})</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Seller:</span>
+                <span class="detail-value">{{ selectedOrder()!.sellerName }} (ID: {{ selectedOrder()!.sellerId }})</span>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Order Items</h3>
+              <div class="items-list">
+                @for (item of selectedOrder()!.items; track item.productId) {
+                  <div class="order-item">
+                    @if (item.imageUrl) {
+                      <img [src]="item.imageUrl" alt="{{ item.productName }}" class="item-image" />
+                    }
+                    <div class="item-details">
+                      <div class="item-name">{{ item.productName }}</div>
+                      <div class="item-meta">
+                        <span>Qty: {{ item.quantity }}</span>
+                        <span>${{ item.price }} each</span>
+                      </div>
+                    </div>
+                    <div class="item-total">${{ item.quantity * item.price }}</div>
+                  </div>
+                }
+              </div>
+              <div class="order-total-row">
+                <span>Total Amount:</span>
+                <span class="total-amount">${{ selectedOrder()!.totalAmount }}</span>
+              </div>
+            </div>
+
+            @if (selectedOrder()!.refundReason) {
+              <div class="detail-section">
+                <h3>Refund Information</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Reason:</span>
+                  <span class="detail-value">{{ selectedOrder()!.refundReason }}</span>
+                </div>
+              </div>
+            }
+
+            @if (selectedOrder()!.cancellationReason) {
+              <div class="detail-section">
+                <h3>Cancellation Information</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Reason:</span>
+                  <span class="detail-value">{{ selectedOrder()!.cancellationReason }}</span>
+                </div>
+              </div>
+            }
+
+            @if (selectedOrder()!.isDisputed) {
+              <div class="detail-section dispute-section">
+                <h3>Dispute Information</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Dispute Reason:</span>
+                  <span class="detail-value">{{ selectedOrder()!.disputeReason }}</span>
+                </div>
+              </div>
+            }
+
+            @if (selectedOrder()!.adminNotes) {
+              <div class="detail-section">
+                <h3>Admin Notes</h3>
+                <p class="admin-notes">{{ selectedOrder()!.adminNotes }}</p>
+              </div>
+            }
+          </div>
+
+          <!-- Intervention Actions -->
+          <div class="intervention-actions">
+            <h3>Manual Intervention</h3>
+            <div class="action-buttons">
+              <button class="btn btn-action" (click)="openInterventionModal('UPDATE_STATUS')">
+                Update Status
+              </button>
+              <button class="btn btn-action btn-danger" (click)="openInterventionModal('FORCE_REFUND')">
+                Force Refund
+              </button>
+              <button class="btn btn-action btn-danger" (click)="openInterventionModal('CANCEL_ORDER')">
+                Cancel Order
+              </button>
+              @if (selectedOrder()!.status !== OrderStatus.DELIVERED && selectedOrder()!.status !== OrderStatus.CANCELLED) {
+                <button class="btn btn-action" (click)="openInterventionModal('UPDATE_TRACKING')">
+                  Update Tracking
+                </button>
+              }
+              @if (!selectedOrder()!.isDisputed) {
+                <button class="btn btn-action btn-warning" (click)="openInterventionModal('MARK_DISPUTED')">
+                  Mark as Disputed
+                </button>
+              } @else {
+                <button class="btn btn-action btn-success" (click)="openInterventionModal('RESOLVE_DISPUTE')">
+                  Resolve Dispute
+                </button>
+              }
+              <button class="btn btn-action btn-secondary" (click)="regenerateLabel()">
+                Regenerate Shipping Label
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Intervention Modal -->
+  @if (showInterventionModal()) {
+    <div class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>
+            @switch (interventionAction()) {
+              @case ('UPDATE_STATUS') { Update Order Status }
+              @case ('FORCE_REFUND') { Force Refund }
+              @case ('CANCEL_ORDER') { Cancel Order }
+              @case ('UPDATE_TRACKING') { Update Tracking }
+              @case ('MARK_DISPUTED') { Mark as Disputed }
+              @case ('RESOLVE_DISPUTE') { Resolve Dispute }
+            }
+          </h2>
+          <button class="close-btn" (click)="closeInterventionModal()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          @if (interventionAction() === 'UPDATE_STATUS') {
+            <div class="form-group">
+              <label>New Status</label>
+              <select [(ngModel)]="interventionStatus" class="form-control">
+                <option [ngValue]="OrderStatus.PENDING">PENDING</option>
+                <option [ngValue]="OrderStatus.CONFIRMED">CONFIRMED</option>
+                <option [ngValue]="OrderStatus.PROCESSING">PROCESSING</option>
+                <option [ngValue]="OrderStatus.SHIPPED">SHIPPED</option>
+                <option [ngValue]="OrderStatus.DELIVERED">DELIVERED</option>
+                <option [ngValue]="OrderStatus.CANCELLED">CANCELLED</option>
+                <option [ngValue]="OrderStatus.REFUNDED">REFUNDED</option>
+              </select>
+            </div>
+          }
+
+          @if (interventionAction() === 'UPDATE_TRACKING') {
+            <div class="form-group">
+              <label>Tracking Number</label>
+              <input type="text" [(ngModel)]="interventionTracking" class="form-control" placeholder="Enter tracking number" />
+            </div>
+          }
+
+          @if (interventionAction() !== 'UPDATE_TRACKING') {
+            <div class="form-group">
+              <label>Reason</label>
+              <textarea 
+                [(ngModel)]="interventionReason" 
+                class="form-control" 
+                rows="3"
+                [placeholder]="'Enter reason for ' + interventionAction().toLowerCase().replace('_', ' ')"
+              ></textarea>
+            </div>
+          }
+
+          @if (interventionAction() === 'FORCE_REFUND' || interventionAction() === 'CANCEL_ORDER') {
+            <div class="warning-box">
+              ⚠ This action will permanently change the order status and notify the buyer and seller.
+            </div>
+          }
+
+          <div class="form-group">
+            <label>Admin Notes (Optional)</label>
+            <textarea 
+              [(ngModel)]="interventionNotes" 
+              class="form-control" 
+              rows="2"
+              placeholder="Add internal notes for this intervention"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" (click)="closeInterventionModal()">Cancel</button>
+          <button class="btn btn-primary" (click)="applyIntervention()">
+            Confirm Intervention
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

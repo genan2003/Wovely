@@ -1,7 +1,7 @@
 @if (selectedUser()) {
   <!-- Detailed Profile View -->
-  <app-user-profile 
-    [user]="selectedUser()!" 
+  <app-user-profile
+    [user]="selectedUser()!"
     (close)="closeProfile()">
   </app-user-profile>
 } @else {
@@ -10,6 +10,38 @@
     <div class="crm-header">
       <h2>User Database</h2>
       <p>Search, manage, and monitor all marketplace users.</p>
+    </div>
+
+    <!-- Search and Filter Controls -->
+    <div class="crm-controls">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search by username or email..."
+          [(ngModel)]="searchQuery"
+        />
+      </div>
+      
+      <div class="filter-controls">
+        <select class="filter-select" [(ngModel)]="statusFilter">
+          <option value="ALL">All Statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="SUSPENDED">Suspended</option>
+          <option value="BANNED">Banned</option>
+        </select>
+        
+        @if (searchQuery() || statusFilter() !== 'ALL') {
+          <button class="btn-reset" (click)="resetFilters()">
+            Clear Filters
+          </button>
+        }
+      </div>
+      
+      <div class="results-count">
+        Showing {{ filteredUsers().length }} of {{ users().length }} users
+      </div>
     </div>
 
     <div class="table-card">
@@ -25,7 +57,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (user of users(); track user.id) {
+          @for (user of filteredUsers(); track user.id) {
             <tr>
               <td class="fw-medium">{{ user.username }}</td>
               <td>{{ user.email }}</td>
@@ -51,7 +83,13 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="text-center empty-row">No users found.</td>
+              <td colspan="6" class="text-center empty-row">
+                @if (users().length === 0) {
+                  <span>No users found in the database.</span>
+                } @else {
+                  <span>No users match your search criteria.</span>
+                }
+              </td>
             </tr>
           }
         </tbody>

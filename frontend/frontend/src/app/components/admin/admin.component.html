@@ -5,11 +5,14 @@
   </div>
 
   <div class="admin-tabs">
-    <button class="tab-btn" [class.active]="activeTab() === 'ads'" (click)="activeTab.set('ads')">
+    <button class="tab-btn" [class.active]="activeTab() === 'ads'" (click)="switchTab('ads')">
       Ad Approval Queue
     </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="activeTab.set('users')">
+    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="switchTab('users')">
       User CRM & Penalties
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')">
+      Order Resolution
     </button>
   </div>
 
@@ -35,7 +38,7 @@
                  <span class="price">${{ ad.price }}</span>
                  <span class="category">{{ ad.category }}</span>
                </div>
-               
+
                <div class="ad-actions">
                   <button class="btn btn-approve" (click)="ad.id && approveAd(ad.id)">Approve</button>
                   <button class="btn btn-reject" (click)="ad.id && rejectAd(ad.id)">Reject</button>
@@ -93,5 +96,7 @@
     }
   } @else if (activeTab() === 'users') {
     <app-user-crm></app-user-crm>
+  } @else if (activeTab() === 'orders') {
+    <app-order-resolution></app-order-resolution>
   }
 </div>

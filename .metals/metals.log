@@ -1,0 +1,576 @@
+2026.03.18 12:36:30 WARN  Using H2 2.4.240 which is newer than the version Flyway has been verified with. The latest verified version of H2 is 2.3.232.
+2026.03.18 12:36:31 WARN  no build tool detected in workspace 'E:\Wovely'. The most common cause for this problem is that the editor was opened in the wrong working directory, for example if you use sbt then the workspace directory should contain build.sbt. 
+2026.03.18 12:36:31 WARN  Build server is not auto-connectable.
+2026.03.18 12:36:31 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\payload\response\UserCrmDTO.java
+2026.03.18 12:36:31 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java
+2026.03.18 12:36:31 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AdminUserController.java
+2026.03.18 12:36:31 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\EAccountStatus.java
+2026.03.18 12:36:31 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\payload\request\PenaltyRequest.java
+2026.03.18 12:36:43 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\repository\UserRepository.java
+Mar 18, 2026 12:38:18 PM org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint notify
+INFO: Unsupported notification method: $/setTrace
+2026.03.18 12:39:08 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AdminUserController.java. Using fallback presentation compiler.
+2026.03.18 12:39:15 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java. Using fallback presentation compiler.
+2026.03.18 12:39:15 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\EAccountStatus.java. Using fallback presentation compiler.
+2026.03.18 12:39:26 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\payload\request\PenaltyRequest.java. Using fallback presentation compiler.
+2026.03.18 12:39:26 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\payload\response\UserCrmDTO.java. Using fallback presentation compiler.
+2026.03.18 12:39:43 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\repository\UserRepository.java. Using fallback presentation compiler.
+2026.03.18 12:45:51 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java
+2026.03.18 12:45:55 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AuthController.java
+2026.03.18 12:46:23 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java. Using fallback presentation compiler.
+2026.03.18 12:46:23 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java. Using fallback presentation compiler.
+2026.03.18 12:46:23 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java
+2026.03.18 12:48:51 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java. Using fallback presentation compiler.
+2026.03.18 12:48:55 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AuthController.java. Using fallback presentation compiler.
+2026.03.18 12:56:22 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java
+2026.03.18 12:56:22 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+Mar 18, 2026 12:56:22 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleCancellation
+WARNING: Unmatched cancel notification for request id 3
+2026.03.18 12:56:22 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+Mar 18, 2026 12:56:23 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleCancellation
+WARNING: Unmatched cancel notification for request id 5
+2026.03.18 12:56:22 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.18 12:56:33 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.18 12:56:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.18 12:56:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.18 12:56:39 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.18 12:56:46 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.18 12:56:46 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 12:56:46 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 12:56:46 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 12:56:46 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 12:56:46 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 12:57:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 12:58:30 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 12:59:58 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:00:00 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:00:36 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java
+2026.03.18 13:00:36 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\ERole.java
+2026.03.18 13:00:36 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\repository\UserRepository.java
+2026.03.18 13:00:36 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AdminUserController.java
+2026.03.18 13:00:42 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\Role.java
+2026.03.18 13:00:42 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\repository\RoleRepository.java
+2026.03.18 13:00:42 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AuthController.java
+2026.03.18 13:00:49 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java
+2026.03.18 13:03:18 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:03:36 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java. Using fallback presentation compiler.
+2026.03.18 13:03:36 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\ERole.java. Using fallback presentation compiler.
+2026.03.18 13:03:36 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\repository\UserRepository.java. Using fallback presentation compiler.
+2026.03.18 13:03:36 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AdminUserController.java. Using fallback presentation compiler.
+2026.03.18 13:03:42 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\Role.java. Using fallback presentation compiler.
+2026.03.18 13:03:42 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\repository\RoleRepository.java. Using fallback presentation compiler.
+2026.03.18 13:03:42 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AuthController.java. Using fallback presentation compiler.
+2026.03.18 13:03:49 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\WovelyApplication.java. Using fallback presentation compiler.
+2026.03.18 13:07:55 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\security\WebSecurityConfig.java
+2026.03.18 13:07:55 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\security\services\UserDetailsImpl.java
+2026.03.18 13:07:56 WARN  Running javac-semanticdb failed for file:///E:/Wovely/backend/wovely/src/main/java/com/wovely/wovely/security/services/UserDetailsImpl.java. Output:
+
+Mar 18, 2026 1:09:50 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5CCheckAdminUser.java?new%26rand%3D0.6247241143294407"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:09:56 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:09:56 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:09:56 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:09:56 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleCancellation
+WARNING: Unmatched cancel notification for request id 69
+2026.03.18 13:09:56 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:09:56 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:10:31 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:10:31 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:10:55 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\security\WebSecurityConfig.java. Using fallback presentation compiler.
+2026.03.18 13:10:55 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\security\services\UserDetailsImpl.java. Using fallback presentation compiler.
+2026.03.18 13:11:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:11:24 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:12:08 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java
+2026.03.18 13:12:08 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AdminUserController.java
+2026.03.18 13:12:15 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\ERole.java
+Mar 18, 2026 1:12:58 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5CEOrderStatus.java?new%26rand%3D0.2560394168524812"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:13:16 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:16 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:13:16 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:16 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:13:16 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrder.java?new%26rand%3D0.7586210330348954"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:13:18 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:18 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:18 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:13:18 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderItem.java?new%26rand%3D0.288056574924763"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:13:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:19 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:13:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:20 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:13:32 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderRepository.java?new%26rand%3D0.778388681709416"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:13:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:13:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:14:00 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderDTO.java?new%26rand%3D0.24867038989266355"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:14:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:02 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:14:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:14:03 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderItemDTO.java?new%26rand%3D0.05955967118543637"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:14:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:14:05 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderInterventionRequest.java?new%26rand%3D0.18524063151652925"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:14:06 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:06 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:14:06 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:06 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:14:06 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderSearchRequest.java?new%26rand%3D0.8136161508280555"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:14:08 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:08 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:08 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:08 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:14:31 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderService.java?new%26rand%3D0.5913964819218863"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:14:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:34 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:14:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:14:34 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+Mar 18, 2026 1:14:55 PM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleNotification
+WARNING: Notification threw an exception: {
+  "jsonrpc": "2.0",
+  "method": "metals/didFocusTextDocument",
+  "params": [
+    "qwen-diff:e%3A%5CWovely%5COrderAdminController.java?new%26rand%3D0.3321975130780539"
+  ]
+}
+java.nio.file.FileSystemNotFoundException: Provider "qwen-diff" not installed
+	at java.base/java.nio.file.Path.of(Path.java:210)
+	at java.base/java.nio.file.Paths.get(Paths.java:95)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionURIMtags.toAbsolutePath(MtagsEnrichments.scala:149)
+	at scala.meta.internal.mtags.MtagsEnrichments$XtensionStringMtags.toAbsolutePath(MtagsEnrichments.scala:209)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:787)
+	at scala.meta.internal.metals.MetalsEnrichments$XtensionString.toAbsolutePath(MetalsEnrichments.scala:784)
+	at scala.meta.internal.metals.WorkspaceLspService.didFocus(WorkspaceLspService.scala:808)
+	at scala.meta.metals.lsp.DelegatingScalaService.didFocus(DelegatingScalaService.scala:42)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.lambda$recursiveFindRpcMethods$0(GenericEndpoint.java:65)
+	at org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint.notify(GenericEndpoint.java:160)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.handleNotification(RemoteEndpoint.java:225)
+	at org.eclipse.lsp4j.jsonrpc.RemoteEndpoint.consume(RemoteEndpoint.java:192)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.handleMessage(StreamMessageProducer.java:189)
+	at org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer.listen(StreamMessageProducer.java:97)
+	at org.eclipse.lsp4j.jsonrpc.json.ConcurrentMessageProcessor.run(ConcurrentMessageProcessor.java:97)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+2026.03.18 13:15:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:04 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:08 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java. Using fallback presentation compiler.
+2026.03.18 13:15:08 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AdminUserController.java. Using fallback presentation compiler.
+2026.03.18 13:15:15 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\ERole.java. Using fallback presentation compiler.
+2026.03.18 13:15:17 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:17 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:15:17 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:17 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:17 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:37 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:37 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:37 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:37 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:15:48 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:16:39 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:16:39 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:16:39 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:16:39 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:16:39 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:17:20 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:17:20 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:18:09 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:18:09 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:18:09 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:18:09 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:20:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:20:05 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:20:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:20:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:20:05 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:20:59 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:21:27 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:21:27 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:21:27 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:21:27 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:22:32 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:22:32 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:22:32 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:22:32 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:22:32 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:23:04 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:26:55 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:26:55 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:26:55 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:26:55 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:26:55 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:27:18 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:29:41 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:29:41 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:29:41 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:29:41 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:29:41 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:30:02 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:30:50 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:30:50 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:30:50 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:30:52 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:30:59 INFO  Shutting down server
+2026.03.18 13:30:59 INFO  Memory monitor stopped
+2026.03.18 13:30:59 INFO  shutting down Metals
+2026.03.18 13:30:59 INFO  Exiting server
+2026.03.18 13:31:15 INFO  Started: Metals version 1.6.6 in folders 'E:\Wovely' for client Visual Studio Code 1.111.0.
+2026.03.18 13:31:15 INFO  Memory monitor started
+2026.03.18 13:31:15 WARN  Using H2 2.4.240 which is newer than the version Flyway has been verified with. The latest verified version of H2 is 2.3.232.
+2026.03.18 13:31:15 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:31:16 WARN  no build tool detected in workspace 'E:\Wovely'. The most common cause for this problem is that the editor was opened in the wrong working directory, for example if you use sbt then the workspace directory should contain build.sbt. 
+2026.03.18 13:31:16 WARN  Build server is not auto-connectable.
+2026.03.18 13:31:16 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java
+2026.03.18 13:31:39 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\JwtUtils.java. Using fallback presentation compiler.
+2026.03.18 13:31:55 INFO  Shutting down server
+2026.03.18 13:31:55 INFO  Memory monitor stopped
+2026.03.18 13:31:55 INFO  shutting down Metals
+2026.03.18 13:31:55 INFO  Exiting server
+2026.03.23 12:30:19 INFO  Started: Metals version 1.6.6 in folders 'E:\Wovely' for client Visual Studio Code 1.112.0.
+2026.03.23 12:30:19 INFO  Memory monitor started
+2026.03.23 12:30:19 WARN  Using H2 2.4.240 which is newer than the version Flyway has been verified with. The latest verified version of H2 is 2.3.232.
+2026.03.23 12:30:19 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:30:21 WARN  no build tool detected in workspace 'E:\Wovely'. The most common cause for this problem is that the editor was opened in the wrong working directory, for example if you use sbt then the workspace directory should contain build.sbt. 
+2026.03.23 12:30:21 WARN  Build server is not auto-connectable.
+2026.03.23 12:30:21 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java
+2026.03.23 12:30:44 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:30:45 WARN  no build target for: E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java
+2026.03.23 12:32:11 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:33:37 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:33:50 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:33:50 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:33:50 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:33:50 INFO  no build target found for E:\Wovely\backend\products\src\main\java\com\wovely\products\security\AuthTokenFilter.java. Using fallback presentation compiler.
+2026.03.23 12:33:50 INFO  Created report: Optional[file:///E:/Wovely/backend/products/src/main/java/com/wovely/products/security/AuthTokenFilter.java]
+2026.03.23 12:33:50 INFO  empty definition using pc, found symbol in pc: java/io/IOException# (full report at: "E:\Wovely\.metals\.reports\metals-full\2026-03-23\r_empty-definition_12-33-50-946.md")
+2026.03.23 12:40:51 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java
+2026.03.23 12:42:42 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AuthController.java
+2026.03.23 12:43:52 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\User.java. Using fallback presentation compiler.
+2026.03.23 12:44:40 WARN  no build target for: E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\Role.java
+2026.03.23 12:45:42 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\controllers\AuthController.java. Using fallback presentation compiler.
+2026.03.23 12:47:40 INFO  no build target found for E:\Wovely\backend\wovely\src\main\java\com\wovely\wovely\models\Role.java. Using fallback presentation compiler.
+2026.03.23 13:07:30 INFO  Shutting down server
+2026.03.23 13:07:30 INFO  Memory monitor stopped
+2026.03.23 13:07:30 INFO  shutting down Metals
+2026.03.23 13:07:30 INFO  Exiting server
