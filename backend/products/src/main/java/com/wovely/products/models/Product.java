@@ -26,7 +26,7 @@ public class Product {
   public Product() {
   }
 
-  public Product(String name, String description, double price, String sellerId, String imageUrl, String category, String co2EmissionScore, String shippingMethod, boolean isHandmade) {
+  public Product(String name, String description, double price, String sellerId, String imageUrl, String category, String co2EmissionScore, String shippingMethod, boolean isHandmade, Integer stockQuantity, Integer lowStockThreshold) {
     this.name = name;
     this.description = description;
     this.price = price;
@@ -36,6 +36,8 @@ public class Product {
     this.co2EmissionScore = co2EmissionScore;
     this.shippingMethod = shippingMethod;
     this.isHandmade = isHandmade;
+    this.stockQuantity = stockQuantity != null ? stockQuantity : 0;
+    this.lowStockThreshold = lowStockThreshold != null ? lowStockThreshold : 5;
     this.status = "PENDING";
   }
 

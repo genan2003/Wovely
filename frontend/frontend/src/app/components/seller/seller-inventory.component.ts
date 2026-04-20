@@ -44,6 +44,18 @@ export class SellerInventoryComponent implements OnInit {
     formStockQuantity = signal<number>(0);
     formLowStockThreshold = signal<number>(5);
 
+    // Edit/Restock Dialog
+    showRestockDialog = signal<boolean>(false);
+    selectedItem = signal<InventoryItem | null>(null);
+    restockQuantity = signal<number>(0);
+    restockLoading = signal<boolean>(false);
+    restockError = signal<string | null>(null);
+    isEditMode = signal<boolean>(false); // true for direct edit, false for restock (add)
+
+    // Details Dialog
+    showDetailsDialog = signal<boolean>(false);
+    selectedDetailItem = signal<InventoryItem | null>(null);
+
     // Computed
     filteredItems = computed(() => {
         let filtered = this.items();
@@ -170,6 +182,7 @@ export class SellerInventoryComponent implements OnInit {
 
         const newItem: Partial<InventoryItem> = {
             productName: this.formName(),
+            description: this.formDescription(),
             price: this.formPrice(),
             imageUrl: this.formImageUrl(),
             category: this.formCategory(),
@@ -194,6 +207,68 @@ export class SellerInventoryComponent implements OnInit {
                 console.error(err);
             }
         });
+    }
+
+    // Stock Management Methods
+    openRestockDialog(item: InventoryItem): void {
+        this.selectedItem.set(item);
+        this.restockQuantity.set(0);
+        this.restockError.set(null);
+        this.isEditMode.set(false);
+        this.showRestockDialog.set(true);
+    }
+
+    openEditStockDialog(item: InventoryItem): void {
+        this.selectedItem.set(item);
+        this.restockQuantity.set(item.stockQuantity);
+        this.restockError.set(null);
+        this.isEditMode.set(true);
+        this.showRestockDialog.set(true);
+    }
+
+    closeRestockDialog(): void {
+        this.showRestockDialog.set(false);
+        this.selectedItem.set(null);
+    }
+
+    saveStockUpdate(): void {
+        const item = this.selectedItem();
+        const quantity = this.restockQuantity();
+
+        if (!item || quantity < 0) {
+            this.restockError.set('Please enter a valid quantity.');
+            return;
+        }
+
+        this.restockLoading.set(true);
+        const request = this.isEditMode() 
+            ? this.inventoryService.updateStock(this.sellerId, item.productId, quantity)
+            : this.inventoryService.restockProduct(this.sellerId, item.productId, quantity);
+
+        request.subscribe({
+            next: () => {
+                this.restockLoading.set(false);
+                this.showRestockDialog.set(false);
+                this.loadInventory();
+                this.loadDashboard();
+            },
+            error: (err: HttpErrorResponse) => {
+                this.restockLoading.set(false);
+                this.restockError.set('Failed to update stock.');
+                console.error(err);
+            }
+        });
+    }
+
+    // Details Methods
+    viewDetails(item: InventoryItem): void {
+        this.selectedDetailItem.set(item);
+        this.showDetailsDialog.set(true);
+    }
+
+    closeDetailsDialog(): void {
+        this.showDetailsDialog.set(false);
+        this.selectedDetailItem.set(null);
     }
 
     getStockBadgeClass(item: InventoryItem): string {

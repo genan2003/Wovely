@@ -110,14 +110,14 @@
                                     </span>
                                 </div>
                                 <div class="card-actions">
-                                    <button class="btn btn-sm btn-outline-primary" title="Edit Stock">
-                                        <i class="bi bi-pencil"></i>
+                                    <button class="btn btn-sm btn-outline-primary" title="Edit Stock" (click)="openEditStockDialog(item)">
+                                        <i class="bi bi-pencil"></i> Edit
                                     </button>
-                                    <button class="btn btn-sm btn-outline-success" title="Restock">
-                                        <i class="bi bi-plus-lg"></i>
+                                    <button class="btn btn-sm btn-outline-success" title="Restock" (click)="openRestockDialog(item)">
+                                        <i class="bi bi-plus-lg"></i> Restock
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary" title="View Details">
-                                        <i class="bi bi-eye"></i>
+                                    <button class="btn btn-sm btn-outline-secondary" title="View Details" (click)="viewDetails(item)">
+                                        <i class="bi bi-eye"></i> Details
                                     </button>
                                 </div>
                             </div>
@@ -154,14 +154,14 @@
                                 </span>
                             </div>
                             <div class="list-col actions-col">
-                                <button class="btn btn-sm btn-icon" title="Edit Stock">
-                                    <i class="bi bi-pencil"></i>
+                                <button class="btn btn-sm btn-icon" title="Edit Stock" (click)="openEditStockDialog(item)">
+                                    <i class="bi bi-pencil"></i> Edit
                                 </button>
-                                <button class="btn btn-sm btn-icon" title="Restock">
-                                    <i class="bi bi-plus-lg"></i>
+                                <button class="btn btn-sm btn-icon" title="Restock" (click)="openRestockDialog(item)">
+                                    <i class="bi bi-plus-lg"></i> Restock
                                 </button>
-                                <button class="btn btn-sm btn-icon" title="View Details">
-                                    <i class="bi bi-eye"></i>
+                                <button class="btn btn-sm btn-icon" title="View Details" (click)="viewDetails(item)">
+                                    <i class="bi bi-eye"></i> Details
                                 </button>
                             </div>
                         </div>
@@ -171,6 +171,137 @@
         }
     }
 </div>
+
+<!-- Details Modal -->
+@if (showDetailsDialog()) {
+    <div class="modal-backdrop" (click)="closeDetailsDialog()">
+        <div class="modal-content details-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2><i class="bi bi-info-circle"></i> Product Details</h2>
+                <button type="button" class="btn-close" (click)="closeDetailsDialog()"></button>
+            </div>
+            <div class="modal-body">
+                @if (selectedDetailItem(); as item) {
+                    <div class="details-layout">
+                        <div class="details-image">
+                            <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                        </div>
+                        <div class="details-info">
+                            <div class="details-header-row">
+                                <h3 class="details-product-name">{{ item.productName }}</h3>
+                                <span class="stock-badge" [class]="getStockBadgeClass(item)">
+                                    {{ getStockLabel(item) }}
+                                </span>
+                            </div>
+                            <p class="details-category">{{ item.category }}</p>
+                            
+                            <div class="details-description mb-4">
+                                <h5>Description</h5>
+                                <p>{{ item.description || 'No description provided for this product.' }}</p>
+                            </div>
+
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Price</span>
+                                    <span class="detail-value text-primary font-bold">${{ item.price | number:'1.2-2' }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Current Stock</span>
+                                    <span class="detail-value">{{ item.stockQuantity }} units</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Low Stock Threshold</span>
+                                    <span class="detail-value">{{ item.lowStockThreshold }} units</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Sustainability Score</span>
+                                    <span class="detail-value badge-co2" [class]="'co2-' + (item.co2EmissionScore?.toLowerCase() || 'low')">
+                                        {{ item.co2EmissionScore || 'Low' }}
+                                    </span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Shipping Method</span>
+                                    <span class="detail-value">{{ item.shippingMethod || 'Standard' }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Handmade</span>
+                                    <span class="detail-value">{{ item.isHandmade ? 'Yes' : 'No' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeDetailsDialog()">Close</button>
+                @if (selectedDetailItem(); as item) {
+                    <button type="button" class="btn btn-primary" (click)="closeDetailsDialog(); openEditStockDialog(item)">
+                        <i class="bi bi-pencil"></i> Edit Stock
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Restock/Edit Stock Modal -->
+@if (showRestockDialog()) {
+    <div class="modal-backdrop" (click)="closeRestockDialog()">
+        <div class="modal-content restock-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2>
+                    <i class="bi" [class.bi-pencil]="isEditMode()" [class.bi-plus-circle]="!isEditMode()"></i>
+                    {{ isEditMode() ? 'Edit Stock' : 'Restock Product' }}
+                </h2>
+                <button type="button" class="btn-close" (click)="closeRestockDialog()"></button>
+            </div>
+            <div class="modal-body">
+                @if (selectedItem(); as item) {
+                    <div class="product-preview mb-4">
+                        <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                        <div class="product-preview-info">
+                            <h4>{{ item.productName }}</h4>
+                            <p class="mb-0">Current Stock: <strong>{{ item.stockQuantity }} units</strong></p>
+                        </div>
+                    </div>
+                }
+
+                @if (restockError()) {
+                    <div class="alert alert-danger">{{ restockError() }}</div>
+                }
+
+                <div class="form-group">
+                    <label for="restockQty">
+                        {{ isEditMode() ? 'New Total Stock Quantity' : 'Quantity to Add' }}
+                    </label>
+                    <input 
+                        type="number" 
+                        id="restockQty" 
+                        class="form-control" 
+                        [(ngModel)]="restockQuantity" 
+                        name="restockQuantity" 
+                        min="0"
+                        autofocus
+                    />
+                    <small class="text-muted">
+                        {{ isEditMode() ? 'Set the exact number of units currently available.' : 'Enter the number of units you are adding to your current stock.' }}
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeRestockDialog()">Cancel</button>
+                <button type="button" class="btn btn-success" (click)="saveStockUpdate()" [disabled]="restockLoading()">
+                    @if (restockLoading()) {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Saving...
+                    } @else {
+                        <i class="bi bi-check-circle"></i> {{ isEditMode() ? 'Update Stock' : 'Confirm Restock' }}
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 <!-- Add Product Modal -->
 @if (showAddDialog()) {

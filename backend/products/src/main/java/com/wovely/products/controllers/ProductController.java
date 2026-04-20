@@ -58,7 +58,9 @@ public class ProductController {
           product.getCategory(),
           product.getCo2EmissionScore(),
           product.getShippingMethod(),
-          product.isHandmade()));
+          product.isHandmade(),
+          product.getStockQuantity(),
+          product.getLowStockThreshold()));
       return new ResponseEntity<>(_product, HttpStatus.CREATED);
     } catch (Exception e) {
       return new ResponseEntity<Product>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -269,6 +271,7 @@ public class ProductController {
     visual.put("id", product.getId());
     visual.put("productId", product.getId());
     visual.put("name", product.getName());
+    visual.put("description", product.getDescription());
     visual.put("imageUrl", product.getImageUrl());
     visual.put("category", product.getCategory());
     visual.put("price", product.getPrice());

@@ -3,6 +3,7 @@ export interface InventoryItem {
     productId: string;
     sellerId: string;
     productName: string;
+    description?: string;
     imageUrl: string;
     category: string;
     price: number;

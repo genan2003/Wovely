@@ -84,7 +84,7 @@ export class InventoryService {
     addProduct(sellerId: string, item: Partial<InventoryItem>): Observable<any> {
         const product = {
             name: item.productName,
-            description: item.productName || '',
+            description: item.description || item.productName || '',
             price: item.price || 0,
             sellerId: sellerId,
             imageUrl: item.imageUrl || '',

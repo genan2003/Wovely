@@ -69,7 +69,7 @@ export class ManualOrderComponent implements OnInit {
 
     // Computed properties
     filteredProducts = computed(() => {
-        return this.inventoryItems().filter(item => item.stockQuantity > 0);
+        return this.inventoryItems();
     });
 
     cartTotal = computed(() => {
@@ -87,6 +87,7 @@ export class ManualOrderComponent implements OnInit {
         
         if (newMap.has(productId)) {
             newMap.delete(productId);
+            this.removeFromCart(productId);
         } else {
             newMap.set(productId, 1);
             this.addToCart(productId);
@@ -106,7 +107,7 @@ export class ManualOrderComponent implements OnInit {
         }
 
         const product = this.inventoryItems().find(p => p.productId === productId);
-        if (!product || quantity > product.stockQuantity) {
+        if (!product) {
             return;
         }
 
@@ -137,10 +138,8 @@ export class ManualOrderComponent implements OnInit {
         const existing = cart.find(item => item.productId === productId);
         
         if (existing) {
-            if (existing.quantity < product.stockQuantity) {
-                existing.quantity++;
-                this.cartItems.set([...cart]);
-            }
+            existing.quantity++;
+            this.cartItems.set([...cart]);
         } else {
             cart.push({
                 productId: product.productId,
