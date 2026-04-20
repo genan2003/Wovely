@@ -5,6 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.client.RestTemplate;
 import com.wovely.wovely.models.ERole;
 import com.wovely.wovely.models.EAccountStatus;
 import com.wovely.wovely.models.Role;
@@ -22,6 +23,11 @@ public class WovelyApplication {
 	}
 
 	@Bean
+	public RestTemplate restTemplate() {
+		return new RestTemplate();
+	}
+
+	@Bean
 	CommandLineRunner initDatabase(RoleRepository roleRepository, UserRepository userRepository,
 			PasswordEncoder encoder) {
 		return args -> {
@@ -31,6 +37,9 @@ public class WovelyApplication {
 			}
 			if (!roleRepository.findByName(ERole.ROLE_ADMIN).isPresent()) {
 				roleRepository.save(new Role(ERole.ROLE_ADMIN));
+			}
+			if (!roleRepository.findByName(ERole.ROLE_SELLER).isPresent()) {
+				roleRepository.save(new Role(ERole.ROLE_SELLER));
 			}
 
 			// Create admin user if not exists
@@ -55,6 +64,18 @@ public class WovelyApplication {
 				user.setAccountStatus(EAccountStatus.ACTIVE);
 				userRepository.save(user);
 				System.out.println("✅ Test user created: username='testuser', password='user123'");
+			}
+
+			// Create test seller user
+			if (!userRepository.existsByUsername("seller")) {
+				User seller = new User("seller", "seller@wovely.com", encoder.encode("seller123"));
+				Set<Role> roles = new HashSet<>();
+				Role sellerRole = roleRepository.findByName(ERole.ROLE_SELLER).orElseThrow();
+				roles.add(sellerRole);
+				seller.setRoles(roles);
+				seller.setAccountStatus(EAccountStatus.ACTIVE);
+				userRepository.save(seller);
+				System.out.println("✅ Seller user created: username='seller', password='seller123'");
 			}
 		};
 	}

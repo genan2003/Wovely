@@ -7,8 +7,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.wovely.wovely.models.EOrderStatus;
+import com.wovely.wovely.models.ManualOrderRequest;
 import com.wovely.wovely.models.Order;
 import com.wovely.wovely.models.OrderItem;
 import com.wovely.wovely.payload.request.OrderInterventionRequest;
@@ -21,6 +23,11 @@ public class OrderService {
 
     @Autowired
     OrderRepository orderRepository;
+
+    @Autowired
+    RestTemplate restTemplate;
+
+    private static final String PRODUCTS_API = "http://localhost:8082/api/products";
 
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
@@ -116,7 +123,7 @@ public class OrderService {
 
     public OrderDTO regenerateShippingLabel(String orderId) {
         Optional<Order> orderOpt = orderRepository.findById(orderId);
-        
+
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
             String newTrackingNumber = "TRK-" + System.currentTimeMillis() + "-" + orderId.substring(0, 6).toUpperCase();
@@ -125,8 +132,85 @@ public class OrderService {
             orderRepository.save(order);
             return convertToDto(order);
         }
-        
+
         return null;
+    }
+
+    /**
+     * Create a manual order for off-platform sales (e.g., craft fair sales).
+     * This reduces inventory stock and creates an order record.
+     */
+    public OrderDTO createManualOrder(ManualOrderRequest request) {
+        Order order = new Order();
+        
+        // Generate unique order number
+        String orderNumber = "MAN-" + System.currentTimeMillis() + "-" + 
+            request.getSellerId().substring(0, Math.min(4, request.getSellerId().length())).toUpperCase();
+        
+        order.setOrderNumber(orderNumber);
+        order.setBuyerId("OFF_PLATFORM");
+        order.setBuyerName(request.getBuyerName());
+        order.setSellerId(request.getSellerId());
+        order.setSellerName(request.getSellerName());
+        order.setShippingAddress(request.getShippingAddress());
+        
+        // Convert items
+        OrderItem[] items = request.getItems().stream()
+            .map(item -> new OrderItem(
+                item.getProductId(),
+                item.getProductName(),
+                item.getQuantity(),
+                item.getPrice(),
+                item.getImageUrl()
+            ))
+            .toArray(OrderItem[]::new);
+        
+        order.setItems(items);
+        
+        // Calculate total
+        double total = request.getItems().stream()
+            .mapToDouble(item -> item.getPrice() * item.getQuantity())
+            .sum();
+        order.setTotalAmount(total);
+        
+        order.setStatus(EOrderStatus.COMPLETED); // Manual orders are typically completed immediately
+        order.setCreatedAt(new Date());
+        order.setUpdatedAt(new Date());
+        
+        // Optional fields
+        if (request.getNotes() != null) {
+            order.setAdminNotes("Manual Order - " + request.getNotes());
+        }
+
+        order = orderRepository.save(order);
+
+        // Reduce stock for each item in the products service
+        for (com.wovely.wovely.models.ManualOrderItemRequest orderItem : request.getItems()) {
+            try {
+                String stockUrl = PRODUCTS_API + "/seller/" + request.getSellerId() + "/product/" +
+                    orderItem.getProductId() + "/stock";
+
+                // Get current product to calculate new stock
+                String productUrl = PRODUCTS_API + "/seller/" + request.getSellerId() + "/product/" +
+                    orderItem.getProductId();
+
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> currentProduct = restTemplate.getForObject(productUrl,
+                    java.util.Map.class);
+
+                if (currentProduct != null) {
+                    int currentStock = ((Number) currentProduct.get("stockQuantity")).intValue();
+                    int newStock = Math.max(0, currentStock - orderItem.getQuantity());
+
+                    restTemplate.put(stockUrl, java.util.Map.of("quantity", newStock));
+                }
+            } catch (Exception e) {
+                // Log but don't fail the order if stock update fails
+                System.err.println("Failed to update stock for product: " + orderItem.getProductId());
+            }
+        }
+
+        return convertToDto(order);
     }
 
     private OrderDTO convertToDto(Order order) {

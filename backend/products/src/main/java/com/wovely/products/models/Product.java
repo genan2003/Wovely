@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Product {
   @Id
   private String id;
-  
+
   private String name;
   private String description;
   private double price;
@@ -18,6 +18,10 @@ public class Product {
   private String shippingMethod; // e.g., Carbon Neutral Courier
   private boolean isHandmade;
   private String status = "PENDING"; // PENDING, APPROVED, REJECTED, NEEDS_CHANGES
+  
+  // Inventory tracking fields
+  private Integer stockQuantity = 0;
+  private Integer lowStockThreshold = 5;
 
   public Product() {
   }
@@ -121,5 +125,29 @@ public class Product {
 
   public void setStatus(String status) {
     this.status = status;
+  }
+
+  public Integer getStockQuantity() {
+    return stockQuantity;
+  }
+
+  public void setStockQuantity(Integer stockQuantity) {
+    this.stockQuantity = stockQuantity;
+  }
+
+  public Integer getLowStockThreshold() {
+    return lowStockThreshold;
+  }
+
+  public void setLowStockThreshold(Integer lowStockThreshold) {
+    this.lowStockThreshold = lowStockThreshold;
+  }
+
+  public boolean isLowStock() {
+    return stockQuantity != null && stockQuantity <= lowStockThreshold;
+  }
+
+  public boolean isOutOfStock() {
+    return stockQuantity != null && stockQuantity == 0;
   }
 }

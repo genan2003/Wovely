@@ -1,0 +1,14 @@
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\controllers\InventoryController.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\models\Inventory.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\models\InventoryItem.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\models\ManualOrderRequest.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\repository\InventoryItemRepository.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\repository\InventoryRepository.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\security\AuthEntryPointJwt.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\security\AuthTokenFilter.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\security\JwtUtils.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\security\services\UserDetailsImpl.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\security\services\UserDetailsServiceImpl.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\security\WebSecurityConfig.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\services\InventoryService.java
+E:\Wovely\backend\inventory\src\main\java\com\wovely\inventory\WovelyInventoryApplication.java

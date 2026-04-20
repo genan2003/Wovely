@@ -23,6 +23,11 @@ export class App {
     return user && user.roles && user.roles.includes('ROLE_ADMIN');
   }
 
+  isSeller(): boolean {
+    const user = this.storageService.getUser();
+    return user && user.roles && user.roles.includes('ROLE_SELLER');
+  }
+
   logout(event: Event): void {
     event.preventDefault();
     this.authService.logout().subscribe();

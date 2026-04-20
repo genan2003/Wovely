@@ -1,0 +1,15 @@
+com\wovely\inventory\WovelyInventoryApplication.class
+com\wovely\inventory\models\ManualOrderRequest.class
+com\wovely\inventory\security\WebSecurityConfig.class
+com\wovely\inventory\security\AuthEntryPointJwt.class
+com\wovely\inventory\security\AuthTokenFilter.class
+com\wovely\inventory\security\services\UserDetailsImpl.class
+com\wovely\inventory\services\InventoryService.class
+com\wovely\inventory\models\ManualOrderItemRequest.class
+com\wovely\inventory\repository\InventoryRepository.class
+com\wovely\inventory\security\JwtUtils.class
+com\wovely\inventory\security\services\UserDetailsServiceImpl.class
+com\wovely\inventory\models\InventoryItem.class
+com\wovely\inventory\models\Inventory.class
+com\wovely\inventory\controllers\InventoryController.class
+com\wovely\inventory\repository\InventoryItemRepository.class

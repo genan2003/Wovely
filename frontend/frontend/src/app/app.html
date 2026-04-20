@@ -18,6 +18,12 @@
     <li class="nav-item" *ngIf="isAdmin()">
       <a class="nav-link" routerLink="/admin" routerLinkActive="active">Moderation Hub</a>
     </li>
+    <li class="nav-item" *ngIf="isSeller()">
+      <a class="nav-link" routerLink="/seller/inventory" routerLinkActive="active">My Inventory</a>
+    </li>
+    <li class="nav-item" *ngIf="isSeller()">
+      <a class="nav-link" routerLink="/seller/manual-order" routerLinkActive="active">Manual Order</a>
+    </li>
     <li class="nav-item">
       <a class="nav-link" routerLink="/products" routerLinkActive="active">Products</a>
     </li>

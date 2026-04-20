@@ -6,6 +6,7 @@ public enum EOrderStatus {
     PROCESSING,
     SHIPPED,
     DELIVERED,
+    COMPLETED,
     CANCELLED,
     REFUNDED,
     DISPUTED

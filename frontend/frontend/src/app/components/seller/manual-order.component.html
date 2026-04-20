@@ -1,0 +1,268 @@
+<div class="manual-order-container">
+    <!-- Header -->
+    <div class="order-header">
+        <div class="header-content">
+            <h1>Manual Order</h1>
+            <p class="subtitle">Create orders for off-platform sales (craft fairs, in-person, etc.)</p>
+        </div>
+    </div>
+
+    @if (error()) {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            {{ error() }}
+            <button type="button" class="btn-close" (click)="error.set(null)"></button>
+        </div>
+    }
+
+    <div class="order-content">
+        <!-- Left: Product Selection -->
+        <div class="product-selection-panel">
+            <div class="panel-header">
+                <h2>Select Products</h2>
+                <span class="cart-badge">{{ cartItemCount() }} items</span>
+            </div>
+
+            @if (loading()) {
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading products...</p>
+                </div>
+            } @else {
+                <div class="products-grid">
+                    @for (product of filteredProducts(); track product.productId) {
+                        <div 
+                            class="product-card" 
+                            [class.selected]="isSelected(product.productId)"
+                            [class]="getStockClass(product)"
+                            (click)="toggleProductSelection(product.productId)"
+                        >
+                            <div class="product-image">
+                                <img [src]="product.imageUrl || 'assets/placeholder-product.png'" [alt]="product.productName" />
+                                @if (isSelected(product.productId)) {
+                                    <div class="selected-overlay">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                }
+                            </div>
+                            <div class="product-info">
+                                <h4>{{ product.productName }}</h4>
+                                <p class="product-category">{{ product.category }}</p>
+                                <div class="product-meta">
+                                    <span class="price">${{ product.price | number:'1.2-2' }}</span>
+                                    <span class="stock">
+                                        <i class="bi bi-box"></i> {{ product.stockQuantity }} available
+                                    </span>
+                                </div>
+                                @if (isSelected(product.productId)) {
+                                    <div class="quantity-controls" (click)="$event.stopPropagation()">
+                                        <button class="btn-qty" (click)="updateQuantity(product.productId, getSelectedQuantity(product.productId) - 1)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <span class="qty-value">{{ getSelectedQuantity(product.productId) }}</span>
+                                        <button class="btn-qty" (click)="updateQuantity(product.productId, getSelectedQuantity(product.productId) + 1)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Right: Order Details -->
+        <div class="order-details-panel">
+            <div class="panel-header">
+                <h2>Order Details</h2>
+            </div>
+
+            <form (ngSubmit)="submitOrder()" class="order-form">
+                <!-- Buyer Information -->
+                <div class="form-section">
+                    <h3>Buyer Information</h3>
+                    <div class="form-group">
+                        <label for="buyerName">Buyer Name *</label>
+                        <input 
+                            type="text" 
+                            id="buyerName" 
+                            class="form-control" 
+                            [(ngModel)]="buyerName" 
+                            name="buyerName"
+                            placeholder="Enter buyer's name"
+                            required
+                        />
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buyerEmail">Email</label>
+                            <input 
+                                type="email" 
+                                id="buyerEmail" 
+                                class="form-control" 
+                                [(ngModel)]="buyerEmail" 
+                                name="buyerEmail"
+                                placeholder="buyer@email.com"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="buyerPhone">Phone</label>
+                            <input 
+                                type="tel" 
+                                id="buyerPhone" 
+                                class="form-control" 
+                                [(ngModel)]="buyerPhone" 
+                                name="buyerPhone"
+                                placeholder="+1 (555) 000-0000"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="shippingAddress">Shipping Address *</label>
+                        <textarea 
+                            id="shippingAddress" 
+                            class="form-control" 
+                            [(ngModel)]="shippingAddress" 
+                            name="shippingAddress"
+                            rows="3"
+                            placeholder="Enter shipping address"
+                            required
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="form-section">
+                    <h3>Order Items</h3>
+                    @if (cartItems().length === 0) {
+                        <div class="empty-cart">
+                            <i class="bi bi-cart"></i>
+                            <p>No products selected</p>
+                            <small>Click on products from the left to add them to this order</small>
+                        </div>
+                    } @else {
+                        <div class="cart-items">
+                            @for (item of cartItems(); track item.productId) {
+                                <div class="cart-item">
+                                    <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                                    <div class="cart-item-details">
+                                        <h4>{{ item.productName }}</h4>
+                                        <p>${{ item.price | number:'1.2-2' }} × {{ item.quantity }}</p>
+                                    </div>
+                                    <div class="cart-item-total">
+                                        ${{ (item.price * item.quantity) | number:'1.2-2' }}
+                                    </div>
+                                    <button type="button" class="btn-remove" (click)="removeFromCart(item.productId)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        <div class="cart-summary">
+                            <div class="summary-row">
+                                <span>Subtotal ({{ cartItemCount() }} items)</span>
+                                <span>${{ cartTotal() | number:'1.2-2' }}</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total</span>
+                                <span>${{ cartTotal() | number:'1.2-2' }}</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Payment & Source -->
+                <div class="form-section">
+                    <h3>Payment Details</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="paymentMethod">Payment Method</label>
+                            <select 
+                                id="paymentMethod" 
+                                class="form-control" 
+                                [(ngModel)]="paymentMethod" 
+                                name="paymentMethod"
+                            >
+                                <option value="CASH">Cash</option>
+                                <option value="CARD">Card</option>
+                                <option value="BANK_TRANSFER">Bank Transfer</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="orderSource">Sale Source</label>
+                            <select 
+                                id="orderSource" 
+                                class="form-control" 
+                                [(ngModel)]="orderSource" 
+                                name="orderSource"
+                            >
+                                <option value="CRAFT_FAIR">Craft Fair</option>
+                                <option value="IN_PERSON">In-Person</option>
+                                <option value="PHONE">Phone Order</option>
+                                <option value="CUSTOM">Custom Order</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Notes (Optional)</label>
+                        <textarea 
+                            id="notes" 
+                            class="form-control" 
+                            [(ngModel)]="notes" 
+                            name="notes"
+                            rows="2"
+                            placeholder="Add any additional notes..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-actions">
+                    <button 
+                        type="submit" 
+                        class="btn btn-primary btn-lg w-100" 
+                        [disabled]="submitting() || cartItems().length === 0"
+                    >
+                        @if (submitting()) {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            Creating Order...
+                        } @else {
+                            <i class="bi bi-check-circle"></i>
+                            Create Manual Order
+                        }
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+@if (showSuccessModal()) {
+    <div class="modal-backdrop" (click)="closeSuccessModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <i class="bi bi-check-circle-fill"></i>
+                <h2>Order Created!</h2>
+            </div>
+            <div class="modal-body">
+                <p>The manual order has been created successfully.</p>
+                <div class="order-number">
+                    <span>Order Number:</span>
+                    <strong>{{ createdOrderNumber() }}</strong>
+                </div>
+                <p class="small text-muted">Inventory has been automatically updated.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" (click)="closeSuccessModal()">
+                    <i class="bi bi-plus-circle"></i> Create Another Order
+                </button>
+            </div>
+        </div>
+    </div>
+}

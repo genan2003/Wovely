@@ -9,6 +9,11 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'products', component: ProductListComponent, canActivate: [authGuard] },
+    { 
+        path: 'seller', 
+        loadChildren: () => import('./components/seller/seller.routes').then(m => m.SELLER_ROUTES),
+        canActivate: [authGuard] 
+    },
     { path: 'admin', loadComponent: () => import('./components/admin/admin.component').then(m => m.AdminComponent), canActivate: [AdminGuard] },
     { path: '', redirectTo: 'products', pathMatch: 'full' }
 ];

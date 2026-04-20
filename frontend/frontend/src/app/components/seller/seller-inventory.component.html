@@ -1,0 +1,293 @@
+<div class="seller-inventory-container">
+    <!-- Header -->
+    <div class="inventory-header">
+        <div class="header-content">
+            <h1>Visual Inventory</h1>
+            <p class="subtitle">Manage your products with our SKU-free interface</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" (click)="toggleView()">
+                <i class="bi" [class.bi-grid]="viewMode() === 'list'" [class.bi-list]="viewMode() === 'grid'"></i>
+                {{ viewMode() === 'grid' ? 'List View' : 'Grid View' }}
+            </button>
+            <button class="btn btn-success" (click)="openAddDialog()">
+                <i class="bi bi-plus-circle"></i> Add Product
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Dashboard -->
+    <div class="stats-dashboard">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats().total }}</div>
+            <div class="stat-label">Total Products</div>
+        </div>
+        <div class="stat-card stat-in-stock">
+            <div class="stat-value">{{ stats().inStock }}</div>
+            <div class="stat-label">In Stock</div>
+        </div>
+        <div class="stat-card stat-low-stock">
+            <div class="stat-value">{{ stats().lowStock }}</div>
+            <div class="stat-label">Low Stock</div>
+        </div>
+        <div class="stat-card stat-out-of-stock">
+            <div class="stat-value">{{ stats().outOfStock }}</div>
+            <div class="stat-label">Out of Stock</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="inventory-filters">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input 
+                type="text" 
+                placeholder="Search products by name..." 
+                (input)="search($event)"
+            />
+        </div>
+        <div class="category-filters">
+            @for (cat of categories(); track cat) {
+                <button 
+                    class="filter-chip" 
+                    [class.active]="selectedCategory() === cat"
+                    (click)="filterByCategory(cat)"
+                >
+                    {{ cat === 'all' ? 'All Categories' : cat }}
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    @if (loading()) {
+        <div class="loading-state">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading your inventory...</p>
+        </div>
+    }
+
+    <!-- Error State -->
+    @if (error()) {
+        <div class="error-state alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i>
+            {{ error() }}
+        </div>
+    }
+
+    <!-- Inventory Grid -->
+    @if (!loading() && !error()) {
+        @if (filteredItems().length === 0) {
+            <div class="empty-state">
+                <i class="bi bi-box-seam"></i>
+                <h3>No products found</h3>
+                <p>Products you create will appear here. Products are created when you submit a product for approval.</p>
+                <a routerLink="/products" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Go to Products Page
+                </a>
+            </div>
+        } @else {
+            <!-- Grid View -->
+            @if (viewMode() === 'grid') {
+                <div class="inventory-grid">
+                    @for (item of filteredItems(); track item.productId) {
+                        <div class="inventory-card" [class.low-stock]="item.isLowStock" [class.out-of-stock]="item.isOutOfStock">
+                            <div class="card-image">
+                                <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                                <span class="stock-badge" [class]="getStockBadgeClass(item)">
+                                    {{ getStockLabel(item) }}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <h4 class="product-name">{{ item.productName }}</h4>
+                                <p class="product-category">{{ item.category }}</p>
+                                <div class="product-details">
+                                    <span class="price">${{ item.price | number:'1.2-2' }}</span>
+                                    <span class="stock-quantity">
+                                        <i class="bi bi-box"></i> {{ item.stockQuantity }} units
+                                    </span>
+                                </div>
+                                <div class="card-actions">
+                                    <button class="btn btn-sm btn-outline-primary" title="Edit Stock">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" title="Restock">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            } @else {
+                <!-- List View -->
+                <div class="inventory-list">
+                    <div class="list-header">
+                        <div class="list-col image-col">Image</div>
+                        <div class="list-col name-col">Product</div>
+                        <div class="list-col category-col">Category</div>
+                        <div class="list-col price-col">Price</div>
+                        <div class="list-col stock-col">Stock</div>
+                        <div class="list-col actions-col">Actions</div>
+                    </div>
+                    @for (item of filteredItems(); track item.productId) {
+                        <div class="list-row" [class.low-stock]="item.isLowStock" [class.out-of-stock]="item.isOutOfStock">
+                            <div class="list-col image-col">
+                                <img class="list-thumbnail" [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                            </div>
+                            <div class="list-col name-col">
+                                <span class="product-name">{{ item.productName }}</span>
+                                <span class="stock-badge-sm" [class]="getStockBadgeClass(item)">
+                                    {{ getStockLabel(item) }}
+                                </span>
+                            </div>
+                            <div class="list-col category-col">{{ item.category }}</div>
+                            <div class="list-col price-col">${{ item.price | number:'1.2-2' }}</div>
+                            <div class="list-col stock-col">
+                                <span class="stock-indicator" [class.low]="item.isLowStock" [class.out]="item.isOutOfStock">
+                                    {{ item.stockQuantity }}
+                                </span>
+                            </div>
+                            <div class="list-col actions-col">
+                                <button class="btn btn-sm btn-icon" title="Edit Stock">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-icon" title="Restock">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                                <button class="btn btn-sm btn-icon" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    }
+</div>
+
+<!-- Add Product Modal -->
+@if (showAddDialog()) {
+    <div class="modal-backdrop" (click)="closeAddDialog()">
+        <div class="modal-content add-product-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2><i class="bi bi-plus-circle"></i> Add Product</h2>
+                <button type="button" class="btn-close" (click)="closeAddDialog()"></button>
+            </div>
+            <div class="modal-body">
+                @if (addError()) {
+                    <div class="alert alert-danger">{{ addError() }}</div>
+                }
+                <form (ngSubmit)="addProduct()">
+                    <div class="form-section">
+                        <h3>Product Information</h3>
+                        <div class="form-group">
+                            <label for="addName">Product Name *</label>
+                            <input type="text" id="addName" class="form-control" 
+                                [(ngModel)]="formName" name="formName" 
+                                placeholder="e.g., Handwoven Basket" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="addDescription">Description</label>
+                            <textarea id="addDescription" class="form-control" 
+                                [(ngModel)]="formDescription" name="formDescription" 
+                                rows="2" placeholder="Brief description of your product"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="addPrice">Price ($) *</label>
+                                <input type="number" id="addPrice" class="form-control" 
+                                    [(ngModel)]="formPrice" name="formPrice" 
+                                    step="0.01" min="0.01" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="addCategory">Category</label>
+                                <select id="addCategory" class="form-control" 
+                                    [(ngModel)]="formCategory" name="formCategory">
+                                    <option value="Handmade">Handmade</option>
+                                    <option value="Jewelry">Jewelry</option>
+                                    <option value="Pottery">Pottery</option>
+                                    <option value="Textiles">Textiles</option>
+                                    <option value="Woodwork">Woodwork</option>
+                                    <option value="Art">Art</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="addImageUrl">Image URL</label>
+                            <input type="text" id="addImageUrl" class="form-control" 
+                                [(ngModel)]="formImageUrl" name="formImageUrl" 
+                                placeholder="https://example.com/product-image.jpg" />
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h3>Sustainability & Shipping</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="addCo2">CO2 Emission Score</label>
+                                <select id="addCo2" class="form-control" 
+                                    [(ngModel)]="formCo2Score" name="formCo2Score">
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="addShipping">Shipping Method</label>
+                                <select id="addShipping" class="form-control" 
+                                    [(ngModel)]="formShipping" name="formShipping">
+                                    <option value="Standard">Standard</option>
+                                    <option value="Carbon Neutral">Carbon Neutral</option>
+                                    <option value="Express">Express</option>
+                                    <option value="Local Pickup">Local Pickup</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="addHandmade" 
+                                    [(ngModel)]="formIsHandmade" name="formIsHandmade" />
+                                <label for="addHandmade">This product is handmade</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h3>Inventory</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="addStock">Initial Stock Quantity</label>
+                                <input type="number" id="addStock" class="form-control" 
+                                    [(ngModel)]="formStockQuantity" name="formStockQuantity" 
+                                    min="0" />
+                            </div>
+                            <div class="form-group">
+                                <label for="addLowStock">Low Stock Alert Threshold</label>
+                                <input type="number" id="addLowStock" class="form-control" 
+                                    [(ngModel)]="formLowStockThreshold" name="formLowStockThreshold" 
+                                    min="1" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeAddDialog()">Cancel</button>
+                <button type="button" class="btn btn-success" (click)="addProduct()" [disabled]="addLoading()">
+                    @if (addLoading()) {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Adding...
+                    } @else {
+                        <i class="bi bi-check-circle"></i> Add Product
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
