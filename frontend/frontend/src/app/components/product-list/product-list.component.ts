@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductService } from '../../services/product.service';
+import { OrderService } from '../../services/order.service';
+import { StorageService } from '../../services/storage.service';
 import { Product } from '../../models/product.model';
 
 @Component({
@@ -12,13 +14,84 @@ import { Product } from '../../models/product.model';
 })
 export class ProductListComponent implements OnInit {
     private productService = inject(ProductService);
+    private orderService = inject(OrderService);
+    private storageService = inject(StorageService);
 
     public products = signal<Product[]>([]);
     public loading = signal<boolean>(true);
+    public orderProcessing = signal<boolean>(false);
     public error = signal<string | null>(null);
+
+    // Details Modal
+    public showDetails = signal<boolean>(false);
+    public selectedProduct = signal<Product | null>(null);
 
     ngOnInit(): void {
         this.fetchProducts();
+    }
+
+    openDetails(product: Product): void {
+        this.selectedProduct.set(product);
+        this.showDetails.set(true);
+    }
+
+    closeDetails(): void {
+        this.showDetails.set(false);
+        this.selectedProduct.set(null);
+    }
+
+    buyNow(product: Product): void {
+        if (!this.storageService.isLoggedIn()) {
+            alert('Please login to purchase items.');
+            return;
+        }
+
+        if (product.stockQuantity === 0) {
+            alert('Sorry, this unique item is currently out of stock.');
+            return;
+        }
+
+        const user = this.storageService.getUser();
+        
+        // Prepare order object
+        const order = {
+            buyerId: user.id,
+            buyerName: user.username,
+            sellerId: product.sellerId,
+            sellerName: 'Seller', // We could fetch seller name from products service if needed
+            totalAmount: product.price,
+            status: 'PENDING',
+            items: [
+                {
+                    productId: product.id,
+                    productName: product.name,
+                    quantity: 1,
+                    price: product.price,
+                    imageUrl: product.imageUrl
+                }
+            ],
+            shippingAddress: 'Buyer Default Address', // Placeholder
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        this.orderProcessing.set(true);
+        this.orderService.createOrder(order).subscribe({
+            next: (res) => {
+                alert(`Order successful! Order Number: ${res.orderNumber}. Stock has been reserved for your unique item.`);
+                this.orderProcessing.set(false);
+                this.closeDetails();
+                this.fetchProducts(); // Refresh to show updated stock
+            },
+            error: (err) => {
+                console.error('Order failed', err);
+                const errorMsg = err.error?.error || 'Failed to complete checkout. The item might have just been sold.';
+                alert(`Checkout failed: ${errorMsg}`);
+                this.orderProcessing.set(true);
+                this.orderProcessing.set(false);
+                this.fetchProducts(); // Refresh stock
+            }
+        });
     }
 
     fetchProducts(): void {
@@ -54,7 +127,9 @@ export class ProductListComponent implements OnInit {
                 category: 'Home & Living',
                 co2EmissionScore: 'Low',
                 shippingMethod: 'Carbon Neutral Courier',
-                isHandmade: true
+                isHandmade: true,
+                stockQuantity: 15,
+                lowStockThreshold: 5
             },
             {
                 id: '2',
@@ -66,7 +141,9 @@ export class ProductListComponent implements OnInit {
                 category: 'Clothing',
                 co2EmissionScore: 'Low',
                 shippingMethod: 'Bicycle Delivery (Local)',
-                isHandmade: true
+                isHandmade: true,
+                stockQuantity: 3,
+                lowStockThreshold: 5
             },
             {
                 id: '3',
@@ -78,7 +155,9 @@ export class ProductListComponent implements OnInit {
                 category: 'Home & Living',
                 co2EmissionScore: 'Low',
                 shippingMethod: 'Standard Eco-Post',
-                isHandmade: true
+                isHandmade: true,
+                stockQuantity: 0,
+                lowStockThreshold: 5
             },
             {
                 id: '4',
@@ -90,7 +169,9 @@ export class ProductListComponent implements OnInit {
                 category: 'Furniture',
                 co2EmissionScore: 'Medium',
                 shippingMethod: 'Freight (Carbon Offset)',
-                isHandmade: true
+                isHandmade: true,
+                stockQuantity: 1,
+                lowStockThreshold: 5
             },
             {
                 id: '5',
@@ -102,7 +183,9 @@ export class ProductListComponent implements OnInit {
                 category: 'Accessories',
                 co2EmissionScore: 'Low',
                 shippingMethod: 'Carbon Neutral Courier',
-                isHandmade: true
+                isHandmade: true,
+                stockQuantity: 25,
+                lowStockThreshold: 5
             }
         ];
     }

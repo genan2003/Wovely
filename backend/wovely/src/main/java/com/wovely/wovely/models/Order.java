@@ -61,6 +61,9 @@ public class Order {
     @Field("dispute_reason")
     private String disputeReason;
 
+    @Field("eco_shipping_label")
+    private String ecoShippingLabel;
+
     public Order() {
         this.createdAt = new Date();
         this.updatedAt = new Date();
@@ -209,5 +212,13 @@ public class Order {
 
     public void setDisputeReason(String disputeReason) {
         this.disputeReason = disputeReason;
+    }
+
+    public String getEcoShippingLabel() {
+        return ecoShippingLabel;
+    }
+
+    public void setEcoShippingLabel(String ecoShippingLabel) {
+        this.ecoShippingLabel = ecoShippingLabel;
     }
 }

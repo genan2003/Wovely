@@ -1,0 +1,79 @@
+.seller-orders-container {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    min-height: 80vh;
+}
+
+.orders-table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: #6c757d;
+}
+
+.badge {
+    padding: 8px 12px;
+    font-weight: 500;
+    border-radius: 30px;
+}
+
+.badge-pending { background-color: #ffeeba; color: #856404; }
+.badge-confirmed { background-color: #d1ecf1; color: #0c5460; }
+.badge-processing { background-color: #cce5ff; color: #004085; }
+.badge-shipped { background-color: #d4edda; color: #155724; }
+.badge-delivered { background-color: #28a745; color: white; }
+.badge-completed { background-color: #20c997; color: white; }
+.badge-cancelled { background-color: #f8d7da; color: #721c24; }
+.badge-default { background-color: #e2e3e5; color: #383d41; }
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+}
+
+.modal-dialog {
+    width: 100%;
+    max-width: 800px;
+}
+
+.item-img-sm {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.list-group-item {
+    padding: 1rem;
+    border-radius: 8px !important;
+    margin-bottom: 0.5rem;
+    border: 1px solid #eee;
+}
+
+.form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+}

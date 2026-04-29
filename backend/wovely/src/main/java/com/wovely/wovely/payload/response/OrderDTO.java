@@ -23,6 +23,7 @@ public class OrderDTO {
     private String adminNotes;
     private Boolean isDisputed;
     private String disputeReason;
+    private String ecoShippingLabel;
 
     public OrderDTO() {
     }
@@ -31,7 +32,7 @@ public class OrderDTO {
                     String sellerName, List<OrderItemDTO> items, Double totalAmount, EOrderStatus status,
                     Date createdAt, Date updatedAt, String shippingAddress, String trackingNumber,
                     String refundReason, String cancellationReason, String adminNotes, 
-                    Boolean isDisputed, String disputeReason) {
+                    Boolean isDisputed, String disputeReason, String ecoShippingLabel) {
         this.id = id;
         this.orderNumber = orderNumber;
         this.buyerId = buyerId;
@@ -50,6 +51,7 @@ public class OrderDTO {
         this.adminNotes = adminNotes;
         this.isDisputed = isDisputed;
         this.disputeReason = disputeReason;
+        this.ecoShippingLabel = ecoShippingLabel;
     }
 
     public String getId() {
@@ -194,5 +196,13 @@ public class OrderDTO {
 
     public void setDisputeReason(String disputeReason) {
         this.disputeReason = disputeReason;
+    }
+
+    public String getEcoShippingLabel() {
+        return ecoShippingLabel;
+    }
+
+    public void setEcoShippingLabel(String ecoShippingLabel) {
+        this.ecoShippingLabel = ecoShippingLabel;
     }
 }

@@ -1,6 +1,8 @@
 package com.wovely.wovely.controllers;
 
+import com.wovely.wovely.models.EOrderStatus;
 import com.wovely.wovely.models.ManualOrderRequest;
+import com.wovely.wovely.models.Order;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.services.OrderService;
 import jakarta.validation.Valid;
@@ -58,6 +60,89 @@ public class SellerOrderController {
                 "orders", orders,
                 "totalOrders", orders.size()
             ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Update order details (variations or shipping address) during pre-processing.
+     * Locked once order is in PROCESSING status or beyond.
+     */
+    @PutMapping("/orders/{orderId}/edit")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    public ResponseEntity<?> updateOrder(@PathVariable String orderId, @RequestBody Order updatedOrder) {
+        try {
+            OrderDTO order = orderService.updateOrderPreProcessing(orderId, updatedOrder);
+            if (order != null) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "Order updated successfully",
+                    "order", order
+                ));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "An unexpected error occurred: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update order status (e.g., to PROCESSING, SHIPPED, etc.).
+     * This may trigger auto-restocking if status is changed to CANCELLED or REFUNDED.
+     */
+    @PatchMapping("/orders/{orderId}/status")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderId, @RequestBody Map<String, String> request) {
+        try {
+            String statusStr = request.get("status");
+            if (statusStr == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Status is required"));
+            }
+            
+            EOrderStatus newStatus = EOrderStatus.valueOf(statusStr.toUpperCase());
+            String reason = request.get("reason");
+            
+            OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, reason, null);
+            if (order != null) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "Order status updated successfully",
+                    "order", order
+                ));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid status value"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Generate an automated eco-shipping label.
+     * Selects best low-CO2 carrier for the route.
+     */
+    @PostMapping("/orders/{orderId}/eco-label")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    public ResponseEntity<?> generateEcoLabel(@PathVariable String orderId) {
+        try {
+            OrderDTO order = orderService.generateEcoShippingLabel(orderId);
+            if (order != null) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "Eco-shipping label generated successfully",
+                    "order", order,
+                    "label", order.getEcoShippingLabel()
+                ));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", e.getMessage()));

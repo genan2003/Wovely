@@ -128,4 +128,26 @@ export class InventoryService {
     getOrdersBySeller(sellerId: string): Observable<{ orders: any[]; totalOrders: number }> {
         return this.http.get<{ orders: any[]; totalOrders: number }>(`${SELLER_API}/orders/seller/${sellerId}`);
     }
+
+    /**
+     * Update order details (variations or shipping address) during pre-processing.
+     * Locked once order is in PROCESSING status or beyond.
+     */
+    updateOrder(orderId: string, orderData: any): Observable<any> {
+        return this.http.put<any>(`${SELLER_API}/orders/${orderId}/edit`, orderData);
+    }
+
+    /**
+     * Update order status (e.g., to PROCESSING, SHIPPED, etc.).
+     */
+    updateOrderStatus(orderId: string, status: string, reason?: string): Observable<any> {
+        return this.http.patch<any>(`${SELLER_API}/orders/${orderId}/status`, { status, reason });
+    }
+
+    /**
+     * Automated Eco-Shipping: Best Low-CO2 Carrier selection and label generation.
+     */
+    generateEcoLabel(orderId: string): Observable<any> {
+        return this.http.post<any>(`${SELLER_API}/orders/${orderId}/eco-label`, {});
+    }
 }

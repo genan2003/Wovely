@@ -164,7 +164,7 @@ public class InventoryController {
      * Restock a product (add to existing stock).
      */
     @PostMapping("/seller/{sellerId}/product/{productId}/restock")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
     public ResponseEntity<?> restockProduct(@PathVariable String sellerId,
                                              @PathVariable String productId,
                                              @RequestBody Map<String, Integer> restockRequest) {
@@ -178,6 +178,46 @@ public class InventoryController {
                 .map(item -> {
                     inventoryService.updateInventoryStats(sellerId);
                     return ResponseEntity.ok(toVisualInventoryItem(item));
+                })
+                .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Reduce stock for a product (Real-Time Deduction).
+     * Returns error if not enough stock available.
+     */
+    @PostMapping("/seller/{sellerId}/product/{productId}/reduce-stock")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
+    public ResponseEntity<?> reduceStock(@PathVariable String sellerId,
+                                          @PathVariable String productId,
+                                          @RequestBody Map<String, Integer> reduceRequest) {
+        try {
+            Integer quantity = reduceRequest.get("quantity");
+            if (quantity == null || quantity <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Valid quantity is required"));
+            }
+
+            // Check if enough stock exists first
+            return inventoryService.getInventoryItem(sellerId, productId)
+                .map(item -> {
+                    if (item.getStockQuantity() < quantity) {
+                        return ResponseEntity.badRequest().body(Map.of(
+                            "error", "Not enough stock available",
+                            "available", item.getStockQuantity(),
+                            "requested", quantity
+                        ));
+                    }
+                    
+                    return inventoryService.reduceStock(sellerId, productId, quantity)
+                        .map(updatedItem -> {
+                            inventoryService.updateInventoryStats(sellerId);
+                            return ResponseEntity.ok(toVisualInventoryItem(updatedItem));
+                        })
+                        .orElse(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
                 })
                 .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {

@@ -158,7 +158,7 @@ public class ProductController {
    * Restock a product (add to existing stock).
    */
   @PostMapping("/seller/{sellerId}/product/{productId}/restock")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
   public ResponseEntity<?> restockProduct(@PathVariable String sellerId,
                                            @PathVariable String productId,
                                            @RequestBody Map<String, Integer> restockRequest) {
@@ -172,6 +172,42 @@ public class ProductController {
       }
       
       product.setStockQuantity(product.getStockQuantity() + quantity);
+      productRepository.save(product);
+      
+      return ResponseEntity.ok(toVisualProductMap(product));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", e.getMessage()));
+    }
+  }
+
+  /**
+   * Reduce stock for a product (Real-Time Deduction).
+   * Returns error if not enough stock available.
+   */
+  @PostMapping("/seller/{sellerId}/product/{productId}/reduce-stock")
+  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
+  public ResponseEntity<?> reduceStock(@PathVariable String sellerId,
+                                        @PathVariable String productId,
+                                        @RequestBody Map<String, Integer> reduceRequest) {
+    try {
+      Product product = productRepository.findBySellerIdAndId(sellerId, productId)
+          .orElseThrow(() -> new RuntimeException("Product not found"));
+      
+      Integer quantity = reduceRequest.get("quantity");
+      if (quantity == null || quantity <= 0) {
+        return ResponseEntity.badRequest().body(Map.of("error", "Valid quantity is required"));
+      }
+
+      if (product.getStockQuantity() < quantity) {
+        return ResponseEntity.badRequest().body(Map.of(
+            "error", "Not enough stock available",
+            "available", product.getStockQuantity(),
+            "requested", quantity
+        ));
+      }
+      
+      product.setStockQuantity(product.getStockQuantity() - quantity);
       productRepository.save(product);
       
       return ResponseEntity.ok(toVisualProductMap(product));

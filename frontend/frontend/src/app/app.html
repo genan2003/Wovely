@@ -22,6 +22,9 @@
       <a class="nav-link" routerLink="/seller/inventory" routerLinkActive="active">My Inventory</a>
     </li>
     <li class="nav-item" *ngIf="isSeller()">
+      <a class="nav-link" routerLink="/seller/orders" routerLinkActive="active">My Orders</a>
+    </li>
+    <li class="nav-item" *ngIf="isSeller()">
       <a class="nav-link" routerLink="/seller/manual-order" routerLinkActive="active">Manual Order</a>
     </li>
     <li class="nav-item">

@@ -9,5 +9,7 @@ export interface Product {
     co2EmissionScore: string;
     shippingMethod: string;
     isHandmade: boolean;
+    stockQuantity?: number;
+    lowStockThreshold?: number;
     status?: string;
 }

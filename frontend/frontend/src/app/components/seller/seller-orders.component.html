@@ -1,0 +1,169 @@
+<div class="seller-orders-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manage Orders</h2>
+        <button class="btn btn-outline-primary btn-sm" (click)="loadOrders()" [disabled]="loading()">
+            <span *ngIf="loading()">Refreshing...</span>
+            <span *ngIf="!loading()">Refresh Orders</span>
+        </button>
+    </div>
+
+    <div *ngIf="error()" class="alert alert-danger">{{ error() }}</div>
+
+    <div *ngIf="loading() && orders().length === 0" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Loading your orders...</p>
+    </div>
+
+    <div *ngIf="!loading() && orders().length === 0" class="empty-state text-center py-5">
+        <div class="empty-icon">📦</div>
+        <h3>No orders yet</h3>
+        <p class="text-muted">When you receive orders, they will appear here for management.</p>
+    </div>
+
+    <div *ngIf="orders().length > 0" class="orders-table-container">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Order #</th>
+                    <th>Buyer</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let order of orders()">
+                    <td>
+                        <strong>{{ order.orderNumber }}</strong>
+                        <div *ngIf="order.trackingNumber" class="small text-muted">
+                            Tracking: {{ order.trackingNumber }}
+                        </div>
+                    </td>
+                    <td>{{ order.buyerName }}</td>
+                    <td>{{ order.createdAt | date:'shortDate' }}</td>
+                    <td>{{ order.totalAmount | currency }}</td>
+                    <td>
+                        <span class="badge" [ngClass]="getStatusClass(order.status)">
+                            {{ order.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-info" (click)="openEditDialog(order)" [disabled]="!canEdit(order)">
+                                Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" (click)="updateStatus(order, 'PROCESSING')" *ngIf="order.status === 'CONFIRMED' || order.status === 'PENDING'">
+                                Start Processing
+                            </button>
+                            
+                            <!-- One-Click Eco-Label -->
+                            <button class="btn btn-sm btn-success" (click)="generateEcoLabel(order)" *ngIf="order.status === 'PROCESSING' && !order.ecoShippingLabel" [disabled]="generatingLabel()">
+                                <span *ngIf="generatingLabel()">Generating...</span>
+                                <span *ngIf="!generatingLabel()">Generate Eco-Label</span>
+                            </button>
+                            
+                            <button class="btn btn-sm btn-outline-primary" (click)="generateEcoLabel(order)" *ngIf="order.ecoShippingLabel">
+                                View Label
+                            </button>
+
+                            <button class="btn btn-sm btn-outline-primary" (click)="updateStatus(order, 'SHIPPED')" *ngIf="order.status === 'PROCESSING' && order.trackingNumber">
+                                Mark Shipped
+                            </button>
+                            <button class="btn btn-sm btn-outline-dark" (click)="updateStatus(order, 'DELIVERED')" *ngIf="order.status === 'SHIPPED'">
+                                Mark Delivered
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" (click)="updateStatus(order, 'CANCELLED')" *ngIf="canEdit(order)">
+                                Cancel
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Edit Order Dialog -->
+    <div class="modal-backdrop" *ngIf="showEditDialog()">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Edit Order: {{ selectedOrder()?.orderNumber }}</h5>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeEditDialog()"></button>
+                </div>
+                <div class="modal-body">
+                    <div *ngIf="editError()" class="alert alert-danger">{{ editError() }}</div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Shipping Address</label>
+                            <textarea class="form-control" rows="3" [(ngModel)]="editShippingAddress"></textarea>
+                            <div class="form-text">You can only edit this before the order enters "Processing".</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Order Items (Variations)</label>
+                            <div class="list-group">
+                                <div *ngFor="let item of editItems(); let i = index" class="list-group-item d-flex align-items-center">
+                                    <img [src]="item.imageUrl" alt="" class="item-img-sm me-3">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ item.productName }}</h6>
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <label class="form-label small mb-0">Color</label>
+                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="item.color">
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-0">Size</label>
+                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="item.size">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="ms-3 text-end">
+                                        <div class="fw-bold">{{ item.price | currency }}</div>
+                                        <div class="small">Qty: {{ item.quantity }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-outline-secondary" (click)="closeEditDialog()">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4" (click)="saveOrderChanges()" [disabled]="editLoading()">
+                        <span *ngIf="editLoading()">Saving...</span>
+                        <span *ngIf="!editLoading()">Save Changes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eco Label Dialog -->
+    <div class="modal-backdrop" *ngIf="showLabelDialog()">
+        <div class="modal-dialog">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Prepaid Eco-Shipping Label</h5>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeLabelDialog()"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="shipping-label-preview mb-4 p-3 border border-dark border-2 bg-light">
+                        <pre style="white-space: pre-wrap; font-family: monospace; font-size: 1rem; margin: 0;">{{ selectedLabel() }}</pre>
+                    </div>
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        The system has automatically selected the lowest CO2 carrier for this route. 
+                        No carrier negotiation or rate selection was required.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" (click)="closeLabelDialog()">Close</button>
+                    <button type="button" class="btn btn-success px-4" (click)="printLabel()">
+                        Print Label
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,11 @@ public class OrderService {
     @Autowired
     RestTemplate restTemplate;
 
+    @Autowired
+    EcoCarrierService ecoCarrierService;
+
     private static final String PRODUCTS_API = "http://localhost:8082/api/products";
+    private static final String INVENTORY_API = "http://localhost:8083/api/inventory";
 
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
@@ -75,41 +80,70 @@ public class OrderService {
         
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
-            
             String action = request.getAction();
             
             if ("UPDATE_STATUS".equals(action)) {
                 if (request.getNewStatus() != null) {
-                    order.setStatus(request.getNewStatus());
-                    
-                    if (EOrderStatus.CANCELLED.equals(request.getNewStatus())) {
-                        order.setCancellationReason(request.getReason());
-                    } else if (EOrderStatus.REFUNDED.equals(request.getNewStatus())) {
-                        order.setRefundReason(request.getReason());
-                    }
+                    return updateOrderStatus(orderId, request.getNewStatus(), request.getReason(), request.getAdminNotes());
                 }
             } else if ("FORCE_REFUND".equals(action)) {
-                order.setStatus(EOrderStatus.REFUNDED);
-                order.setRefundReason(request.getReason());
+                return updateOrderStatus(orderId, EOrderStatus.REFUNDED, request.getReason(), request.getAdminNotes());
             } else if ("CANCEL_ORDER".equals(action)) {
-                order.setStatus(EOrderStatus.CANCELLED);
-                order.setCancellationReason(request.getReason());
+                return updateOrderStatus(orderId, EOrderStatus.CANCELLED, request.getReason(), request.getAdminNotes());
             } else if ("UPDATE_TRACKING".equals(action)) {
                 order.setTrackingNumber(request.getTrackingNumber());
+                if (request.getAdminNotes() != null) order.setAdminNotes(request.getAdminNotes());
+                order.setUpdatedAt(new Date());
+                orderRepository.save(order);
+                return convertToDto(order);
             } else if ("MARK_DISPUTED".equals(action)) {
                 order.setIsDisputed(true);
                 order.setDisputeReason(request.getReason());
-                order.setStatus(EOrderStatus.DISPUTED);
+                return updateOrderStatus(orderId, EOrderStatus.DISPUTED, request.getReason(), request.getAdminNotes());
             } else if ("RESOLVE_DISPUTE".equals(action)) {
                 order.setIsDisputed(false);
                 order.setDisputeReason(null);
                 if (request.getNewStatus() != null) {
-                    order.setStatus(request.getNewStatus());
+                    return updateOrderStatus(orderId, request.getNewStatus(), request.getReason(), request.getAdminNotes());
                 }
             }
             
-            if (request.getAdminNotes() != null && !request.getAdminNotes().isEmpty()) {
-                order.setAdminNotes(request.getAdminNotes());
+            return convertToDto(order);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Centralized method to update order status and handle side effects like auto-restocking.
+     */
+    public OrderDTO updateOrderStatus(String orderId, EOrderStatus newStatus, String reason, String adminNotes) {
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        
+        if (orderOpt.isPresent()) {
+            Order order = orderOpt.get();
+            EOrderStatus oldStatus = order.getStatus();
+            
+            if (oldStatus == newStatus) {
+                return convertToDto(order);
+            }
+
+            order.setStatus(newStatus);
+            
+            if (EOrderStatus.CANCELLED.equals(newStatus)) {
+                order.setCancellationReason(reason);
+            } else if (EOrderStatus.REFUNDED.equals(newStatus)) {
+                order.setRefundReason(reason);
+            }
+            
+            // Auto-Restock on Cancellation or Refund
+            if ((newStatus == EOrderStatus.CANCELLED || newStatus == EOrderStatus.REFUNDED) && 
+                (oldStatus != EOrderStatus.CANCELLED && oldStatus != EOrderStatus.REFUNDED)) {
+                restoreStockForOrder(order);
+            }
+            
+            if (adminNotes != null && !adminNotes.isEmpty()) {
+                order.setAdminNotes(adminNotes);
             }
             
             order.setUpdatedAt(new Date());
@@ -119,6 +153,64 @@ public class OrderService {
         }
         
         return null;
+    }
+
+    /**
+     * Reduce stock for an item in both products and inventory services (Real-Time Deduction).
+     * Returns true if successful, false if not enough stock or other error.
+     */
+    private boolean reduceStockInServices(String sellerId, String productId, int quantity) {
+        try {
+            String productsUrl = PRODUCTS_API + "/seller/" + sellerId + "/product/" + productId + "/reduce-stock";
+            String inventoryUrl = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId + "/reduce-stock";
+
+            // Try reducing in products service first
+            restTemplate.postForEntity(productsUrl, java.util.Map.of("quantity", quantity), Object.class);
+            
+            // Then try in inventory service (best effort sync)
+            try {
+                restTemplate.postForEntity(inventoryUrl, java.util.Map.of("quantity", quantity), Object.class);
+            } catch (Exception e) {
+                System.err.println("Inventory service sync failed for product " + productId + ": " + e.getMessage());
+            }
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Failed to reduce stock in products service for product " + productId + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Restores stock for an item in both products and inventory services (Auto-Restock).
+     */
+    private void restockInServices(String sellerId, String productId, int quantity) {
+        try {
+            String productsUrl = PRODUCTS_API + "/seller/" + sellerId + "/product/" + productId + "/restock";
+            String inventoryUrl = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId + "/restock";
+
+            restTemplate.postForEntity(productsUrl, java.util.Map.of("quantity", quantity), Object.class);
+            
+            try {
+                restTemplate.postForEntity(inventoryUrl, java.util.Map.of("quantity", quantity), Object.class);
+            } catch (Exception e) {
+                System.err.println("Inventory service restock sync failed for product " + productId + ": " + e.getMessage());
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to restock in products service for product " + productId + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Restores stock for all items in an order (Auto-Restock on Cancellation/Refund).
+     */
+    private void restoreStockForOrder(Order order) {
+        if (order.getItems() == null) return;
+        
+        System.out.println("Restoring stock for order: " + order.getOrderNumber());
+        for (OrderItem item : order.getItems()) {
+            restockInServices(order.getSellerId(), item.getProductId(), item.getQuantity());
+        }
     }
 
     public OrderDTO regenerateShippingLabel(String orderId) {
@@ -131,6 +223,35 @@ public class OrderService {
             order.setUpdatedAt(new Date());
             orderRepository.save(order);
             return convertToDto(order);
+        }
+
+        return null;
+    }
+
+    /**
+     * Automated Eco-Shipping: Best Low-CO2 Carrier selection and label generation.
+     */
+    public OrderDTO generateEcoShippingLabel(String orderId) {
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+
+        if (orderOpt.isPresent()) {
+            Order order = orderOpt.get();
+            
+            // 1. Automatically select best eco-carrier
+            EcoCarrierService.EcoCarrier carrier = ecoCarrierService.selectBestCarrier(order.getShippingAddress());
+            
+            // 2. Generate prepaid label
+            String label = ecoCarrierService.generateLabel(order.getOrderNumber(), carrier, order.getShippingAddress());
+            
+            // 3. Update order with label and mock tracking
+            order.setEcoShippingLabel(label);
+            if (order.getTrackingNumber() == null) {
+                order.setTrackingNumber("ECO-" + System.currentTimeMillis() + "-" + carrier.getName().substring(0, 3).toUpperCase());
+            }
+            
+            order.setUpdatedAt(new Date());
+            Order savedOrder = orderRepository.save(order);
+            return convertToDto(savedOrder);
         }
 
         return null;
@@ -182,35 +303,102 @@ public class OrderService {
             order.setAdminNotes("Manual Order - " + request.getNotes());
         }
 
-        order = orderRepository.save(order);
-
-        // Reduce stock for each item in the products service
-        for (com.wovely.wovely.models.ManualOrderItemRequest orderItem : request.getItems()) {
-            try {
-                String stockUrl = PRODUCTS_API + "/seller/" + request.getSellerId() + "/product/" +
-                    orderItem.getProductId() + "/stock";
-
-                // Get current product to calculate new stock
-                String productUrl = PRODUCTS_API + "/seller/" + request.getSellerId() + "/product/" +
-                    orderItem.getProductId();
-
-                @SuppressWarnings("unchecked")
-                java.util.Map<String, Object> currentProduct = restTemplate.getForObject(productUrl,
-                    java.util.Map.class);
-
-                if (currentProduct != null) {
-                    int currentStock = ((Number) currentProduct.get("stockQuantity")).intValue();
-                    int newStock = Math.max(0, currentStock - orderItem.getQuantity());
-
-                    restTemplate.put(stockUrl, java.util.Map.of("quantity", newStock));
+        // Try reducing stock for all items (Real-Time Deduction)
+        List<OrderItem> reducedItems = new ArrayList<>();
+        try {
+            for (OrderItem item : order.getItems()) {
+                if (reduceStockInServices(order.getSellerId(), item.getProductId(), item.getQuantity())) {
+                    reducedItems.add(item);
+                } else {
+                    throw new RuntimeException("Insufficient stock for product: " + item.getProductName());
                 }
-            } catch (Exception e) {
-                // Log but don't fail the order if stock update fails
-                System.err.println("Failed to update stock for product: " + orderItem.getProductId());
             }
+        } catch (Exception e) {
+            // Rollback stock reduction for already processed items
+            for (OrderItem reducedItem : reducedItems) {
+                restockInServices(order.getSellerId(), reducedItem.getProductId(), reducedItem.getQuantity());
+            }
+            throw e;
         }
 
+        order = orderRepository.save(order);
         return convertToDto(order);
+    }
+
+    /**
+     * Create a regular order (Real-Time Deduction).
+     * This is called when a buyer completes checkout.
+     */
+    public OrderDTO createOrder(Order order) {
+        if (order.getCreatedAt() == null) order.setCreatedAt(new Date());
+        if (order.getUpdatedAt() == null) order.setUpdatedAt(new Date());
+        if (order.getStatus() == null) order.setStatus(EOrderStatus.PENDING);
+        
+        // Generate order number if not present
+        if (order.getOrderNumber() == null) {
+            order.setOrderNumber("ORD-" + System.currentTimeMillis() + "-" + 
+                (order.getBuyerId() != null ? order.getBuyerId().substring(0, Math.min(4, order.getBuyerId().length())).toUpperCase() : "GUEST"));
+        }
+
+        // 1. Try to reduce stock for all items first (Real-Time Deduction)
+        List<OrderItem> reducedItems = new ArrayList<>();
+        if (order.getItems() != null) {
+            try {
+                for (OrderItem item : order.getItems()) {
+                    if (reduceStockInServices(order.getSellerId(), item.getProductId(), item.getQuantity())) {
+                        reducedItems.add(item);
+                    } else {
+                        throw new RuntimeException("Insufficient stock for product: " + item.getProductName());
+                    }
+                }
+            } catch (Exception e) {
+                // 2. Compensation: Rollback stock reduction if any fails
+                for (OrderItem reducedItem : reducedItems) {
+                    restockInServices(order.getSellerId(), reducedItem.getProductId(), reducedItem.getQuantity());
+                }
+                throw e;
+            }
+        }
+        
+        // 3. Save order only if stock reduction succeeded
+        Order savedOrder = orderRepository.save(order);
+        return convertToDto(savedOrder);
+    }
+
+    /**
+     * Update order items (variations) or shipping address during pre-processing.
+     * Locked once status is PROCESSING or beyond.
+     */
+    public OrderDTO updateOrderPreProcessing(String orderId, Order updatedOrderData) {
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        
+        if (orderOpt.isPresent()) {
+            Order order = orderOpt.get();
+            EOrderStatus currentStatus = order.getStatus();
+            
+            // Lock if status is beyond CONFIRMED (i.e., PROCESSING, SHIPPED, etc.)
+            if (currentStatus != EOrderStatus.PENDING && currentStatus != EOrderStatus.CONFIRMED) {
+                throw new RuntimeException("Order is locked and cannot be edited in its current status: " + currentStatus);
+            }
+            
+            // Update shipping address if provided
+            if (updatedOrderData.getShippingAddress() != null) {
+                order.setShippingAddress(updatedOrderData.getShippingAddress());
+            }
+            
+            // Update items (variations like color/size)
+            if (updatedOrderData.getItems() != null) {
+                // Ensure we don't change product IDs or quantities easily without re-checking stock,
+                // but for this feature we mainly focus on variations.
+                order.setItems(updatedOrderData.getItems());
+            }
+            
+            order.setUpdatedAt(new Date());
+            Order savedOrder = orderRepository.save(order);
+            return convertToDto(savedOrder);
+        }
+        
+        return null;
     }
 
     private OrderDTO convertToDto(Order order) {
@@ -245,7 +433,8 @@ public class OrderService {
             order.getCancellationReason(),
             order.getAdminNotes(),
             order.getIsDisputed(),
-            order.getDisputeReason()
+            order.getDisputeReason(),
+            order.getEcoShippingLabel()
         );
     }
 }

@@ -4,55 +4,151 @@
         <p class="lead text-muted wovely-subtitle">Discover unique finds with a low carbon footprint.</p>
     </div>
 
-    <div *ngIf="loading()" class="text-center py-5">
-        <div class="spinner-border text-success" role="status">
-            <span class="visually-hidden">Loading amazing products...</span>
+    @if (loading()) {
+        <div class="text-center py-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading amazing products...</span>
+            </div>
         </div>
-    </div>
+    }
 
-    <div *ngIf="!loading() && products().length === 0" class="text-center py-5">
-        <h3 class="text-muted">No products found. Be the first to sell!</h3>
-    </div>
+    @if (!loading() && products().length === 0) {
+        <div class="text-center py-5">
+            <h3 class="text-muted">No products found. Be the first to sell!</h3>
+        </div>
+    }
 
-    <div *ngIf="!loading() && products().length > 0"
-        class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 masonry-grid">
+    @if (!loading() && products().length > 0) {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 masonry-grid">
+            @for(product of products(); track product.id) {
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative overflow-hidden card-img-container">
+                        <img [src]="product.imageUrl" class="card-img-top product-image" [alt]="product.name">
 
-        @for(product of products(); track product.id) {
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <div class="position-relative overflow-hidden card-img-container">
-                    <img [src]="product.imageUrl" class="card-img-top product-image" [alt]="product.name">
-
-                    <div class="position-absolute top-0 end-0 p-2 d-flex flex-column gap-2">
-                        <span class="badge rounded-pill eco-badge shadow-sm" *ngIf="product.co2EmissionScore === 'Low'"
-                            title="Low CO2 Shipping">
-                            <i class="bi bi-tree-fill me-1"></i> Eco
-                        </span>
-                        <span class="badge rounded-pill handmade-badge shadow-sm" *ngIf="product.isHandmade"
-                            title="Handmade Item">
-                            <i class="bi bi-heart-fill me-1"></i> Handcrafted
-                        </span>
-                    </div>
-                </div>
-
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title fw-bold mb-0 product-title">{{ product.name }}</h5>
-                        <span class="fw-bold product-price">${{ product.price | number:'1.2-2' }}</span>
+                        <div class="position-absolute top-0 end-0 p-2 d-flex flex-column gap-2">
+                            @if (product.co2EmissionScore === 'Low') {
+                                <span class="badge rounded-pill eco-badge shadow-sm" title="Low CO2 Shipping">
+                                    <i class="bi bi-tree-fill me-1"></i> Eco
+                                </span>
+                            }
+                            @if (product.isHandmade) {
+                                <span class="badge rounded-pill handmade-badge shadow-sm" title="Handmade Item">
+                                    <i class="bi bi-heart-fill me-1"></i> Handcrafted
+                                </span>
+                            }
+                        </div>
                     </div>
 
-                    <p class="card-text text-muted small flex-grow-1">{{ product.description }}</p>
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title fw-bold mb-0 product-title">{{ product.name }}</h5>
+                            <span class="fw-bold product-price">${{ product.price | number:'1.2-2' }}</span>
+                        </div>
 
-                    <div class="mt-3 d-flex align-items-center justify-content-between brand-footer">
-                        <small class="text-muted d-flex align-items-center">
-                            <span class="shipping-icon me-1">🚚</span> {{ product.shippingMethod }}
-                        </small>
-                        <button class="btn btn-sm btn-outline-dark rounded-pill px-3 buy-btn">View</button>
+                        <p class="card-text text-muted small flex-grow-1">{{ product.description }}</p>
+
+                        <div class="mt-3 d-flex align-items-center justify-content-between brand-footer">
+                            <small class="text-muted d-flex align-items-center">
+                                <span class="shipping-icon me-1">🚚</span> {{ product.shippingMethod }}
+                            </small>
+                            <button class="btn btn-sm btn-outline-dark rounded-pill px-3 buy-btn" (click)="openDetails(product)">View</button>
+                        </div>
                     </div>
                 </div>
             </div>
+            }
         </div>
-        }
-
-    </div>
+    }
 </div>
+
+<!-- Product Details Modal -->
+@if (showDetails()) {
+    <div class="modal-backdrop" (click)="closeDetails()">
+        <div class="modal-content product-details-modal" (click)="$event.stopPropagation()">
+            <button class="close-btn" (click)="closeDetails()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+
+            @if (selectedProduct(); as product) {
+                <div class="details-container">
+                    <div class="details-image-section">
+                        <img [src]="product.imageUrl" [alt]="product.name">
+                    </div>
+
+                    <div class="details-info-section">
+                        <div class="details-header">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="category-tag">{{ product.category }}</span>
+                                <div class="d-flex gap-2">
+                                    @if (product.co2EmissionScore === 'Low') {
+                                        <span class="badge rounded-pill eco-badge-alt">
+                                            <i class="bi bi-tree-fill"></i> Eco-Friendly
+                                        </span>
+                                    }
+                                    @if (product.isHandmade) {
+                                        <span class="badge rounded-pill handmade-badge-alt">
+                                            <i class="bi bi-heart-fill"></i> Handcrafted
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                            <h2 class="product-full-title">{{ product.name }}</h2>
+                            <div class="price-stock-row d-flex justify-content-between align-items-center">
+                                <span class="full-price">${{ product.price | number:'1.2-2' }}</span>
+                                <span class="stock-info" [class.out-of-stock]="product.stockQuantity === 0">
+                                    {{ product.stockQuantity === 0 ? 'Out of Stock' : (product.stockQuantity + ' items left') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="details-description mt-4">
+                            <h6>Description</h6>
+                            <p>{{ product.description }}</p>
+                        </div>
+
+                        <div class="sustainability-info mt-4">
+                            <h6>Impact Highlights</h6>
+                            <div class="impact-grid">
+                                <div class="impact-item">
+                                    <i class="bi bi-truck"></i>
+                                    <div>
+                                        <span class="label">Shipping</span>
+                                        <span class="value">{{ product.shippingMethod }}</span>
+                                    </div>
+                                </div>
+                                @if (product.co2EmissionScore === 'Low') {
+                                    <div class="impact-item">
+                                        <i class="bi bi-cloud-check"></i>
+                                        <div>
+                                            <span class="label">Emissions</span>
+                                            <span class="value">Low Carbon</span>
+                                        </div>
+                                    </div>
+                                }
+                                @if (product.isHandmade) {
+                                    <div class="impact-item">
+                                        <i class="bi bi-people"></i>
+                                        <div>
+                                            <span class="label">Source</span>
+                                            <span class="value">Local Artisan</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="action-buttons mt-5 d-flex gap-3">
+                            <button class="btn btn-outline-dark btn-lg flex-grow-1" (click)="buyNow(product)" [disabled]="product.stockQuantity === 0">
+                                Add to Cart
+                            </button>
+                            <button class="btn btn-dark btn-lg flex-grow-1" (click)="buyNow(product)" [disabled]="product.stockQuantity === 0">
+                                Buy Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}

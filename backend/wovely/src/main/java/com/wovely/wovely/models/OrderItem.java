@@ -6,6 +6,8 @@ public class OrderItem {
     private Integer quantity;
     private Double price;
     private String imageUrl;
+    private String color;
+    private String size;
 
     public OrderItem() {
     }
@@ -16,6 +18,16 @@ public class OrderItem {
         this.quantity = quantity;
         this.price = price;
         this.imageUrl = imageUrl;
+    }
+
+    public OrderItem(String productId, String productName, Integer quantity, Double price, String imageUrl, String color, String size) {
+        this.productId = productId;
+        this.productName = productName;
+        this.quantity = quantity;
+        this.price = price;
+        this.imageUrl = imageUrl;
+        this.color = color;
+        this.size = size;
     }
 
     public String getProductId() {
@@ -56,5 +68,21 @@ public class OrderItem {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public String getSize() {
+        return size;
+    }
+
+    public void setSize(String size) {
+        this.size = size;
     }
 }
