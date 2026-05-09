@@ -1,0 +1,32 @@
+.chat-container {
+    width: 350px;
+    height: 450px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-bubble {
+    max-width: 80%;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+}
+
+.status-indicator.online {
+    background: #28a745;
+}
+
+.typing-indicator {
+    font-style: italic;
+}

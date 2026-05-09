@@ -1,0 +1,14 @@
+$reviews = @(
+    @{ productId = "69f66f715f84cb31f6432ba6"; userId = "user1"; username = "Alice S."; rating = 5; comment = "Absolutely stunning! The quality is incredible."; photoUrls = @() },
+    @{ productId = "69f66f715f84cb31f6432ba6"; userId = "user2"; username = "Bob G."; rating = 4; comment = "Very durable and looks great."; photoUrls = @() },
+    @{ productId = "69f7b9ceb1424e85b217082c"; userId = "user3"; username = "Charlie B."; rating = 5; comment = "A beautiful vase, looks much better in person."; photoUrls = @() },
+    @{ productId = "69f7b9ceb1424e85b217082c"; userId = "user4"; username = "Diana M."; rating = 3; comment = "It's okay, but the packaging was a bit thin."; photoUrls = @() }
+)
+foreach ($review in $reviews) {
+    try {
+        Invoke-RestMethod -Uri "http://localhost:8082/api/reviews" -Method Post -Body ($review | ConvertTo-Json) -ContentType "application/json"
+        Write-Host "Injected review for $($review.productId)"
+    } catch {
+        Write-Error "Failed to inject review: $_"
+    }
+}

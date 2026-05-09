@@ -20,21 +20,99 @@ public class ProductController {
   @Autowired
   ProductRepository productRepository;
 
-  @GetMapping
-  public ResponseEntity<List<Product>> getAllProducts(@RequestParam(required = false) String category) {
+  private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+  private final String INVENTORY_API = "http://localhost:8083/api/inventory";
+
+  /**
+   * Sync changes with the inventory service.
+   */
+  private void syncWithInventory(String sellerId, String productId, Product product) {
     try {
-      List<Product> products;
-      if (category == null) {
-        products = productRepository.findByStatus("APPROVED");
-      } else {
-        products = productRepository.findByStatusAndCategory("APPROVED", category);
+      String url = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId;
+      
+      Map<String, Object> details = new HashMap<>();
+      details.put("productName", product.getName());
+      details.put("price", product.getPrice());
+      details.put("imageUrl", product.getImageUrl());
+      details.put("category", product.getCategory());
+      details.put("lowStockThreshold", product.getLowStockThreshold());
+      details.put("co2EmissionScore", product.getCo2EmissionScore());
+      details.put("shippingMethod", product.getShippingMethod());
+      details.put("isHandmade", product.getHandmade());
+      details.put("stockQuantity", product.getStockQuantity());
+      
+      restTemplate.put(url, details);
+    } catch (Exception e) {
+      System.err.println("Failed to sync with inventory service: " + e.getMessage());
+    }
+  }
+
+  @GetMapping
+  public ResponseEntity<List<Product>> getAllProducts(
+      @RequestParam(required = false) String category,
+      @RequestParam(required = false) String categoryPath,
+      @RequestParam(required = false) Boolean isEco,
+      @RequestParam(required = false) Boolean isHandmade,
+      @RequestParam(required = false) String city,
+      @RequestParam(required = false) String region,
+      @RequestParam(required = false) Double minPrice,
+      @RequestParam(required = false) Double maxPrice) {
+    try {
+      List<Product> products = productRepository.findByStatus("APPROVED");
+
+      if (category != null && !category.isEmpty()) {
+        products = products.stream()
+            .filter(p -> category.equals(p.getCategory()))
+            .collect(Collectors.toList());
       }
 
-      if (products.isEmpty()) {
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+      if (categoryPath != null && !categoryPath.isEmpty()) {
+        products = products.stream()
+            .filter(p -> p.getCategoryPath() != null && p.getCategoryPath().startsWith(categoryPath))
+            .collect(Collectors.toList());
       }
+
+      if (isEco != null && isEco) {
+        products = products.stream()
+            .filter(p -> "Low".equalsIgnoreCase(p.getCo2EmissionScore()))
+            .collect(Collectors.toList());
+      }
+
+      if (isHandmade != null && isHandmade) {
+        products = products.stream()
+            .filter(p -> p.getHandmade() != null && p.getHandmade())
+            .collect(Collectors.toList());
+      }
+
+      if (city != null && !city.isEmpty()) {
+        String searchCity = city.trim().toLowerCase();
+        products = products.stream()
+            .filter(p -> p.getCity() != null && p.getCity().toLowerCase().contains(searchCity))
+            .collect(Collectors.toList());
+      }
+
+      if (region != null && !region.isEmpty()) {
+        String searchRegion = region.trim().toLowerCase();
+        products = products.stream()
+            .filter(p -> p.getRegion() != null && p.getRegion().toLowerCase().contains(searchRegion))
+            .collect(Collectors.toList());
+      }
+
+      if (minPrice != null) {
+        products = products.stream()
+            .filter(p -> p.getPrice() != null && p.getPrice() >= minPrice)
+            .collect(Collectors.toList());
+      }
+
+      if (maxPrice != null) {
+        products = products.stream()
+            .filter(p -> p.getPrice() != null && p.getPrice() <= maxPrice)
+            .collect(Collectors.toList());
+      }
+
       return new ResponseEntity<>(products, HttpStatus.OK);
     } catch (Exception e) {
+      System.err.println("Search error: " + e.getMessage());
       return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -49,20 +127,35 @@ public class ProductController {
   @PostMapping
   public ResponseEntity<Product> createProduct(@RequestBody Product product) {
     try {
-      Product _product = productRepository.save(new Product(
+      Product _product = new Product(
           product.getName(),
           product.getDescription(),
           product.getPrice(),
           product.getSellerId(),
           product.getImageUrl(),
           product.getCategory(),
+          product.getCategoryPath(),
+          product.getMaterials(),
+          product.getCity(),
+          product.getRegion(),
+          product.getLatitude(),
+          product.getLongitude(),
           product.getCo2EmissionScore(),
           product.getShippingMethod(),
-          product.isHandmade(),
-          product.getStockQuantity(),
-          product.getLowStockThreshold()));
-      return new ResponseEntity<>(_product, HttpStatus.CREATED);
+          product.getHandmade(),
+          product.getStockQuantity() != null ? product.getStockQuantity() : 0,
+          product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5);
+      
+      if (product.getId() != null) {
+          _product.setId(product.getId());
+      }
+      
+      _product.setStatus("APPROVED");
+      Product savedProduct = productRepository.save(_product);
+      return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
     } catch (Exception e) {
+      System.err.println("Error creating product: " + e.getMessage());
+      e.printStackTrace();
       return new ResponseEntity<Product>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -146,6 +239,7 @@ public class ProductController {
       
       product.setStockQuantity(stockRequest.get("quantity"));
       productRepository.save(product);
+      syncWithInventory(sellerId, productId, product);
       
       return ResponseEntity.ok(toVisualProductMap(product));
     } catch (Exception e) {
@@ -158,7 +252,6 @@ public class ProductController {
    * Restock a product (add to existing stock).
    */
   @PostMapping("/seller/{sellerId}/product/{productId}/restock")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
   public ResponseEntity<?> restockProduct(@PathVariable String sellerId,
                                            @PathVariable String productId,
                                            @RequestBody Map<String, Integer> restockRequest) {
@@ -173,6 +266,7 @@ public class ProductController {
       
       product.setStockQuantity(product.getStockQuantity() + quantity);
       productRepository.save(product);
+      syncWithInventory(sellerId, productId, product);
       
       return ResponseEntity.ok(toVisualProductMap(product));
     } catch (Exception e) {
@@ -186,7 +280,6 @@ public class ProductController {
    * Returns error if not enough stock available.
    */
   @PostMapping("/seller/{sellerId}/product/{productId}/reduce-stock")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
   public ResponseEntity<?> reduceStock(@PathVariable String sellerId,
                                         @PathVariable String productId,
                                         @RequestBody Map<String, Integer> reduceRequest) {
@@ -209,8 +302,74 @@ public class ProductController {
       
       product.setStockQuantity(product.getStockQuantity() - quantity);
       productRepository.save(product);
+      syncWithInventory(sellerId, productId, product);
       
       return ResponseEntity.ok(toVisualProductMap(product));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", e.getMessage()));
+    }
+  }
+
+  /**
+   * Update full product details for a seller.
+   */
+  @PutMapping("/seller/{sellerId}/product/{productId}")
+  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  public ResponseEntity<?> updateProduct(@PathVariable String sellerId,
+                                        @PathVariable String productId,
+                                        @RequestBody Product product) {
+    try {
+      java.util.Optional<Product> productData = productRepository.findBySellerIdAndId(sellerId, productId);
+      
+      if (productData.isPresent()) {
+        Product _product = productData.get();
+        _product.setName(product.getName());
+        _product.setDescription(product.getDescription());
+        _product.setPrice(product.getPrice());
+        _product.setImageUrl(product.getImageUrl());
+        _product.setCategory(product.getCategory());
+        _product.setCategoryPath(product.getCategoryPath());
+        _product.setMaterials(product.getMaterials());
+        _product.setCity(product.getCity());
+        _product.setRegion(product.getRegion());
+        _product.setLatitude(product.getLatitude());
+        _product.setLongitude(product.getLongitude());
+        _product.setCo2EmissionScore(product.getCo2EmissionScore());
+        _product.setShippingMethod(product.getShippingMethod());
+        _product.setHandmade(product.getHandmade());
+        _product.setLowStockThreshold(product.getLowStockThreshold());
+        
+        if (product.getStockQuantity() != null) {
+          _product.setStockQuantity(product.getStockQuantity());
+        }
+        
+        Product saved = productRepository.save(_product);
+        syncWithInventory(sellerId, productId, saved);
+        return new ResponseEntity<>(toVisualProductMap(saved), HttpStatus.OK);
+      } else {
+        return new ResponseEntity<>("Product not found with id: " + productId, HttpStatus.NOT_FOUND);
+      }
+    } catch (Exception e) {
+      System.err.println("Update error: " + e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", e.getMessage()));
+    }
+  }
+
+  /**
+   * Delete a product for a seller.
+   */
+  @DeleteMapping("/seller/{sellerId}/product/{productId}")
+  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  public ResponseEntity<?> deleteProduct(@PathVariable String sellerId,
+                                        @PathVariable String productId) {
+    try {
+      Product product = productRepository.findBySellerIdAndId(sellerId, productId)
+          .orElseThrow(() -> new RuntimeException("Product not found or unauthorized"));
+      
+      productRepository.delete(product);
+      return ResponseEntity.ok(Map.of("message", "Product deleted successfully"));
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(Map.of("error", e.getMessage()));
@@ -307,6 +466,7 @@ public class ProductController {
     visual.put("id", product.getId());
     visual.put("productId", product.getId());
     visual.put("name", product.getName());
+    visual.put("productName", product.getName());
     visual.put("description", product.getDescription());
     visual.put("imageUrl", product.getImageUrl());
     visual.put("category", product.getCategory());
@@ -317,8 +477,14 @@ public class ProductController {
     visual.put("isOutOfStock", product.isOutOfStock());
     visual.put("co2EmissionScore", product.getCo2EmissionScore());
     visual.put("shippingMethod", product.getShippingMethod());
-    visual.put("isHandmade", product.isHandmade());
+    visual.put("isHandmade", product.getHandmade());
     visual.put("status", product.getStatus());
+    visual.put("categoryPath", product.getCategoryPath());
+    visual.put("materials", product.getMaterials());
+    visual.put("city", product.getCity());
+    visual.put("region", product.getRegion());
+    visual.put("latitude", product.getLatitude());
+    visual.put("longitude", product.getLongitude());
     return visual;
   }
 }

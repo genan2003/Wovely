@@ -6,12 +6,15 @@ export interface InventoryItem {
     description?: string;
     imageUrl: string;
     category: string;
+    categoryPath?: string;
     price: number;
     stockQuantity: number;
     lowStockThreshold: number;
     co2EmissionScore?: string;
     shippingMethod?: string;
     isHandmade?: boolean;
+    city?: string;
+    region?: string;
     isActive?: boolean;
     isLowStock?: boolean;
     isOutOfStock?: boolean;

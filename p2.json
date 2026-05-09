@@ -1,0 +1,16 @@
+{
+  "name": "Vintage Linen Dress",
+  "description": "Upcycled vintage linen dress.",
+  "price": 85.00,
+  "sellerId": "user456",
+  "imageUrl": "https://images.unsplash.com/photo-1595777457583-95e059d581b8",
+  "category": "Clothing",
+  "categoryPath": "Clothing > Dresses",
+  "city": "Cluj-Napoca",
+  "region": "Cluj",
+  "co2EmissionScore": "Low",
+  "shippingMethod": "Bicycle Delivery",
+  "isHandmade": true,
+  "stockQuantity": 10,
+  "lowStockThreshold": 5
+}

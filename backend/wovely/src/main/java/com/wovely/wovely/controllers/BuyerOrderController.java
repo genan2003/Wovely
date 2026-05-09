@@ -1,6 +1,8 @@
 package com.wovely.wovely.controllers;
 
 import com.wovely.wovely.models.Order;
+import com.wovely.wovely.models.OrderItem;
+import com.wovely.wovely.repository.OrderRepository;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.services.OrderService;
 import jakarta.validation.Valid;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Controller for buyer-specific order operations.
@@ -24,6 +27,9 @@ public class BuyerOrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     /**
      * Create a new order (Checkout).
@@ -56,6 +62,53 @@ public class BuyerOrderController {
             OrderDTO updatedOrder = orderService.updateOrderStatus(id, com.wovely.wovely.models.EOrderStatus.CANCELLED, reason, null);
             if (updatedOrder != null) {
                 return ResponseEntity.ok(updatedOrder);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Confirm delivery of an order.
+     * Transitions order to DELIVERED status.
+     */
+    @PostMapping("/{id}/confirm-receipt")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> confirmReceipt(@PathVariable String id) {
+        try {
+            OrderDTO updatedOrder = orderService.updateOrderStatus(id, com.wovely.wovely.models.EOrderStatus.DELIVERED, "Buyer confirmed receipt", null);
+            if (updatedOrder != null) {
+                return ResponseEntity.ok(updatedOrder);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Mark specific items in an order as reviewed.
+     */
+    @PostMapping("/{id}/mark-reviewed")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> markReviewed(@PathVariable String id, @RequestBody List<String> productIds) {
+        try {
+            Optional<Order> orderOpt = orderRepository.findById(id);
+            if (orderOpt.isPresent()) {
+                Order order = orderOpt.get();
+                for (OrderItem item : order.getItems()) {
+                    if (productIds.contains(item.getProductId())) {
+                        item.setReviewed(true);
+                    }
+                }
+                order.setReviewed(true);
+                orderRepository.save(order);
+                return ResponseEntity.ok(Map.of("message", "Items marked as reviewed"));
             } else {
                 return ResponseEntity.notFound().build();
             }

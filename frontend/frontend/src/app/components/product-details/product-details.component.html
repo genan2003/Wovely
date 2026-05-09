@@ -1,0 +1,138 @@
+<div class="product-page py-5">
+    <div class="container">
+        @if (loading()) {
+            <div class="text-center py-5">
+                <div class="spinner-border text-success" role="status"></div>
+            </div>
+        } @else if (product(); as p) {
+            <div class="row g-4">
+                <!-- Left Card: Product Details -->
+                <div class="col-lg-8">
+                    <div class="card product-card p-4 h-100">
+                        <!-- Image Gallery Grid -->
+                        <div class="gallery-grid mb-4">
+                            <div class="main-image">
+                                <img [src]="p.imageUrl" [alt]="p.name" class="img-fluid rounded-4">
+                            </div>
+                            <div class="side-images">
+                                <img [src]="p.imageUrl" [alt]="p.name" class="img-fluid rounded-4 mb-2">
+                                <img [src]="p.imageUrl" [alt]="p.name" class="img-fluid rounded-4">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h1 class="product-title fw-bold mb-0">{{ p.name }}</h1>
+                                <div class="d-flex gap-2 mb-2">
+                                    @if (p.co2EmissionScore === 'Low') {
+                                        <span class="badge rounded-pill eco-badge shadow-sm" title="Eco" style="background-color: #E0F2DF; color: #2B542C;">
+                                            <i class="bi bi-leaf me-1"></i> Eco
+                                        </span>
+                                    }
+                                    @if (p.handmade || p.isHandmade) {
+                                        <span class="badge rounded-pill handmade-badge shadow-sm" title="Handcrafted" style="background-color: #FDEBD0; color: #D35400;">
+                                            Handcrafted
+                                        </span>
+                                    }
+                                </div>
+                                <h2 class="product-price fw-bold mb-3">{{ p.price | number:'1.0-0' }} RON</h2>
+                            </div>
+                            <div class="text-end">
+                                <div class="rating-stars h4 mb-0">
+                                    @for (i of [1,2,3,4,5]; track i) {
+                                        <i class="bi" [class.bi-star-fill]="i <= (averageRating() || 0)" [class.bi-star]="i > (averageRating() || 0)"></i>
+                                    }
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <a href="#reviews" class="text-decoration-none text-dark small" (click)="scrollToReviews($event)">See all {{ reviews().length }} reviews <i class="bi bi-arrow-right-circle"></i></a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="product-description text-muted mb-4">{{ p.description }}</p>
+
+                        <div class="mt-auto d-flex justify-content-end align-items-center gap-3">
+                            <button class="btn btn-fav-main" (click)="toggleFavorite()" [title]="favoriteService.isFavorite(safeProduct().id || '') ? 'Remove from Favorites' : 'Add to Favorites'">
+                                <i class="bi" [class.bi-heart-fill]="favoriteService.isFavorite(safeProduct().id || '')" [class.bi-heart]="!favoriteService.isFavorite(safeProduct().id || '')"></i>
+                            </button>
+                            <button class="btn btn-dark add-to-cart-btn px-4 py-2" (click)="addToCart()">
+                                Add to cart <i class="bi bi-cart"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Card: About Seller -->
+                <div class="col-lg-4">
+                    <div class="card seller-card p-4 h-100">
+                        <h3 class="fw-bold mb-4">About seller</h3>
+                        
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="seller-avatar">
+                                <img [src]="sellerProfile()?.workshopImageUrl || 'icons/user.png'" 
+                                     class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                            </div>
+                            <div>
+                                <div class="rating-stars h5 mb-0">
+                                    @for (i of [1,2,3,4,5]; track i) {
+                                        <i class="bi" [class.bi-star-fill]="i <= (averageRating() || 0)" [class.bi-star]="i > (averageRating() || 0)"></i>
+                                    }
+                                </div>
+                                <a [routerLink]="['/seller-profile', p.sellerId]" class="text-decoration-none text-dark small">See seller reviews <i class="bi bi-arrow-right-circle"></i></a>
+                            </div>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">{{ sellerProfile()?.fullName || sellerProfile()?.username || 'Seller #' + p.sellerId.substring(0, 6) }}</h4>
+                        <p class="seller-bio text-muted italic mb-4">
+                            {{ sellerProfile()?.makerStory || 'The artisan hasn\'t shared their story yet, but their work speaks for itself!' }}
+                        </p>
+
+                        <button class="btn btn-outline-dark w-100 rounded-pill py-2 fw-bold mb-2" (click)="toggleChat()">
+                            <i class="bi bi-chat-dots me-2"></i> Ask the Artisan
+                        </button>
+                        <button class="btn btn-link text-muted w-100 small p-0" (click)="reportProduct()">
+                            <i class="bi bi-flag-fill me-1"></i> Report this listing
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Section -->
+            <div class="mt-5" id="reviews">
+                <h2 class="fw-bold mb-4">Reviews</h2>
+                <div class="reviews-list">
+                    @for (review of reviews(); track review.id) {
+                        <div class="review-item p-4 rounded-4 bg-white border mb-3 shadow-sm">
+                            <div class="d-flex justify-content-between mb-2">
+                                <div>
+                                    <span class="fw-bold">{{ review.username }}</span>
+                                    <span class="badge bg-success bg-opacity-10 text-success ms-2 small" style="font-size: 0.7rem;">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Verified Purchase
+                                    </span>
+                                </div>
+                                <div class="text-warning">
+                                    @for (i of [1,2,3,4,5]; track i) {
+                                        <i class="bi" [class.bi-star-fill]="i <= review.rating" [class.bi-star]="i > review.rating"></i>
+                                    }
+                                </div>
+                            </div>
+                            <p class="text-muted mb-0">{{ review.comment }}</p>
+                        </div>
+                    } @empty {
+                        <p class="text-muted">No reviews yet for this masterpiece.</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Chat Overlay -->
+            @if (showChat()) {
+                <div class="chat-position">
+                    <app-chat [receiverId]="p.sellerId" 
+                             [receiverName]="sellerProfile()?.username || 'Artisan'" 
+                             [product]="p"
+                             (closeChat)="showChat.set(false)"></app-chat>
+                </div>
+            }
+        }
+    </div>
+</div>

@@ -1,0 +1,16 @@
+{
+  "name": "Basket",
+  "description": "yaya",
+  "price": 105.0,
+  "sellerId": "69f6015a06de5ea99ce5f21e",
+  "imageUrl": "https://free-images.com/lg/2532/easter_basket_purple_basket.jpg",
+  "category": "Art & Collectibles",
+  "categoryPath": "Art & Collectibles",
+  "city": "Sibiu",
+  "region": "Sibiu",
+  "co2EmissionScore": "Low",
+  "shippingMethod": "Standard",
+  "stockQuantity": 9,
+  "lowStockThreshold": 5,
+  "isHandmade": true
+}

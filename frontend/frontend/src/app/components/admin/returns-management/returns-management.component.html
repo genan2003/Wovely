@@ -1,0 +1,81 @@
+<div class="returns-management py-4">
+    @if (loading()) {
+        <div class="text-center p-5">
+            <div class="spinner-border text-success"></div>
+        </div>
+    } @else {
+        <div class="row g-4">
+            @for (ret of returns(); track ret.id) {
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+                        <div class="card-header bg-light p-3 border-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold me-3">Order #{{ ret.orderNumber }}</span>
+                                <span class="text-muted small">{{ ret.createdAt | date:'medium' }}</span>
+                            </div>
+                            <span class="badge" 
+                                  [class.bg-warning]="ret.status === 'PICKED_UP'" 
+                                  [class.bg-info]="ret.status === 'ARRIVED'"
+                                  [class.bg-primary]="ret.status === 'INSPECTION'"
+                                  [class.bg-success]="ret.status === 'REFUNDED'"
+                                  [class.bg-danger]="ret.status === 'DENIED'">
+                                {{ ret.status }}
+                            </span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row">
+                                <div class="col-md-6 border-end">
+                                    <h6 class="fw-bold mb-3">Return Details</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Buyer ID:</span>
+                                        <span>{{ ret.buyerId }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Seller:</span>
+                                        <span>{{ ret.sellerName }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="text-muted">Refund Amount:</span>
+                                        <span class="fw-bold text-success">{{ ret.totalAmount }} RON</span>
+                                    </div>
+                                    <div class="p-3 bg-light rounded-3 small">
+                                        <div class="fw-bold mb-1">Reason:</div>
+                                        {{ ret.reason }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold mb-3">Administrative Actions</h6>
+                                    <div class="btn-group w-100 mb-4 shadow-sm">
+                                        <button class="btn btn-outline-primary" (click)="updateStatus(ret.id!, 'INSPECTION')" [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'">Start Inspection</button>
+                                        <button class="btn btn-outline-success" (click)="updateStatus(ret.id!, 'REFUNDED')" [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'">Approve Refund</button>
+                                        <button class="btn btn-outline-danger" (click)="updateStatus(ret.id!, 'DENIED')" [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'">Deny Refund</button>
+                                    </div>
+                                    
+                                    <div class="status-preview small mt-3">
+                                        <div class="fw-bold mb-2">Customer Visibility:</div>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <span class="extra-small px-2 py-1 rounded bg-secondary text-white opacity-50" [class.opacity-100]="ret.status==='PICKED_UP'">Picked Up</span>
+                                            <i class="bi bi-chevron-right opacity-25"></i>
+                                            <span class="extra-small px-2 py-1 rounded bg-secondary text-white opacity-50" [class.opacity-100]="ret.status==='ARRIVED'">Arrived</span>
+                                            <i class="bi bi-chevron-right opacity-25"></i>
+                                            <span class="extra-small px-2 py-1 rounded bg-secondary text-white opacity-50" [class.opacity-100]="ret.status==='INSPECTION'">Inspection</span>
+                                            <i class="bi bi-chevron-right opacity-25"></i>
+                                            <span class="extra-small px-2 py-1 rounded bg-secondary text-white opacity-50" [class.bg-success]="ret.status==='REFUNDED'" [class.bg-danger]="ret.status==='DENIED'" [class.opacity-100]="ret.status==='REFUNDED' || ret.status==='DENIED'">
+                                                {{ ret.status === 'DENIED' ? 'Denied' : 'Refunded' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            } @empty {
+                <div class="text-center py-5">
+                    <i class="bi bi-shield-check display-1 text-muted opacity-25"></i>
+                    <p class="lead mt-3 text-muted">No refund requests pending review.</p>
+                </div>
+            }
+        </div>
+    }
+</div>

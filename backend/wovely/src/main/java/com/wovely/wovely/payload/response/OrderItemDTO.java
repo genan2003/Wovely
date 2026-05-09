@@ -6,6 +6,8 @@ public class OrderItemDTO {
     private Integer quantity;
     private Double price;
     private String imageUrl;
+    private boolean isReturned;
+    private boolean isReviewed;
 
     public OrderItemDTO() {
     }
@@ -16,6 +18,16 @@ public class OrderItemDTO {
         this.quantity = quantity;
         this.price = price;
         this.imageUrl = imageUrl;
+    }
+
+    public OrderItemDTO(String productId, String productName, Integer quantity, Double price, String imageUrl, boolean isReturned, boolean isReviewed) {
+        this.productId = productId;
+        this.productName = productName;
+        this.quantity = quantity;
+        this.price = price;
+        this.imageUrl = imageUrl;
+        this.isReturned = isReturned;
+        this.isReviewed = isReviewed;
     }
 
     public String getProductId() {
@@ -56,5 +68,21 @@ public class OrderItemDTO {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public boolean isReturned() {
+        return isReturned;
+    }
+
+    public void setReturned(boolean returned) {
+        isReturned = returned;
+    }
+
+    public boolean isReviewed() {
+        return isReviewed;
+    }
+
+    public void setReviewed(boolean reviewed) {
+        isReviewed = reviewed;
     }
 }

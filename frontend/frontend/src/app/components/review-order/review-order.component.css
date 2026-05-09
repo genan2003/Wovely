@@ -1,0 +1,32 @@
+.review-page {
+    background-color: #F5E6D6;
+    min-height: 100vh;
+}
+
+.review-card {
+    background-color: #FEF9F3 !important;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.stars {
+    color: #2D3A30;
+    cursor: pointer;
+}
+
+.stars i {
+    font-size: 1.5rem;
+    margin-left: 5px;
+}
+
+.post-btn {
+    background-color: #3E4A3D !important;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.item-review:last-of-type {
+    border-bottom: none !important;
+}

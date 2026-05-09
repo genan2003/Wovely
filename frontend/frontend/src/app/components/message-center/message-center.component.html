@@ -1,0 +1,105 @@
+<div class="message-center-container container-fluid py-5">
+    <div class="container bg-white shadow rounded-4 overflow-hidden message-hub">
+        <div class="row g-0 h-100">
+            <!-- Conversations Sidebar -->
+            <div class="col-md-4 col-lg-3 border-end sidebar h-100">
+                <div class="p-3 border-bottom sidebar-header">
+                    <h4 class="fw-bold mb-0">Messages</h4>
+                </div>
+                <div class="conversation-list overflow-auto">
+                    @if (loading()) {
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-success" role="status"></div>
+                        </div>
+                    } @else if (conversations().length === 0) {
+                        <div class="text-center p-5 text-muted">
+                            <i class="bi bi-chat-dots display-4 mb-3"></i>
+                            <p>No messages yet.</p>
+                        </div>
+                    } @else {
+                        @for (conv of conversations(); track conv.otherId) {
+                            <div class="conversation-item p-3 border-bottom d-flex align-items-center gap-3 cursor-pointer"
+                                 [class.active]="selectedConversation()?.otherId === conv.otherId"
+                                 (click)="selectConversation(conv)">
+                                <img [src]="conv.avatar" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="fw-bold mb-0 text-truncate">{{ conv.otherName }}</h6>
+                                        <small class="text-muted">{{ conv.timestamp | date:'shortTime' }}</small>
+                                    </div>
+                                    <div class="last-message small text-muted text-truncate" [class.fw-bold]="!conv.isRead">
+                                        {{ conv.lastMessage }}
+                                    </div>
+                                </div>
+                                @if (!conv.isRead) {
+                                    <div class="unread-dot"></div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="col-md-8 col-lg-9 d-flex flex-column h-100 chat-area">
+                @if (selectedConversation(); as conv) {
+                    <div class="chat-header p-3 border-bottom bg-light d-flex align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <img [src]="conv.avatar" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                            <h5 class="fw-bold mb-0">{{ conv.otherName }}</h5>
+                        </div>
+                        
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Dynamic Product Context (AliExpress Style) -->
+                            @if (messages().length > 0 && messages()[0].productId) {
+                                <div class="product-mini-card d-flex align-items-center gap-2 p-1 px-3 rounded-pill bg-white shadow-sm border">
+                                    <img [src]="messages()[0].productThumbnail" class="rounded" style="width: 25px; height: 25px; object-fit: cover;">
+                                    <span class="small fw-bold text-truncate" style="max-width: 120px;">Regarding Product</span>
+                                </div>
+                            }
+                            <button class="btn btn-link text-muted p-0" title="Report Conversation" (click)="reportConversation()">
+                                <i class="bi bi-flag-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="chat-history flex-grow-1 overflow-auto p-4 bg-light">
+                        @for (msg of messages(); track msg.id) {
+                            <div class="message-wrapper d-flex mb-3" [class.justify-content-end]="msg.senderId === currentUser.id">
+                                <div class="message-bubble p-2 px-3 rounded-4 shadow-sm"
+                                     [class.bg-success]="msg.senderId === currentUser.id"
+                                     [class.text-white]="msg.senderId === currentUser.id"
+                                     [class.bg-white]="msg.senderId !== currentUser.id">
+                                    <div class="content">{{ msg.content }}</div>
+                                    <div class="time small opacity-75 text-end" style="font-size: 0.7rem;">
+                                        {{ msg.timestamp | date:'shortTime' }}
+                                        @if (msg.senderId === currentUser.id) {
+                                            <i class="bi" [class.bi-check]="!msg.isRead" [class.bi-check-all]="msg.isRead"></i>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="chat-input p-3 border-top">
+                        <form (submit)="send()" class="d-flex gap-2">
+                            <input type="text" [(ngModel)]="newMessage" name="message" 
+                                   class="form-control rounded-pill px-4" 
+                                   placeholder="Type your message here...">
+                            <button type="submit" class="btn btn-success rounded-circle p-2 d-flex align-items-center justify-content-center" 
+                                    style="width: 45px; height: 45px;" [disabled]="!newMessage.trim()">
+                                <i class="bi bi-send-fill"></i>
+                            </button>
+                        </form>
+                    </div>
+                } @else {
+                    <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-muted bg-light">
+                        <i class="bi bi-chat-left-dots display-1 mb-3"></i>
+                        <h3>Select a conversation to start chatting</h3>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

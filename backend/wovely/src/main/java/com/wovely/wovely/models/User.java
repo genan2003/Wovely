@@ -38,6 +38,14 @@ public class User {
     
     private java.util.Date suspendedUntil;
 
+    private String fullName;
+
+    // Seller profile fields
+    private String makerStory;
+    private String workshopImageUrl;
+    private String city;
+    private String region;
+
     public User() {
     }
 
@@ -111,5 +119,45 @@ public class User {
 
     public void setSuspendedUntil(java.util.Date suspendedUntil) {
         this.suspendedUntil = suspendedUntil;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getMakerStory() {
+        return makerStory;
+    }
+
+    public void setMakerStory(String makerStory) {
+        this.makerStory = makerStory;
+    }
+
+    public String getWorkshopImageUrl() {
+        return workshopImageUrl;
+    }
+
+    public void setWorkshopImageUrl(String workshopImageUrl) {
+        this.workshopImageUrl = workshopImageUrl;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
     }
 }

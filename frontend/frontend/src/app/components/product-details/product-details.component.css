@@ -1,0 +1,136 @@
+.product-page {
+    background-color: #F5E6D6; /* Warm beige from mockup */
+    min-height: 100vh;
+    color: #2D3A30;
+}
+
+.product-card, .seller-card {
+    background-color: #FEF9F3; /* Light cream from mockup */
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.gallery-grid {
+    display: flex;
+    gap: 15px;
+}
+
+.main-image {
+    flex: 2;
+}
+
+.main-image img {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    background-color: #E5E5E5;
+}
+
+.side-images {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.side-images img {
+    width: 100%;
+    height: 192.5px; /* (400 - 15) / 2 */
+    object-fit: cover;
+    background-color: #E5E5E5;
+}
+
+.product-title {
+    font-size: 2.5rem;
+    color: #2D3A30;
+}
+
+.product-price {
+    font-size: 1.8rem;
+    color: #2D3A30;
+}
+
+.rating-stars {
+    color: #2D3A30;
+}
+
+.rating-stars i {
+    font-size: 1.5rem;
+}
+
+.product-description {
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.add-to-cart-btn {
+    background-color: #3E4A3D; /* Dark green/grey from mockup */
+    border: none;
+    border-radius: 10px;
+    padding: 12px 25px;
+    font-weight: 600;
+}
+
+.add-to-cart-btn:hover {
+    background-color: #2D3A30;
+}
+
+.seller-avatar img {
+    border: 2px solid #E5E5E5;
+    background-color: #E5E5E5;
+}
+
+.seller-bio {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.review-item {
+    background-color: #FEF9F3 !important;
+    border: none !important;
+    border-radius: 15px;
+}
+
+.btn-fav-main {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: #344E41;
+    font-size: 2rem;
+    transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 48px; /* Matching the approximate height of the padded cart button */
+}
+
+.btn-fav-main:hover {
+    transform: scale(1.1);
+}
+
+.btn-fav-main .bi-heart-fill {
+    color: #e74c3c;
+}
+
+.chat-position {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+}
+
+@media (max-width: 991.98px) {
+    .gallery-grid {
+        flex-direction: column;
+    }
+    .side-images {
+        flex-direction: row;
+    }
+    .side-images img {
+        height: 200px;
+    }
+}

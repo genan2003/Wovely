@@ -19,7 +19,7 @@
         <input 
           type="text" 
           class="search-input" 
-          placeholder="Search by username or email..."
+          placeholder="Search by name, ID, username or email..."
           [(ngModel)]="searchQuery"
         />
       </div>
@@ -48,6 +48,7 @@
       <table class="wovely-table">
         <thead>
           <tr>
+            <th>Full Name</th>
             <th>Username</th>
             <th>Email</th>
             <th>Roles</th>
@@ -59,6 +60,7 @@
         <tbody>
           @for (user of filteredUsers(); track user.id) {
             <tr>
+              <td class="fw-bold">{{ user['fullName'] || '—' }}</td>
               <td class="fw-medium">{{ user.username }}</td>
               <td>{{ user.email }}</td>
               <td>
@@ -83,7 +85,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="text-center empty-row">
+              <td colspan="7" class="text-center empty-row">
                 @if (users().length === 0) {
                   <span>No users found in the database.</span>
                 } @else {

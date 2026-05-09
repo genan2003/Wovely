@@ -1,0 +1,53 @@
+.settings-page {
+    background-color: #F5E6D6;
+    min-height: 100vh;
+    padding: 3rem 0;
+}
+
+.settings-card {
+    background-color: #FEF9F3 !important;
+    border: 1px solid #A68A64 !important;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    transition: transform 0.2s ease;
+}
+
+.settings-card:hover {
+    transform: translateY(-5px);
+}
+
+.card-title {
+    color: #2A4335 !important;
+    border-bottom: 2px solid #A68A64;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-save {
+    background-color: #3E4A3D !important;
+    color: #FEF9F3 !important;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 25px;
+    font-weight: 600;
+}
+
+.btn-save:hover {
+    background-color: #2D3A30 !important;
+}
+
+.form-label {
+    color: #2A4335;
+    font-weight: 600;
+}
+
+.form-control {
+    border-radius: 10px;
+}
+
+.section-icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+    color: #3E4A3D;
+}

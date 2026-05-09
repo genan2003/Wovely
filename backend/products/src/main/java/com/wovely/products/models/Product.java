@@ -10,13 +10,19 @@ public class Product {
 
   private String name;
   private String description;
-  private double price;
+  private Double price;
   private String sellerId;
   private String imageUrl;
   private String category;
+  private String categoryPath; // e.g., "Home & Living > Ceramics > Mugs"
+  private java.util.List<String> materials;
+  private String city;
+  private String region;
+  private Double latitude;
+  private Double longitude;
   private String co2EmissionScore; // Low, Medium, High
   private String shippingMethod; // e.g., Carbon Neutral Courier
-  private boolean isHandmade;
+  private Boolean isHandmade;
   private String status = "PENDING"; // PENDING, APPROVED, REJECTED, NEEDS_CHANGES
   
   // Inventory tracking fields
@@ -26,13 +32,19 @@ public class Product {
   public Product() {
   }
 
-  public Product(String name, String description, double price, String sellerId, String imageUrl, String category, String co2EmissionScore, String shippingMethod, boolean isHandmade, Integer stockQuantity, Integer lowStockThreshold) {
+  public Product(String name, String description, Double price, String sellerId, String imageUrl, String category, String categoryPath, java.util.List<String> materials, String city, String region, Double latitude, Double longitude, String co2EmissionScore, String shippingMethod, Boolean isHandmade, Integer stockQuantity, Integer lowStockThreshold) {
     this.name = name;
     this.description = description;
     this.price = price;
     this.sellerId = sellerId;
     this.imageUrl = imageUrl;
     this.category = category;
+    this.categoryPath = categoryPath;
+    this.materials = materials;
+    this.city = city;
+    this.region = region;
+    this.latitude = latitude;
+    this.longitude = longitude;
     this.co2EmissionScore = co2EmissionScore;
     this.shippingMethod = shippingMethod;
     this.isHandmade = isHandmade;
@@ -65,11 +77,11 @@ public class Product {
     this.description = description;
   }
 
-  public double getPrice() {
+  public Double getPrice() {
     return price;
   }
 
-  public void setPrice(double price) {
+  public void setPrice(Double price) {
     this.price = price;
   }
 
@@ -97,6 +109,54 @@ public class Product {
     this.category = category;
   }
 
+  public String getCategoryPath() {
+    return categoryPath;
+  }
+
+  public void setCategoryPath(String categoryPath) {
+    this.categoryPath = categoryPath;
+  }
+
+  public java.util.List<String> getMaterials() {
+    return materials;
+  }
+
+  public void setMaterials(java.util.List<String> materials) {
+    this.materials = materials;
+  }
+
+  public String getCity() {
+    return city;
+  }
+
+  public void setCity(String city) {
+    this.city = city;
+  }
+
+  public String getRegion() {
+    return region;
+  }
+
+  public void setRegion(String region) {
+    this.region = region;
+  }
+
+  public Double getLatitude() {
+    return latitude;
+  }
+
+  public void setLatitude(Double latitude) {
+    this.latitude = latitude;
+  }
+
+  public Double getLongitude() {
+    return longitude;
+  }
+
+  public void setLongitude(Double longitude) {
+    this.longitude = longitude;
+  }
+
   public String getCo2EmissionScore() {
     return co2EmissionScore;
   }
@@ -113,11 +173,11 @@ public class Product {
     this.shippingMethod = shippingMethod;
   }
 
-  public boolean isHandmade() {
+  public Boolean getHandmade() {
     return isHandmade;
   }
 
-  public void setHandmade(boolean handmade) {
+  public void setHandmade(Boolean handmade) {
     isHandmade = handmade;
   }
 

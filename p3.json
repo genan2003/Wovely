@@ -1,0 +1,16 @@
+{
+  "name": "Organic Beeswax Candles",
+  "description": "Set of 3 hand-poured candles.",
+  "price": 18.00,
+  "sellerId": "user789",
+  "imageUrl": "https://images.unsplash.com/photo-1603006905003-be475563bc59",
+  "category": "Home & Living",
+  "categoryPath": "Home & Living > Decor",
+  "city": "Sibiu",
+  "region": "Sibiu",
+  "co2EmissionScore": "Low",
+  "shippingMethod": "Standard Eco-Post",
+  "isHandmade": true,
+  "stockQuantity": 20,
+  "lowStockThreshold": 5
+}

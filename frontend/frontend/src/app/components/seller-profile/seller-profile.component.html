@@ -1,0 +1,98 @@
+<div class="seller-profile-page py-5">
+    <div class="container">
+        @if (loading()) {
+            <div class="text-center py-5">
+                <div class="spinner-border text-success" role="status"></div>
+            </div>
+        } @else if (seller(); as s) {
+            <div class="row g-4">
+                <!-- Seller Header -->
+                <div class="col-12">
+                    <div class="card profile-header-card p-4 shadow-sm border-0">
+                        <div class="d-flex align-items-center gap-4">
+                            <img [src]="safeSeller().workshopImageUrl || 'icons/user.png'" 
+                                 class="rounded-circle shadow" style="width: 120px; height: 120px; object-fit: cover;">
+                            <div>
+                                <h1 class="display-5 fw-bold mb-1">{{ safeSeller().fullName || safeSeller().username }}</h1>
+                                <p class="text-muted mb-0"><i class="bi bi-geo-alt-fill"></i> {{ safeSeller().city }}, {{ safeSeller().region }}</p>
+                                <div class="mt-2 h4 text-warning">
+                                    @for (i of [1,2,3,4,5]; track i) {
+                                        <i class="bi" [class.bi-star-fill]="i <= averageRatings().overall" [class.bi-star-half]="i > averageRatings().overall && i - 0.5 <= averageRatings().overall" [class.bi-star]="i > averageRatings().overall && i - 0.5 > averageRatings().overall"></i>
+                                    }
+                                    <span class="text-dark small ms-2">({{ reviews().length }} shop reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats and Bio -->
+                <div class="col-lg-4">
+                    <div class="card p-4 shadow-sm border-0 h-100 bg-white rounded-4">
+                        <h4 class="fw-bold mb-4">Artisan Story</h4>
+                        <p class="text-muted lh-lg italic">{{ safeSeller().makerStory || 'This artisan hasn\'t shared their story yet.' }}</p>
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="fw-bold mb-3">Shop Performance</h5>
+                        <div class="d-grid gap-3">
+                            <div class="stat-item">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Communication</span>
+                                    <span class="fw-bold">{{ averageRatings().communication | number:'1.1-1' }}/5</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" [style.width.%]="(averageRatings().communication/5)*100"></div>
+                                </div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Shipping Speed</span>
+                                    <span class="fw-bold">{{ averageRatings().shipping | number:'1.1-1' }}/5</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" [style.width.%]="(averageRatings().shipping/5)*100"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seller Reviews List -->
+                <div class="col-lg-8">
+                    <div class="card p-4 shadow-sm border-0 h-100 bg-white rounded-4">
+                        <h4 class="fw-bold mb-4">Customer Feedback</h4>
+                        
+                        <div class="reviews-list">
+                            @for (rev of reviews(); track rev.id) {
+                                <div class="review-item mb-4 pb-4 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <span class="fw-bold text-dark">{{ rev.buyerName }}</span>
+                                            <small class="text-muted ms-2">{{ rev.createdAt | date:'mediumDate' }}</small>
+                                        </div>
+                                        <div class="text-warning">
+                                            @for (i of [1,2,3,4,5]; track i) {
+                                                <i class="bi" [class.bi-star-fill]="i <= rev.overallRating" [class.bi-star]="i > rev.overallRating"></i>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (rev.comment) {
+                                        <p class="text-muted mb-0">{{ rev.comment }}</p>
+                                    } @else {
+                                        <p class="text-muted mb-0 italic small">Customer left a rating without a comment.</p>
+                                    }
+                                </div>
+                            } @empty {
+                                <div class="text-center py-5">
+                                    <i class="bi bi-chat-heart display-1 text-muted opacity-25"></i>
+                                    <p class="mt-3 text-muted">No seller reviews yet.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

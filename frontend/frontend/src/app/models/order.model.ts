@@ -4,6 +4,8 @@ export interface OrderItem {
   quantity: number;
   price: number;
   imageUrl?: string;
+  isReturned?: boolean;
+  isReviewed?: boolean;
 }
 
 export interface Order {
@@ -25,6 +27,8 @@ export interface Order {
   adminNotes?: string;
   isDisputed?: boolean;
   disputeReason?: string;
+  estimatedDeliveryDays?: number;
+  isReviewed?: boolean;
 }
 
 export enum OrderStatus {

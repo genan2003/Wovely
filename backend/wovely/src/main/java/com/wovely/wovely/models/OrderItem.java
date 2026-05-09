@@ -1,5 +1,7 @@
 package com.wovely.wovely.models;
 
+import org.springframework.data.mongodb.core.mapping.Field;
+
 public class OrderItem {
     private String productId;
     private String productName;
@@ -8,6 +10,12 @@ public class OrderItem {
     private String imageUrl;
     private String color;
     private String size;
+
+    @Field("is_returned")
+    private boolean isReturned = false;
+
+    @Field("is_reviewed")
+    private boolean isReviewed = false;
 
     public OrderItem() {
     }
@@ -84,5 +92,21 @@ public class OrderItem {
 
     public void setSize(String size) {
         this.size = size;
+    }
+
+    public boolean isReturned() {
+        return isReturned;
+    }
+
+    public void setReturned(boolean returned) {
+        isReturned = returned;
+    }
+
+    public boolean isReviewed() {
+        return isReviewed;
+    }
+
+    public void setReviewed(boolean reviewed) {
+        isReviewed = reviewed;
     }
 }

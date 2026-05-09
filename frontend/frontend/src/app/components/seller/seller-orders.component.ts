@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InventoryService } from '../../services/inventory.service';
 import { StorageService } from '../../services/storage.service';
+import { ReturnService, ReturnRequest } from '../../services/return.service';
 import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
@@ -15,11 +16,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 export class SellerOrdersComponent implements OnInit {
     inventoryService = inject(InventoryService);
     storageService = inject(StorageService);
+    returnService = inject(ReturnService);
 
     // Signals
     orders = signal<any[]>([]);
+    returns = signal<ReturnRequest[]>([]);
     loading = signal<boolean>(true);
     error = signal<string | null>(null);
+    view = signal<'orders' | 'returns'>('orders');
     
     // Status update
     updatingStatus = signal<boolean>(false);
@@ -38,6 +42,7 @@ export class SellerOrdersComponent implements OnInit {
     // Form fields
     editShippingAddress = signal<string>('');
     editItems = signal<any[]>([]);
+    deliveryDays = signal<number>(3); // Default 3 days
 
     sellerId: string = '';
 
@@ -54,7 +59,11 @@ export class SellerOrdersComponent implements OnInit {
         this.inventoryService.getOrdersBySeller(this.sellerId).subscribe({
             next: (response) => {
                 this.orders.set(response.orders);
-                this.loading.set(false);
+                // Also load returns
+                this.returnService.loadSellerReturns(this.sellerId).subscribe(rets => {
+                    this.returns.set(rets);
+                    this.loading.set(false);
+                });
             },
             error: (err) => {
                 this.error.set('Failed to load orders.');
@@ -105,9 +114,17 @@ export class SellerOrdersComponent implements OnInit {
     }
 
     updateStatus(order: any, newStatus: string): void {
+        let days = undefined;
+        if (newStatus === 'PROCESSING' || newStatus === 'SHIPPED') {
+            const input = prompt(`Estimated delivery in how many days?`, this.deliveryDays().toString());
+            if (input === null) return; // Cancelled
+            days = parseInt(input);
+            if (isNaN(days)) days = this.deliveryDays();
+        }
+
         if (confirm(`Are you sure you want to change status to ${newStatus}?`)) {
             this.updatingStatus.set(true);
-            this.inventoryService.updateOrderStatus(order.id, newStatus).subscribe({
+            this.inventoryService.updateOrderStatus(order.id, newStatus, undefined, days).subscribe({
                 next: () => {
                     this.updatingStatus.set(false);
                     this.loadOrders();
@@ -115,6 +132,25 @@ export class SellerOrdersComponent implements OnInit {
                 error: (err: HttpErrorResponse) => {
                     this.updatingStatus.set(false);
                     alert('Failed to update status: ' + (err.error?.error || err.message));
+                }
+            });
+        }
+    }
+
+    cancelOrder(order: any): void {
+        const reason = prompt('Reason for cancellation?');
+        if (reason === null) return; // User cancelled prompt
+
+        if (confirm('Are you sure you want to cancel this order? This will restock the items.')) {
+            this.updatingStatus.set(true);
+            this.inventoryService.updateOrderStatus(order.id, 'CANCELLED', reason).subscribe({
+                next: () => {
+                    this.updatingStatus.set(false);
+                    this.loadOrders();
+                },
+                error: (err: HttpErrorResponse) => {
+                    this.updatingStatus.set(false);
+                    alert('Failed to cancel order: ' + (err.error?.error || err.message));
                 }
             });
         }

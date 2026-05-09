@@ -1,0 +1,125 @@
+<div class="settings-page">
+    <div class="container py-5">
+        <h1 class="display-4 fw-bold mb-5 text-center">Settings</h1>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                
+                <!-- Profile Section -->
+                <div class="card settings-card p-4">
+                    <h3 class="card-title d-flex align-items-center">
+                        <i class="bi bi-person-circle section-icon"></i>
+                        Profile Information
+                    </h3>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" [(ngModel)]="profile.fullName" placeholder="Enter your full name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" [value]="username()" disabled>
+                        </div>
+                        @if (isSeller()) {
+                            <div class="col-12">
+                                <label class="form-label">Workshop / Profile Image URL</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-image"></i></span>
+                                    <input type="text" class="form-control" [(ngModel)]="profile.workshopImageUrl" placeholder="https://example.com/your-image.jpg">
+                                </div>
+                                <small class="text-muted">This image will be shown to customers in the 'About Seller' section.</small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Maker Bio / Story</label>
+                                <textarea class="form-control" [(ngModel)]="profile.makerStory" rows="4" placeholder="Share your story with your customers..."></textarea>
+                            </div>
+                        }
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button class="btn btn-save" (click)="saveProfile()">Save Changes</button>
+                    </div>
+                </div>
+
+                <!-- Addresses Section -->
+                <div class="card settings-card p-4">
+                    <h3 class="card-title d-flex align-items-center">
+                        <i class="bi bi-geo-alt-fill section-icon"></i>
+                        {{ isSeller() ? 'Pickup & Invoicing Addresses' : 'Delivery & Invoicing Addresses' }}
+                    </h3>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3">{{ isSeller() ? 'Pickup Address' : 'Delivery Address' }}</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Street</label>
+                                <input type="text" class="form-control" [(ngModel)]="profile.street" placeholder="123 Main St">
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-8">
+                                    <label class="form-label">City</label>
+                                    <input type="text" class="form-control" [(ngModel)]="profile.city">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">Zip</label>
+                                    <input type="text" class="form-control" [(ngModel)]="profile.zip">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="fw-bold mb-3">Invoicing Address</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Street</label>
+                                <input type="text" class="form-control" [(ngModel)]="profile.invoiceStreet">
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-8">
+                                    <label class="form-label">City</label>
+                                    <input type="text" class="form-control" [(ngModel)]="profile.invoiceCity">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">Zip</label>
+                                    <input type="text" class="form-control" [(ngModel)]="profile.invoiceZip">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button class="btn btn-save" (click)="saveAddresses()">Update Addresses</button>
+                    </div>
+                </div>
+
+                <!-- Payment Section -->
+                <div class="card settings-card p-4">
+                    <h3 class="card-title d-flex align-items-center">
+                        <i class="bi bi-credit-card-fill section-icon"></i>
+                        {{ isSeller() ? 'Payout Details (IBAN)' : 'Payment Methods' }}
+                    </h3>
+                    <div class="row g-3">
+                        @if (isSeller()) {
+                            <div class="col-12">
+                                <label class="form-label">IBAN Account Number</label>
+                                <input type="text" class="form-control" [(ngModel)]="profile.iban" placeholder="RO00 BANK 0000 0000 0000 0000">
+                                <small class="text-muted">This is where you will receive your payments from sales.</small>
+                            </div>
+                        } @else {
+                            <div class="col-md-8">
+                                <label class="form-label">Default Card Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-credit-card"></i></span>
+                                    <input type="text" class="form-control border-start-0" [(ngModel)]="profile.cardNumber" placeholder="**** **** **** 1234">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Expiry Date</label>
+                                <input type="text" class="form-control" [(ngModel)]="profile.expiryDate" placeholder="MM/YY">
+                            </div>
+                        }
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button class="btn btn-save" (click)="savePayment()">Save Payment Info</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

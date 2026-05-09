@@ -1,0 +1,31 @@
+.seller-profile-page {
+    background-color: #F5E6D6;
+    min-height: 100vh;
+}
+
+.profile-header-card {
+    background-color: #FEF9F3;
+    border-radius: 20px;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.review-item:last-child {
+    border-bottom: none !important;
+}
+
+.progress {
+    background-color: #E9ECEF;
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+.stat-item span {
+    font-size: 0.9rem;
+    color: #344E41;
+}

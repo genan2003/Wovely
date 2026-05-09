@@ -1,48 +1,40 @@
 <div class="seller-inventory-container">
     <!-- Header -->
     <div class="inventory-header">
-        <div class="header-content">
-            <h1>Visual Inventory</h1>
-            <p class="subtitle">Manage your products with our SKU-free interface</p>
-        </div>
-        <div class="header-actions">
-            <button class="btn btn-primary" (click)="toggleView()">
-                <i class="bi" [class.bi-grid]="viewMode() === 'list'" [class.bi-list]="viewMode() === 'grid'"></i>
-                {{ viewMode() === 'grid' ? 'List View' : 'Grid View' }}
-            </button>
-            <button class="btn btn-success" (click)="openAddDialog()">
-                <i class="bi bi-plus-circle"></i> Add Product
-            </button>
-        </div>
+        <h1>Visual inventory</h1>
+        <p class="subtitle">Manage your products</p>
     </div>
 
     <!-- Stats Dashboard -->
     <div class="stats-dashboard">
         <div class="stat-card">
-            <div class="stat-value">{{ stats().total }}</div>
-            <div class="stat-label">Total Products</div>
+            <span class="stat-value">{{ stats().total }}</span>
+            <span class="stat-label">Total products</span>
         </div>
-        <div class="stat-card stat-in-stock">
-            <div class="stat-value">{{ stats().inStock }}</div>
-            <div class="stat-label">In Stock</div>
+        <div class="stat-card">
+            <span class="stat-value">{{ stats().inStock }}</span>
+            <span class="stat-label">In Stock</span>
         </div>
-        <div class="stat-card stat-low-stock">
-            <div class="stat-value">{{ stats().lowStock }}</div>
-            <div class="stat-label">Low Stock</div>
+        <div class="stat-card">
+            <span class="stat-value">{{ stats().lowStock }}</span>
+            <span class="stat-label">Low Stock</span>
         </div>
-        <div class="stat-card stat-out-of-stock">
-            <div class="stat-value">{{ stats().outOfStock }}</div>
-            <div class="stat-label">Out of Stock</div>
+        <div class="stat-card">
+            <span class="stat-value">{{ stats().outOfStock }}</span>
+            <span class="stat-label">Out of stock</span>
         </div>
     </div>
 
-    <!-- Filters -->
+    <!-- Horizontal Divider -->
+    <div class="inventory-divider"></div>
+
+    <!-- Filters & Search -->
     <div class="inventory-filters">
         <div class="search-box">
             <i class="bi bi-search"></i>
             <input 
                 type="text" 
-                placeholder="Search products by name..." 
+                placeholder="Search products..." 
                 (input)="search($event)"
             />
         </div>
@@ -57,112 +49,102 @@
                 </button>
             }
         </div>
+        <div class="header-actions">
+            <button class="btn btn-icon" (click)="toggleView()" title="Toggle View">
+                <i class="bi" [class.bi-grid]="viewMode() === 'list'" [class.bi-list]="viewMode() === 'grid'"></i>
+            </button>
+        </div>
     </div>
 
     <!-- Loading State -->
     @if (loading()) {
-        <div class="loading-state">
-            <div class="spinner-border text-primary" role="status">
+        <div class="loading-state text-center py-5">
+            <div class="spinner-border text-success" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p>Loading your inventory...</p>
+            <p class="mt-3">Loading your inventory...</p>
         </div>
     }
 
     <!-- Error State -->
     @if (error()) {
-        <div class="error-state alert alert-danger">
-            <i class="bi bi-exclamation-triangle"></i>
+        <div class="error-state alert alert-danger rounded-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
             {{ error() }}
         </div>
     }
 
-    <!-- Inventory Grid -->
+    <!-- Inventory Content -->
     @if (!loading() && !error()) {
         @if (filteredItems().length === 0) {
-            <div class="empty-state">
-                <i class="bi bi-box-seam"></i>
-                <h3>No products found</h3>
-                <p>Products you create will appear here. Products are created when you submit a product for approval.</p>
-                <a routerLink="/products" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Go to Products Page
-                </a>
+            <div class="empty-state text-center py-5">
+                <i class="bi bi-box-seam display-1 text-muted opacity-25"></i>
+                <h3 class="mt-4">No products found</h3>
+                <p class="text-muted">Start by adding your first masterpiece.</p>
             </div>
         } @else {
             <!-- Grid View -->
             @if (viewMode() === 'grid') {
                 <div class="inventory-grid">
                     @for (item of filteredItems(); track item.productId) {
-                        <div class="inventory-card" [class.low-stock]="item.isLowStock" [class.out-of-stock]="item.isOutOfStock">
+                        <div class="inventory-card">
                             <div class="card-image">
                                 <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
-                                <span class="stock-badge" [class]="getStockBadgeClass(item)">
-                                    {{ getStockLabel(item) }}
-                                </span>
+                                <div class="stock-pill overlay-pill">
+                                    Stock: {{ item.stockQuantity }}
+                                </div>
                             </div>
                             <div class="card-body">
-                                <h4 class="product-name">{{ item.productName }}</h4>
-                                <p class="product-category">{{ item.category }}</p>
-                                <div class="product-details">
-                                    <span class="price">${{ item.price | number:'1.2-2' }}</span>
-                                    <span class="stock-quantity">
-                                        <i class="bi bi-box"></i> {{ item.stockQuantity }} units
-                                    </span>
+                                <div class="product-info-row">
+                                    <h4 class="product-name text-truncate">{{ item.productName }}</h4>
+                                    <span class="price">{{ item.price | number:'1.0-0' }} RON</span>
                                 </div>
-                                <div class="card-actions">
-                                    <button class="btn btn-sm btn-outline-primary" title="Edit Stock" (click)="openEditStockDialog(item)">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-success" title="Restock" (click)="openRestockDialog(item)">
-                                        <i class="bi bi-plus-lg"></i> Restock
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary" title="View Details" (click)="viewDetails(item)">
-                                        <i class="bi bi-eye"></i> Details
-                                    </button>
+                                <p class="product-description">{{ item.description || 'No description provided.' }}</p>
+                                
+                                <div class="card-footer">
+                                    <div class="card-actions">
+                                        <button class="btn-icon" title="Full Edit" (click)="openEditStockDialog(item)">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn-icon" title="Restock" (click)="openRestockDialog(item)">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                        <button class="btn-icon" title="View Details" (click)="viewDetails(item)">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                        <button class="btn-icon text-danger" title="Delete Product" (click)="deleteProduct(item)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     }
                 </div>
             } @else {
-                <!-- List View -->
-                <div class="inventory-list">
-                    <div class="list-header">
-                        <div class="list-col image-col">Image</div>
-                        <div class="list-col name-col">Product</div>
-                        <div class="list-col category-col">Category</div>
-                        <div class="list-col price-col">Price</div>
-                        <div class="list-col stock-col">Stock</div>
-                        <div class="list-col actions-col">Actions</div>
+                <!-- List View (Theme-consistent) -->
+                <div class="inventory-list bg-white rounded-4 overflow-hidden border" style="border-color: #A68A64 !important;">
+                    <div class="list-header p-3 border-bottom d-flex align-items-center gap-3 fw-bold" style="background: rgba(166, 138, 100, 0.1); border-color: #A68A64 !important;">
+                        <div style="width: 50px;"></div>
+                        <div class="flex-grow-1">Product Details</div>
+                        <div style="width: 100px;">Price</div>
+                        <div style="width: 100px;">Stock</div>
+                        <div style="width: 120px; text-align: right;">Actions</div>
                     </div>
                     @for (item of filteredItems(); track item.productId) {
-                        <div class="list-row" [class.low-stock]="item.isLowStock" [class.out-of-stock]="item.isOutOfStock">
-                            <div class="list-col image-col">
-                                <img class="list-thumbnail" [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                        <div class="list-row p-3 border-bottom d-flex align-items-center gap-3" style="border-color: rgba(166, 138, 100, 0.2) !important;">
+                            <img class="rounded-3" [src]="item.imageUrl || 'assets/placeholder-product.png'" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #A68A64;" />
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">{{ item.productName }}</div>
+                                <div class="small text-muted">{{ item.category }}</div>
                             </div>
-                            <div class="list-col name-col">
-                                <span class="product-name">{{ item.productName }}</span>
-                                <span class="stock-badge-sm" [class]="getStockBadgeClass(item)">
-                                    {{ getStockLabel(item) }}
-                                </span>
-                            </div>
-                            <div class="list-col category-col">{{ item.category }}</div>
-                            <div class="list-col price-col">${{ item.price | number:'1.2-2' }}</div>
-                            <div class="list-col stock-col">
-                                <span class="stock-indicator" [class.low]="item.isLowStock" [class.out]="item.isOutOfStock">
-                                    {{ item.stockQuantity }}
-                                </span>
-                            </div>
-                            <div class="list-col actions-col">
-                                <button class="btn btn-sm btn-icon" title="Edit Stock" (click)="openEditStockDialog(item)">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-sm btn-icon" title="Restock" (click)="openRestockDialog(item)">
-                                    <i class="bi bi-plus-lg"></i> Restock
-                                </button>
-                                <button class="btn btn-sm btn-icon" title="View Details" (click)="viewDetails(item)">
-                                    <i class="bi bi-eye"></i> Details
-                                </button>
+                            <div class="fw-bold">{{ item.price | number:'1.0-0' }} RON</div>
+                            <div class="stock-pill">Stock: {{ item.stockQuantity }}</div>
+                            <div class="d-flex gap-2 justify-content-end" style="width: 150px;">
+                                <button class="btn-icon" (click)="openEditStockDialog(item)" title="Full Edit"><i class="bi bi-pencil-square"></i></button>
+                                <button class="btn-icon" (click)="openRestockDialog(item)" title="Restock"><i class="bi bi-plus-lg"></i></button>
+                                <button class="btn-icon" (click)="viewDetails(item)" title="View Details"><i class="bi bi-info-circle"></i></button>
+                                <button class="btn-icon text-danger" (click)="deleteProduct(item)" title="Delete Product"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
                     }
@@ -170,6 +152,13 @@
             }
         }
     }
+
+    <!-- Floating Action Button -->
+    <div class="fab-container">
+        <button class="fab-btn" (click)="openAddDialog()" title="Add Product">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
 </div>
 
 <!-- Details Modal -->
@@ -200,58 +189,61 @@
                                 <p>{{ item.description || 'No description provided for this product.' }}</p>
                             </div>
 
-                            <div class="details-grid">
-                                <div class="detail-item">
-                                    <span class="detail-label">Price</span>
-                                    <span class="detail-value text-primary font-bold">${{ item.price | number:'1.2-2' }}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Current Stock</span>
-                                    <span class="detail-value">{{ item.stockQuantity }} units</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Low Stock Threshold</span>
-                                    <span class="detail-value">{{ item.lowStockThreshold }} units</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Sustainability Score</span>
-                                    <span class="detail-value badge-co2" [class]="'co2-' + (item.co2EmissionScore?.toLowerCase() || 'low')">
-                                        {{ item.co2EmissionScore || 'Low' }}
-                                    </span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Shipping Method</span>
-                                    <span class="detail-value">{{ item.shippingMethod || 'Standard' }}</span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Handmade</span>
-                                    <span class="detail-value">{{ item.isHandmade ? 'Yes' : 'No' }}</span>
+                                <div class="details-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Price: </span>
+                                        <span class="detail-value text-primary font-bold">{{ item.price | number:'1.0-0' }} RON</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Current Stock: </span>
+                                        <span class="detail-value">{{ item.stockQuantity }} units</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Low Stock Threshold: </span>
+                                        <span class="detail-value">{{ item.lowStockThreshold }} units</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Sustainability Score: </span>
+                                        <span class="detail-value badge-co2" [class]="'co2-' + (item.co2EmissionScore?.toLowerCase() || 'low')">
+                                            {{ item.co2EmissionScore || 'Low' }}
+                                        </span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Shipping Method: </span>
+                                        <span class="detail-value">{{ item.shippingMethod || 'Standard' }}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Handmade: </span>
+                                        <span class="detail-value">{{ item.isHandmade ? 'Yes' : 'No' }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" (click)="closeDetailsDialog()">Close</button>
-                @if (selectedDetailItem(); as item) {
-                    <button type="button" class="btn btn-primary" (click)="closeDetailsDialog(); openEditStockDialog(item)">
-                        <i class="bi bi-pencil"></i> Edit Stock
-                    </button>
-                }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" (click)="closeDetailsDialog()">Close</button>
+                    @if (selectedDetailItem(); as item) {
+                        <button type="button" class="btn btn-primary" (click)="closeDetailsDialog(); openEditStockDialog(item)">
+                            <i class="bi bi-pencil"></i> Edit Details
+                        </button>
+                    }
+                </div>
             </div>
         </div>
-    </div>
-}
+    }
+
+    <!-- ... rest of file ... -->
+
 
 <!-- Restock/Edit Stock Modal -->
 @if (showRestockDialog()) {
     <div class="modal-backdrop" (click)="closeRestockDialog()">
-        <div class="modal-content restock-modal" (click)="$event.stopPropagation()">
+        <div class="modal-content restock-modal" (click)="$event.stopPropagation()" [style.max-width]="isEditMode() ? '600px' : '450px'">
             <div class="modal-header">
                 <h2>
                     <i class="bi" [class.bi-pencil]="isEditMode()" [class.bi-plus-circle]="!isEditMode()"></i>
-                    {{ isEditMode() ? 'Edit Stock' : 'Restock Product' }}
+                    {{ isEditMode() ? 'Edit Product Details' : 'Restock Product' }}
                 </h2>
                 <button type="button" class="btn-close" (click)="closeRestockDialog()"></button>
             </div>
@@ -270,9 +262,45 @@
                     <div class="alert alert-danger">{{ restockError() }}</div>
                 }
 
+                @if (isEditMode()) {
+                    <!-- Full Edit Fields -->
+                    <div class="form-group mb-3">
+                        <label for="editName">Product Name</label>
+                        <input type="text" id="editName" class="form-control" [(ngModel)]="editName" name="editName" />
+                    </div>
+                    <div class="form-row mb-3">
+                        <div class="form-group col">
+                            <label for="editPrice">Price (RON)</label>
+                            <input type="number" id="editPrice" class="form-control" [(ngModel)]="editPrice" name="editPrice" />
+                        </div>
+                        <div class="form-group col">
+                            <label for="editThreshold">Low Stock Threshold</label>
+                            <input type="number" id="editThreshold" class="form-control" [(ngModel)]="editLowStockThreshold" name="editLowStockThreshold" />
+                        </div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="editDescription">Description</label>
+                        <textarea id="editDescription" class="form-control" [(ngModel)]="editDescription" name="editDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="editImageUrl">Image URL</label>
+                        <input type="text" id="editImageUrl" class="form-control" [(ngModel)]="editImageUrl" name="editImageUrl" />
+                    </div>
+                    <div class="form-row mb-3">
+                        <div class="form-group col">
+                            <label for="editCity">City</label>
+                            <input type="text" id="editCity" class="form-control" [(ngModel)]="editCity" name="editCity" placeholder="e.g., Bucharest" />
+                        </div>
+                        <div class="form-group col">
+                            <label for="editRegion">Region</label>
+                            <input type="text" id="editRegion" class="form-control" [(ngModel)]="editRegion" name="editRegion" placeholder="e.g., Ilfov" />
+                        </div>
+                    </div>
+                }
+
                 <div class="form-group">
                     <label for="restockQty">
-                        {{ isEditMode() ? 'New Total Stock Quantity' : 'Quantity to Add' }}
+                        {{ isEditMode() ? 'Current Total Stock' : 'Quantity to Add' }}
                     </label>
                     <input 
                         type="number" 
@@ -281,10 +309,9 @@
                         [(ngModel)]="restockQuantity" 
                         name="restockQuantity" 
                         min="0"
-                        autofocus
                     />
                     <small class="text-muted">
-                        {{ isEditMode() ? 'Set the exact number of units currently available.' : 'Enter the number of units you are adding to your current stock.' }}
+                        {{ isEditMode() ? 'Update the exact number of units currently in your possession.' : 'Enter the number of units you are adding to your current stock.' }}
                     </small>
                 </div>
             </div>
@@ -295,7 +322,7 @@
                         <span class="spinner-border spinner-border-sm me-2"></span>
                         Saving...
                     } @else {
-                        <i class="bi bi-check-circle"></i> {{ isEditMode() ? 'Update Stock' : 'Confirm Restock' }}
+                        <i class="bi bi-check-circle"></i> {{ isEditMode() ? 'Save Changes' : 'Confirm Restock' }}
                     }
                 </button>
             </div>
@@ -337,19 +364,6 @@
                                     [(ngModel)]="formPrice" name="formPrice" 
                                     step="0.01" min="0.01" required />
                             </div>
-                            <div class="form-group">
-                                <label for="addCategory">Category</label>
-                                <select id="addCategory" class="form-control" 
-                                    [(ngModel)]="formCategory" name="formCategory">
-                                    <option value="Handmade">Handmade</option>
-                                    <option value="Jewelry">Jewelry</option>
-                                    <option value="Pottery">Pottery</option>
-                                    <option value="Textiles">Textiles</option>
-                                    <option value="Woodwork">Woodwork</option>
-                                    <option value="Art">Art</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
                         </div>
                         <div class="form-group">
                             <label for="addImageUrl">Image URL</label>
@@ -358,7 +372,85 @@
                                 placeholder="https://example.com/product-image.jpg" />
                         </div>
                     </div>
-                    <div class="form-section">
+
+                    <div class="form-section mt-4">
+                        <h3>Categorization</h3>
+                        <div class="form-group">
+                            <label class="form-label">Category Path *</label>
+                            <div class="selected-path-display p-3 rounded-4 bg-light border mb-3 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">{{ selectedCategoryPath() || 'None Selected' }}</span>
+                                @if (selectedCategoryPath()) {
+                                    <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="resetForm()">Clear</button>
+                                }
+                            </div>
+                            
+                            <div class="category-accordion border rounded-4 overflow-hidden">
+                                @for (cat of categoryTree(); track cat.id) {
+                                    <div class="accordion-item border-bottom">
+                                        <button class="category-toggle w-100 text-start p-3 d-flex justify-content-between align-items-center border-0 bg-white" 
+                                                type="button" (click)="selectCategory(cat.name)">
+                                            <span [class.fw-bold]="selectedCategoryPath().includes(cat.name)">{{ cat.name }}</span>
+                                            @if (cat.children.length > 0) {
+                                                <i class="bi bi-chevron-down small opacity-50"></i>
+                                            }
+                                        </button>
+                                        
+                                        @if (cat.children.length > 0 && selectedCategoryPath().includes(cat.name)) {
+                                            <div class="sub-category-list bg-light px-3 pb-3">
+                                                @for (sub of cat.children; track sub.id) {
+                                                    <div class="ms-3 pt-2">
+                                                        <button class="btn btn-sm w-100 text-start d-flex justify-content-between align-items-center py-1 px-2 rounded-3"
+                                                                [class.btn-dark]="selectedCategoryPath().includes(sub.name)"
+                                                                [class.btn-link]="!selectedCategoryPath().includes(sub.name)"
+                                                                [class.text-decoration-none]="true"
+                                                                (click)="selectCategory(cat.name, sub.name)">
+                                                            <span>{{ sub.name }}</span>
+                                                            @if (sub.children.length > 0) {
+                                                                <i class="bi bi-chevron-down small"></i>
+                                                            }
+                                                        </button>
+
+                                                        @if (sub.children.length > 0 && selectedCategoryPath().includes(sub.name)) {
+                                                            <div class="leaf-category-list ms-4 mt-2 d-grid gap-1">
+                                                                @for (leaf of sub.children; track leaf.id) {
+                                                                    <button class="btn btn-sm text-start py-1 px-2 rounded-3"
+                                                                            [class.btn-success]="selectedCategoryPath().endsWith(leaf.name)"
+                                                                            [class.btn-outline-secondary]="!selectedCategoryPath().endsWith(leaf.name)"
+                                                                            (click)="selectCategory(cat.name, sub.name, leaf.name)">
+                                                                        {{ leaf.name }}
+                                                                    </button>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section mt-4">
+                        <h3>Artisan Location</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="addCity">City</label>
+                                <input type="text" id="addCity" class="form-control" 
+                                    [(ngModel)]="formCity" name="formCity" 
+                                    placeholder="e.g., Bucharest" />
+                            </div>
+                            <div class="form-group">
+                                <label for="addRegion">Region</label>
+                                <input type="text" id="addRegion" class="form-control" 
+                                    [(ngModel)]="formRegion" name="formRegion" 
+                                    placeholder="e.g., Ilfov" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section mt-4">
                         <h3>Sustainability & Shipping</h3>
                         <div class="form-row">
                             <div class="form-group">

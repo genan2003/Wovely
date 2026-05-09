@@ -24,6 +24,8 @@ public class OrderDTO {
     private Boolean isDisputed;
     private String disputeReason;
     private String ecoShippingLabel;
+    private Integer estimatedDeliveryDays;
+    private boolean isReviewed;
 
     public OrderDTO() {
     }
@@ -32,7 +34,7 @@ public class OrderDTO {
                     String sellerName, List<OrderItemDTO> items, Double totalAmount, EOrderStatus status,
                     Date createdAt, Date updatedAt, String shippingAddress, String trackingNumber,
                     String refundReason, String cancellationReason, String adminNotes, 
-                    Boolean isDisputed, String disputeReason, String ecoShippingLabel) {
+                    Boolean isDisputed, String disputeReason, String ecoShippingLabel, Integer estimatedDeliveryDays, boolean isReviewed) {
         this.id = id;
         this.orderNumber = orderNumber;
         this.buyerId = buyerId;
@@ -52,6 +54,8 @@ public class OrderDTO {
         this.isDisputed = isDisputed;
         this.disputeReason = disputeReason;
         this.ecoShippingLabel = ecoShippingLabel;
+        this.estimatedDeliveryDays = estimatedDeliveryDays;
+        this.isReviewed = isReviewed;
     }
 
     public String getId() {
@@ -204,5 +208,21 @@ public class OrderDTO {
 
     public void setEcoShippingLabel(String ecoShippingLabel) {
         this.ecoShippingLabel = ecoShippingLabel;
+    }
+
+    public Integer getEstimatedDeliveryDays() {
+        return estimatedDeliveryDays;
+    }
+
+    public void setEstimatedDeliveryDays(Integer estimatedDeliveryDays) {
+        this.estimatedDeliveryDays = estimatedDeliveryDays;
+    }
+
+    public boolean isReviewed() {
+        return isReviewed;
+    }
+
+    public void setReviewed(boolean reviewed) {
+        isReviewed = reviewed;
     }
 }

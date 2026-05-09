@@ -1,37 +1,69 @@
-<nav class="navbar navbar-expand navbar-dark bg-dark px-3 mt-0 mb-4">
-  <a href="#" class="navbar-brand">Wovely</a>
+<nav class="navbar navbar-expand px-3 mt-0 mb-4">
+  <a routerLink="/" class="navbar-brand">Wovely</a>
   <div class="navbar-nav me-auto">
-    <!-- The original Profile link was here. It is now removed as per the instruction to replace it. -->
+    <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        Categories
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark shadow-lg border-0 rounded-4" aria-labelledby="navbarDropdown">
+        <li><a class="dropdown-item py-2" href="#" (click)="filterByCategory('', $event)">All Products</a></li>
+        <li><hr class="dropdown-divider opacity-10"></li>
+        @for (cat of categories(); track cat.id) {
+            <li class="dropdown-submenu">
+                <a class="dropdown-item d-flex justify-content-between align-items-center py-2" href="#" (click)="filterByCategory(cat.name, $event)">
+                    {{ cat.name }}
+                    @if (cat.children.length > 0) {
+                        <i class="bi bi-chevron-right small"></i>
+                    }
+                </a>
+                @if (cat.children.length > 0) {
+                    <ul class="dropdown-menu dropdown-menu-dark shadow-lg border-0 rounded-4 ms-0">
+                        @for (sub of cat.children; track sub.id) {
+                            <li><a class="dropdown-item py-2" href="#" (click)="filterByCategory(cat.name + ' > ' + sub.name, $event)">{{ sub.name }}</a></li>
+                        }
+                    </ul>
+                }
+            </li>
+        }
+      </ul>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link position-relative px-3" routerLink="/cart" routerLinkActive="active">
+        <i class="bi bi-cart3 fs-5"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" *ngIf="cartService.getItemCount() > 0">
+          {{ cartService.getItemCount() }}
+        </span>
+      </a>
+    </li>
   </div>
 
-  <div class="navbar-nav ms-auto" *ngIf="!isLoggedIn()">
-    <li class="nav-item">
-      <a routerLink="/register" class="nav-link" routerLinkActive="active">Sign Up</a>
-    </li>
-    <li class="nav-item">
-      <a routerLink="/login" class="nav-link" routerLinkActive="active">Login</a>
-    </li>
-  </div>
+  <div class="navbar-nav ms-auto align-items-center">
+    <!-- User Profile Dropdown -->
+    <li class="nav-item dropdown">
+      <div class="user-menu-wrapper" id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="icons/user.png" alt="User" class="user-icon-img">
+      </div>
+      
+      <ul class="dropdown-menu dropdown-menu-dark user-dropdown-menu shadow-lg border-0 rounded-4 mt-2" aria-labelledby="userMenuDropdown">
+        <!-- Guest Links -->
+        <ng-container *ngIf="!isLoggedIn()">
+          <li><a routerLink="/register" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-person-plus me-2"></i> Sign Up</a></li>
+          <li><a routerLink="/login" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-box-arrow-in-right me-2"></i> Login</a></li>
+        </ng-container>
 
-  <div class="navbar-nav ms-auto" *ngIf="isLoggedIn()">
-    <!-- Links for logged-in users -->
-    <li class="nav-item" *ngIf="isAdmin()">
-      <a class="nav-link" routerLink="/admin" routerLinkActive="active">Moderation Hub</a>
-    </li>
-    <li class="nav-item" *ngIf="isSeller()">
-      <a class="nav-link" routerLink="/seller/inventory" routerLinkActive="active">My Inventory</a>
-    </li>
-    <li class="nav-item" *ngIf="isSeller()">
-      <a class="nav-link" routerLink="/seller/orders" routerLinkActive="active">My Orders</a>
-    </li>
-    <li class="nav-item" *ngIf="isSeller()">
-      <a class="nav-link" routerLink="/seller/manual-order" routerLinkActive="active">Manual Order</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" routerLink="/products" routerLinkActive="active">Products</a>
-    </li>
-    <li class="nav-item">
-      <a href class="nav-link" (click)="logout($event)">LogOut</a>
+        <!-- Logged-in User Links -->
+        <ng-container *ngIf="isLoggedIn()">
+          <li *ngIf="isAdmin()"><a routerLink="/admin" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-shield-check me-2"></i> Moderation Hub</a></li>
+          <li *ngIf="isSeller()"><a routerLink="/seller/inventory" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-box-seam me-2"></i> My Inventory</a></li>
+          <li *ngIf="isSeller()"><a routerLink="/seller/orders" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-receipt me-2"></i> My Orders</a></li>
+          <li *ngIf="isSeller()"><a routerLink="/seller/manual-order" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-pencil-square me-2"></i> Manual Order</a></li>
+          <li><a routerLink="/messages" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-chat-dots-fill me-2"></i> Messages</a></li>
+          <li><a routerLink="/settings" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-gear-fill me-2"></i> Settings</a></li>
+          <li><a routerLink="/products" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-grid me-2"></i> Products</a></li>
+          <li><hr class="dropdown-divider opacity-10"></li>
+          <li><a href="#" class="dropdown-item py-2 text-danger" (click)="logout($event)"><i class="bi bi-power me-2"></i> LogOut</a></li>
+        </ng-container>
+      </ul>
     </li>
   </div>
 </nav>

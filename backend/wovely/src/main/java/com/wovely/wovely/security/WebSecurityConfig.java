@@ -22,7 +22,10 @@ import com.wovely.wovely.security.jwt.AuthEntryPointJwt;
 import com.wovely.wovely.security.jwt.AuthTokenFilter;
 import com.wovely.wovely.security.services.UserDetailsServiceImpl;
 
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 public class WebSecurityConfig {
     @Autowired
@@ -62,6 +65,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> 
                     auth.requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/test/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated());
@@ -79,6 +83,7 @@ public class WebSecurityConfig {
         configuration.setAllowCredentials(true);
         configuration.addAllowedOrigin("http://localhost:4200");
         configuration.addAllowedOrigin("http://localhost:8081");
+        configuration.addAllowedOrigin("http://localhost:8082");
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

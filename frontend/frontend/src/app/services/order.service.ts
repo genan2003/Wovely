@@ -37,6 +37,27 @@ export class OrderService {
     }
 
     /**
+     * Confirm delivery of an order.
+     */
+    confirmReceipt(orderId: string): Observable<any> {
+        return this.http.post<any>(`${API_URL}/${orderId}/confirm-receipt`, {});
+    }
+
+    /**
+     * Mark items as reviewed.
+     */
+    markReviewed(orderId: string, productIds: string[]): Observable<any> {
+        return this.http.post<any>(`${API_URL}/${orderId}/mark-reviewed`, productIds);
+    }
+
+    /**
+     * Cancel an order.
+     */
+    cancelOrder(orderId: string, reason: string): Observable<any> {
+        return this.http.patch<any>(`${SELLER_API}/orders/${orderId}/status`, { status: 'CANCELLED', reason });
+    }
+
+    /**
      * Update order details (variations or shipping address) during pre-processing.
      * Locked once order is in PROCESSING status or beyond.
      */

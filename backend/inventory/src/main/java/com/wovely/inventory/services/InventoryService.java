@@ -149,6 +149,37 @@ public class InventoryService {
     }
 
     /**
+     * Sync product details from the products service.
+     */
+    public Optional<InventoryItem> syncProductDetails(String sellerId, String productId, InventoryItem details) {
+        InventoryItem item = inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId)
+            .orElseGet(() -> {
+                InventoryItem newItem = new InventoryItem();
+                newItem.setSellerId(sellerId);
+                newItem.setProductId(productId);
+                return newItem;
+            });
+        
+        item.setProductName(details.getProductName());
+        item.setPrice(details.getPrice());
+        item.setImageUrl(details.getImageUrl());
+        item.setCategory(details.getCategory());
+        item.setLowStockThreshold(details.getLowStockThreshold());
+        item.setCo2EmissionScore(details.getCo2EmissionScore());
+        item.setShippingMethod(details.getShippingMethod());
+        item.setIsHandmade(details.getIsHandmade());
+        
+        if (details.getStockQuantity() != null) {
+            item.setStockQuantity(details.getStockQuantity());
+        } else if (item.getStockQuantity() == null) {
+            item.setStockQuantity(0); // Default if not provided and new
+        }
+        
+        item.setUpdatedAt(new Date());
+        return Optional.of(inventoryItemRepository.save(item));
+    }
+
+    /**
      * Update inventory statistics.
      */
     public void updateInventoryStats(String sellerId) {

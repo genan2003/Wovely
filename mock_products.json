@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Handcrafted Ceramic Mug",
+    "description": "Solar-powered kiln fired mug.",
+    "price": 24.50,
+    "sellerId": "user123",
+    "imageUrl": "https://images.unsplash.com/photo-1614806687036-71d37803e7d6",
+    "category": "Home & Living",
+    "categoryPath": "Home & Living > Ceramics",
+    "city": "Local",
+    "region": "Transylvania",
+    "co2EmissionScore": "Low",
+    "shippingMethod": "Carbon Neutral Courier",
+    "isHandmade": true,
+    "stockQuantity": 15,
+    "lowStockThreshold": 5
+  },
+  {
+    "name": "Vintage Linen Dress",
+    "description": "Upcycled vintage linen dress.",
+    "price": 85.00,
+    "sellerId": "user456",
+    "imageUrl": "https://images.unsplash.com/photo-1595777457583-95e059d581b8",
+    "category": "Clothing",
+    "categoryPath": "Clothing > Dresses",
+    "city": "Cluj-Napoca",
+    "region": "Cluj",
+    "co2EmissionScore": "Low",
+    "shippingMethod": "Bicycle Delivery",
+    "isHandmade": true,
+    "stockQuantity": 10,
+    "lowStockThreshold": 5
+  },
+  {
+    "name": "Organic Beeswax Candles",
+    "description": "Set of 3 hand-poured candles.",
+    "price": 18.00,
+    "sellerId": "user789",
+    "imageUrl": "https://images.unsplash.com/photo-1603006905003-be475563bc59",
+    "category": "Home & Living",
+    "categoryPath": "Home & Living > Decor",
+    "city": "Sibiu",
+    "region": "Sibiu",
+    "co2EmissionScore": "Low",
+    "shippingMethod": "Standard Eco-Post",
+    "isHandmade": true,
+    "stockQuantity": 20,
+    "lowStockThreshold": 5
+  }
+]

@@ -1,0 +1,159 @@
+.buyer-dashboard {
+    background-color: #F5E6D6;
+    min-height: 100vh;
+    color: #344E41;
+}
+
+.orders-title {
+    font-weight: 700;
+    color: #344E41;
+    margin-bottom: 1.5rem;
+}
+
+/* Ribbon Icons (Matching Cart Component) */
+.ribbon-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+
+.ribbon-item {
+    background: #FEF9F3;
+    border: 1px solid rgba(52, 78, 65, 0.15);
+    border-radius: 0.75rem;
+    flex: 1;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #344E41;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.ribbon-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 78, 65, 0.1);
+    border-color: #344E41;
+}
+
+.ribbon-item.active-ribbon {
+    background: #344E41;
+    color: #FEF9F3;
+    border-color: #344E41;
+}
+
+.ribbon-item i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.ribbon-item span {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+/* Tabs */
+.btn-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    color: #6c757d;
+    transition: all 0.2s;
+}
+
+.btn-tab.active {
+    color: #344E41;
+    border-bottom-color: #344E41;
+}
+
+/* Shop Card (Matching Cart Component) */
+.shop-card {
+    background: #FEF9F3;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(52, 78, 65, 0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.shop-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-bottom: 1rem;
+}
+
+/* Items */
+.item-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.item-thumb {
+    width: 80px;
+    height: 80px;
+    background: #eee;
+    border-radius: 0.5rem;
+    object-fit: cover;
+}
+
+.btn-review {
+    background: #344E41;
+    color: white;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+}
+
+.btn-review:hover {
+    opacity: 0.9;
+    color: white;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.review-modal {
+    background: #FEF9F3;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 1rem;
+    padding: 2.5rem;
+}
+
+.rating-stars {
+    color: #FFC107;
+    cursor: pointer;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.form-control {
+    background-color: #f8f9fa;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 0.5rem;
+}
+
+.form-control:focus {
+    box-shadow: none;
+    border-color: #344E41;
+}

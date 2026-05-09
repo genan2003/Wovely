@@ -22,9 +22,13 @@ public class WebSecurityConfig {
             .cors(org.springframework.security.config.Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/products/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/products/seller/**").hasAnyRole("SELLER", "ADMIN")
+                .requestMatchers("/api/categories/**").permitAll()
+                .requestMatchers("/api/products/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/products/seller/*/product/*/reduce-stock").permitAll()
+                .requestMatchers("/api/products/seller/*/product/*/restock").permitAll()
+                .requestMatchers("/api/products/seller/**").hasAnyAuthority("ROLE_SELLER", "ROLE_ADMIN")
                 .requestMatchers("/api/products/**").permitAll()
+                .requestMatchers("/api/reviews/**").permitAll()
                 .anyRequest().authenticated()
             );
 
@@ -38,6 +42,8 @@ public class WebSecurityConfig {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowCredentials(true);
         configuration.addAllowedOrigin("http://localhost:4200");
+        configuration.addAllowedOrigin("http://localhost:8081");
+        configuration.addAllowedOrigin("http://localhost:8082");
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();

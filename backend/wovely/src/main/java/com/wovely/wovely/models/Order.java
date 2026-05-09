@@ -64,6 +64,12 @@ public class Order {
     @Field("eco_shipping_label")
     private String ecoShippingLabel;
 
+    @Field("estimated_delivery_days")
+    private Integer estimatedDeliveryDays;
+
+    @Field("is_reviewed")
+    private boolean isReviewed = false;
+
     public Order() {
         this.createdAt = new Date();
         this.updatedAt = new Date();
@@ -220,5 +226,21 @@ public class Order {
 
     public void setEcoShippingLabel(String ecoShippingLabel) {
         this.ecoShippingLabel = ecoShippingLabel;
+    }
+
+    public Integer getEstimatedDeliveryDays() {
+        return estimatedDeliveryDays;
+    }
+
+    public void setEstimatedDeliveryDays(Integer estimatedDeliveryDays) {
+        this.estimatedDeliveryDays = estimatedDeliveryDays;
+    }
+
+    public boolean isReviewed() {
+        return isReviewed;
+    }
+
+    public void setReviewed(boolean reviewed) {
+        isReviewed = reviewed;
     }
 }

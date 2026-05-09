@@ -13,8 +13,26 @@ export class ProductService {
 
     constructor() { }
 
-    getAllProducts(): Observable<Product[]> {
-        return this.http.get<Product[]>(API_URL);
+    getAllProducts(filters?: any): Observable<Product[]> {
+        let url = API_URL;
+        if (filters) {
+            const params = new URLSearchParams();
+            Object.keys(filters).forEach(key => {
+                const value = filters[key];
+                if (value !== null && value !== undefined && value !== '') {
+                    if (Array.isArray(value)) {
+                        value.forEach(v => params.append(key, v));
+                    } else {
+                        params.append(key, value);
+                    }
+                }
+            });
+            const queryString = params.toString();
+            if (queryString) {
+                url += `?${queryString}`;
+            }
+        }
+        return this.http.get<Product[]>(url);
     }
 
     getProductsByCategory(category: string): Observable<Product[]> {

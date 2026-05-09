@@ -1,154 +1,120 @@
-<div class="product-dashboard container">
+<div class="product-dashboard container-fluid px-4">
     <div class="header-section text-center my-5">
         <h1 class="display-4 fw-bold wovely-title">Curated & Crafted</h1>
         <p class="lead text-muted wovely-subtitle">Discover unique finds with a low carbon footprint.</p>
     </div>
 
-    @if (loading()) {
-        <div class="text-center py-5">
-            <div class="spinner-border text-success" role="status">
-                <span class="visually-hidden">Loading amazing products...</span>
-            </div>
-        </div>
-    }
-
-    @if (!loading() && products().length === 0) {
-        <div class="text-center py-5">
-            <h3 class="text-muted">No products found. Be the first to sell!</h3>
-        </div>
-    }
-
-    @if (!loading() && products().length > 0) {
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 masonry-grid">
-            @for(product of products(); track product.id) {
-            <div class="col">
-                <div class="card h-100 border-0 shadow-sm product-card">
-                    <div class="position-relative overflow-hidden card-img-container">
-                        <img [src]="product.imageUrl" class="card-img-top product-image" [alt]="product.name">
-
-                        <div class="position-absolute top-0 end-0 p-2 d-flex flex-column gap-2">
-                            @if (product.co2EmissionScore === 'Low') {
-                                <span class="badge rounded-pill eco-badge shadow-sm" title="Low CO2 Shipping">
-                                    <i class="bi bi-tree-fill me-1"></i> Eco
-                                </span>
-                            }
-                            @if (product.isHandmade) {
-                                <span class="badge rounded-pill handmade-badge shadow-sm" title="Handmade Item">
-                                    <i class="bi bi-heart-fill me-1"></i> Handcrafted
-                                </span>
-                            }
-                        </div>
+    <div class="row">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3 col-md-4 mb-4">
+            <div class="card discovery-sidebar border-0 shadow-sm p-4 sticky-top" style="top: 2rem; z-index: 100;">
+                <h5 class="fw-bold mb-4">Discovery Engine</h5>
+                
+                <div class="filter-group mb-4">
+                    <label class="form-label small text-muted text-uppercase fw-bold">Product Attributes</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="attr1" [(ngModel)]="filters.isEco" (change)="applyFilters()">
+                        <label class="form-check-label" for="attr1">Eco-Friendly (Low CO2)</label>
                     </div>
-
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title fw-bold mb-0 product-title">{{ product.name }}</h5>
-                            <span class="fw-bold product-price">${{ product.price | number:'1.2-2' }}</span>
-                        </div>
-
-                        <p class="card-text text-muted small flex-grow-1">{{ product.description }}</p>
-
-                        <div class="mt-3 d-flex align-items-center justify-content-between brand-footer">
-                            <small class="text-muted d-flex align-items-center">
-                                <span class="shipping-icon me-1">🚚</span> {{ product.shippingMethod }}
-                            </small>
-                            <button class="btn btn-sm btn-outline-dark rounded-pill px-3 buy-btn" (click)="openDetails(product)">View</button>
-                        </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="attr2" [(ngModel)]="filters.isHandmade" (change)="applyFilters()">
+                        <label class="form-check-label" for="attr2">Handcrafted</label>
                     </div>
                 </div>
+
+                <div class="filter-group mb-4">
+                    <label class="form-label small text-muted text-uppercase fw-bold">Artisan Location</label>
+                    <input type="text" class="form-control border-0 bg-light" placeholder="City or Region" [(ngModel)]="filters.city" (keyup.enter)="applyFilters()">
+                </div>
+
+                <div class="filter-group mb-4">
+                    <label class="form-label small text-muted text-uppercase fw-bold">Price Range</label>
+                    <div class="d-flex gap-2">
+                        <input type="number" class="form-control border-0 bg-light" placeholder="Min" [(ngModel)]="filters.minPrice">
+                        <input type="number" class="form-control border-0 bg-light" placeholder="Max" [(ngModel)]="filters.maxPrice">
+                    </div>
+                </div>
+
+                <button class="btn btn-dark w-100 rounded-pill mt-2" (click)="applyFilters()">Apply Filters</button>
             </div>
-            }
         </div>
-    }
-</div>
 
-<!-- Product Details Modal -->
-@if (showDetails()) {
-    <div class="modal-backdrop" (click)="closeDetails()">
-        <div class="modal-content product-details-modal" (click)="$event.stopPropagation()">
-            <button class="close-btn" (click)="closeDetails()">
-                <i class="bi bi-x-lg"></i>
-            </button>
-
-            @if (selectedProduct(); as product) {
-                <div class="details-container">
-                    <div class="details-image-section">
-                        <img [src]="product.imageUrl" [alt]="product.name">
+        <!-- Product Grid -->
+        <div class="col-lg-9 col-md-8">
+            @if (loading()) {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading amazing products...</span>
                     </div>
+                </div>
+            }
 
-                    <div class="details-info-section">
-                        <div class="details-header">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="category-tag">{{ product.category }}</span>
-                                <div class="d-flex gap-2">
+            @if (!loading() && products().length === 0) {
+                <div class="text-center py-5">
+                    <h3 class="text-muted">No products found with these filters.</h3>
+                    <button class="btn btn-link text-success" (click)="filters = {categoryPath:'', isEco:false, isHandmade:false, minPrice:null, maxPrice:null, city:''}; applyFilters()">Clear all filters</button>
+                </div>
+            }
+
+            @if (!loading() && products().length > 0) {
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    @for(product of products(); track product.id) {
+                    <div class="col">
+                        <div class="card h-100 border-0 shadow-sm product-card" (click)="openDetails(product)">
+                            <div class="position-relative overflow-hidden card-img-container">
+                                <img [src]="product.imageUrl" class="card-img-top product-image" [alt]="product.name">
+
+                                <div class="position-absolute top-0 end-0 p-2 d-flex flex-column gap-2">
                                     @if (product.co2EmissionScore === 'Low') {
-                                        <span class="badge rounded-pill eco-badge-alt">
-                                            <i class="bi bi-tree-fill"></i> Eco-Friendly
+                                        <span class="badge rounded-pill eco-badge shadow-sm" title="Eco">
+                                            <i class="bi bi-leaf me-1"></i> Eco
                                         </span>
                                     }
-                                    @if (product.isHandmade) {
-                                        <span class="badge rounded-pill handmade-badge-alt">
-                                            <i class="bi bi-heart-fill"></i> Handcrafted
+                                    @if (product.handmade || product.isHandmade) {
+                                        <span class="badge rounded-pill handmade-badge shadow-sm" title="Handcrafted">
+                                            Handcrafted
                                         </span>
                                     }
                                 </div>
                             </div>
-                            <h2 class="product-full-title">{{ product.name }}</h2>
-                            <div class="price-stock-row d-flex justify-content-between align-items-center">
-                                <span class="full-price">${{ product.price | number:'1.2-2' }}</span>
-                                <span class="stock-info" [class.out-of-stock]="product.stockQuantity === 0">
-                                    {{ product.stockQuantity === 0 ? 'Out of Stock' : (product.stockQuantity + ' items left') }}
-                                </span>
-                            </div>
-                        </div>
 
-                        <div class="details-description mt-4">
-                            <h6>Description</h6>
-                            <p>{{ product.description }}</p>
-                        </div>
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title fw-bold mb-0 product-title text-truncate">{{ product.name }}</h5>
+                                    <span class="fw-bold product-price">${{ product.price | number:'1.2-2' }}</span>
+                                </div>
 
-                        <div class="sustainability-info mt-4">
-                            <h6>Impact Highlights</h6>
-                            <div class="impact-grid">
-                                <div class="impact-item">
-                                    <i class="bi bi-truck"></i>
-                                    <div>
-                                        <span class="label">Shipping</span>
-                                        <span class="value">{{ product.shippingMethod }}</span>
+                                <div class="mb-2 text-warning small">
+                                    @for (i of [1,2,3,4,5]; track i) {
+                                        <i class="bi" [class.bi-star-fill]="i <= (product.averageRating || 0)" 
+                                           [class.bi-star-half]="i > (product.averageRating || 0) && i - 0.5 <= (product.averageRating || 0)"
+                                           [class.bi-star]="i > (product.averageRating || 0) && i - 0.5 > (product.averageRating || 0)"></i>
+                                    }
+                                    <span class="text-muted ms-1">({{ product.totalReviews || 0 }})</span>
+                                </div>
+
+                                <p class="card-text text-muted small flex-grow-1 text-truncate-2">{{ product.description }}</p>
+
+                                <div class="mt-3 d-flex align-items-center justify-content-between brand-footer">
+                                    <small class="text-muted d-flex align-items-center me-2 text-truncate">
+                                        <i class="bi bi-person-fill me-1"></i> {{ product.sellerName || 'Artisan' }}
+                                    </small>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-danger rounded-pill px-2" (click)="toggleFavorite(product, $event)" [title]="favoriteService.isFavorite(product.id!) ? 'Remove from Favorites' : 'Add to Favorites'">
+                                            <i class="bi" [class.bi-heart-fill]="favoriteService.isFavorite(product.id!)" [class.bi-heart]="!favoriteService.isFavorite(product.id!)"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-dark rounded-pill px-2" (click)="addToCart(product, $event)" title="Add to Cart">
+                                            <i class="bi bi-cart-plus"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-dark rounded-pill px-3 buy-btn">View</button>
                                     </div>
                                 </div>
-                                @if (product.co2EmissionScore === 'Low') {
-                                    <div class="impact-item">
-                                        <i class="bi bi-cloud-check"></i>
-                                        <div>
-                                            <span class="label">Emissions</span>
-                                            <span class="value">Low Carbon</span>
-                                        </div>
-                                    </div>
-                                }
-                                @if (product.isHandmade) {
-                                    <div class="impact-item">
-                                        <i class="bi bi-people"></i>
-                                        <div>
-                                            <span class="label">Source</span>
-                                            <span class="value">Local Artisan</span>
-                                        </div>
-                                    </div>
-                                }
                             </div>
-                        </div>
-
-                        <div class="action-buttons mt-5 d-flex gap-3">
-                            <button class="btn btn-outline-dark btn-lg flex-grow-1" (click)="buyNow(product)" [disabled]="product.stockQuantity === 0">
-                                Add to Cart
-                            </button>
-                            <button class="btn btn-dark btn-lg flex-grow-1" (click)="buyNow(product)" [disabled]="product.stockQuantity === 0">
-                                Buy Now
-                            </button>
                         </div>
                     </div>
+                    }
                 </div>
             }
         </div>
     </div>
-}
+</div>

@@ -10,12 +10,40 @@ const AUTH_API_URL = 'http://localhost:8081/api/admin/users';
 
 const ORDER_API_URL = 'http://localhost:8081/api/admin/orders';
 
+const REPORTS_API_URL = 'http://localhost:8081/api/reports';
+
+const AUDIT_API_URL = 'http://localhost:8081/api/admin/audit-logs'; // Assuming this endpoint will be created
+
 @Injectable({
   providedIn: 'root'
 })
 export class AdminService {
 
   constructor(private http: HttpClient) { }
+
+  // Reports API
+
+  createReport(report: any): Observable<any> {
+    return this.http.post<any>(REPORTS_API_URL, report);
+  }
+
+  getAllReports(): Observable<any[]> {
+    return this.http.get<any[]>(REPORTS_API_URL + '/all');
+  }
+
+  updateReportStatus(id: string, status: string): Observable<any> {
+    return this.http.patch<any>(REPORTS_API_URL + `/${id}/status`, { status });
+  }
+
+  getReportedChatLog(reportId: string): Observable<any[]> {
+    return this.http.get<any[]>(REPORTS_API_URL + `/chat-log/${reportId}`);
+  }
+
+  // Audit Log API
+
+  getAuditLogs(): Observable<any[]> {
+    return this.http.get<any[]>(ORDER_API_URL + '/audit'); // Adding it to order controller for simplicity
+  }
 
   getPendingAds(): Observable<Product[]> {
     return this.http.get<Product[]>(API_URL + '/pending');

@@ -1,0 +1,18 @@
+{
+  "id": "1",
+  "name": "Handcrafted Ceramic Mug",
+  "description": "Solar-powered kiln fired mug.",
+  "price": 24.50,
+  "sellerId": "user123",
+  "imageUrl": "https://images.unsplash.com/photo-1614806687036-71d37803e7d6",
+  "category": "Home & Living",
+  "categoryPath": "Home & Living > Ceramics",
+  "city": "Local",
+  "region": "Transylvania",
+  "co2EmissionScore": "Low",
+  "shippingMethod": "Carbon Neutral Courier",
+  "isHandmade": true,
+  "stockQuantity": 15,
+  "lowStockThreshold": 5,
+  "status": "APPROVED"
+}

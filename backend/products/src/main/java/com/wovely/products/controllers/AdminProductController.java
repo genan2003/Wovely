@@ -19,6 +19,33 @@ public class AdminProductController {
   @Autowired
   ProductRepository productRepository;
 
+  private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+  private final String INVENTORY_API = "http://localhost:8083/api/inventory";
+
+  /**
+   * Sync changes with the inventory service.
+   */
+  private void syncWithInventory(String sellerId, String productId, Product product) {
+    try {
+      String url = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId;
+      
+      java.util.Map<String, Object> details = new java.util.HashMap<>();
+      details.put("productName", product.getName());
+      details.put("price", product.getPrice());
+      details.put("imageUrl", product.getImageUrl());
+      details.put("category", product.getCategory());
+      details.put("lowStockThreshold", product.getLowStockThreshold());
+      details.put("co2EmissionScore", product.getCo2EmissionScore());
+      details.put("shippingMethod", product.getShippingMethod());
+      details.put("isHandmade", product.getHandmade());
+      details.put("stockQuantity", product.getStockQuantity());
+      
+      restTemplate.put(url, details);
+    } catch (Exception e) {
+      System.err.println("Failed to sync with inventory service: " + e.getMessage());
+    }
+  }
+
   @GetMapping("/pending")
   public ResponseEntity<List<Product>> getPendingProducts() {
     try {
@@ -73,12 +100,23 @@ public class AdminProductController {
       _product.setPrice(product.getPrice());
       _product.setImageUrl(product.getImageUrl());
       _product.setCategory(product.getCategory());
+      _product.setCategoryPath(product.getCategoryPath());
+      _product.setMaterials(product.getMaterials());
+      _product.setCity(product.getCity());
+      _product.setRegion(product.getRegion());
+      _product.setLatitude(product.getLatitude());
+      _product.setLongitude(product.getLongitude());
       _product.setCo2EmissionScore(product.getCo2EmissionScore());
       _product.setShippingMethod(product.getShippingMethod());
-      _product.setHandmade(product.isHandmade());
+      _product.setHandmade(product.getHandmade());
+      _product.setStockQuantity(product.getStockQuantity() != null ? product.getStockQuantity() : 0);
+      _product.setLowStockThreshold(product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5);
       // We do not change sellerId
       
-      return new ResponseEntity<>(productRepository.save(_product), HttpStatus.OK);
+      Product saved = productRepository.save(_product);
+      syncWithInventory(saved.getSellerId(), id, saved);
+      
+      return new ResponseEntity<>(saved, HttpStatus.OK);
     } else {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }

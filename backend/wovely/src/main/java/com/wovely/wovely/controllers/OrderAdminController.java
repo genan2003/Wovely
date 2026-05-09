@@ -20,6 +20,9 @@ import com.wovely.wovely.payload.request.OrderInterventionRequest;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.services.OrderService;
 
+import com.wovely.wovely.models.AuditLog;
+import com.wovely.wovely.repository.AuditLogRepository;
+
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/admin/orders")
@@ -28,6 +31,14 @@ public class OrderAdminController {
 
     @Autowired
     OrderService orderService;
+
+    @Autowired
+    AuditLogRepository auditLogRepository;
+
+    @GetMapping("/audit")
+    public ResponseEntity<List<AuditLog>> getAuditLogs() {
+        return new ResponseEntity<>(auditLogRepository.findAllByOrderByTimestampDesc(), HttpStatus.OK);
+    }
 
     @GetMapping
     public ResponseEntity<List<OrderDTO>> getAllOrders() {

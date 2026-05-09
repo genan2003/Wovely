@@ -6,11 +6,14 @@ import { AdminService } from '../../services/admin.service';
 import { Product } from '../../models/product.model';
 import { UserCrmComponent } from './user-crm/user-crm';
 import { OrderResolutionComponent } from './order-resolution/order-resolution.component';
+import { AdminReturnsComponent } from './returns-management/returns-management.component';
+import { FlaggedContentComponent } from './flagged-content/flagged-content.component';
+import { AuditTrailComponent } from './audit-trail/audit-trail.component';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, UserCrmComponent, OrderResolutionComponent],
+  imports: [CommonModule, FormsModule, UserCrmComponent, OrderResolutionComponent, AdminReturnsComponent, FlaggedContentComponent, AuditTrailComponent],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.css']
 })
@@ -18,7 +21,7 @@ export class AdminComponent implements OnInit {
   private adminService = inject(AdminService);
   private route = inject(ActivatedRoute);
 
-  activeTab = signal<'ads' | 'users' | 'orders'>('ads');
+  activeTab = signal<'ads' | 'users' | 'orders' | 'returns' | 'flags' | 'audit'>('ads');
 
   pendingAds = signal<Product[]>([]);
   selectedAd = signal<Product | null>(null);
@@ -93,7 +96,7 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  switchTab(tab: 'ads' | 'users' | 'orders'): void {
+  switchTab(tab: 'ads' | 'users' | 'orders' | 'returns' | 'flags' | 'audit'): void {
     this.activeTab.set(tab);
   }
 }

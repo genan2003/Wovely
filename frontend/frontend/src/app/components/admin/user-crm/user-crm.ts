@@ -26,7 +26,9 @@ export class UserCrmComponent implements OnInit {
     
     return this.users().filter(user => {
       const matchesSearch = user.username.toLowerCase().includes(query) || 
-                           user.email.toLowerCase().includes(query);
+                           user.email.toLowerCase().includes(query) ||
+                           user.id.toLowerCase().includes(query) ||
+                           (user.fullName && user.fullName.toLowerCase().includes(query));
       const matchesStatus = status === 'ALL' || user.accountStatus === status;
       return matchesSearch && matchesStatus;
     });

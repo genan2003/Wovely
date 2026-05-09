@@ -7,15 +7,17 @@ import com.wovely.wovely.models.EAccountStatus;
 public class UserCrmDTO {
     private String id;
     private String username;
+    private String fullName;
     private String email;
     private List<String> roles;
     private int strikes;
     private EAccountStatus accountStatus;
     private Date suspendedUntil;
 
-    public UserCrmDTO(String id, String username, String email, List<String> roles, int strikes, EAccountStatus accountStatus, Date suspendedUntil) {
+    public UserCrmDTO(String id, String username, String fullName, String email, List<String> roles, int strikes, EAccountStatus accountStatus, Date suspendedUntil) {
         this.id = id;
         this.username = username;
+        this.fullName = fullName;
         this.email = email;
         this.roles = roles;
         this.strikes = strikes;
@@ -28,6 +30,9 @@ public class UserCrmDTO {
 
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

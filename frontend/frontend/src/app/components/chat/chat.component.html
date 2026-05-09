@@ -1,0 +1,55 @@
+<div class="chat-container card shadow-lg border-0">
+    <div class="chat-header d-flex align-items-center justify-content-between p-3 bg-dark text-white rounded-top">
+        <div class="d-flex align-items-center">
+            <div class="status-indicator me-2" [class.online]="true"></div>
+            <h6 class="mb-0">Chat with {{ receiverName }}</h6>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeChat.emit()"></button>
+    </div>
+
+    @if (product) {
+        <div class="product-context p-2 bg-light border-bottom d-flex align-items-center">
+            <img [src]="product.imageUrl" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+            <div class="small overflow-hidden">
+                <div class="text-truncate fw-bold">{{ product.name }}</div>
+                <div class="text-success small">$ {{ product.price }}</div>
+            </div>
+        </div>
+    }
+
+    <div class="chat-messages p-3" #scrollContainer>
+        @for (msg of messages(); track msg.id) {
+            <div class="message-wrapper d-flex mb-3" [class.justify-content-end]="msg.senderId === currentUser.id">
+                <div class="message-bubble p-2 px-3 rounded-4" 
+                     [class.bg-primary]="msg.senderId === currentUser.id" 
+                     [class.text-white]="msg.senderId === currentUser.id"
+                     [class.bg-light]="msg.senderId !== currentUser.id">
+                    <div class="content">{{ msg.content }}</div>
+                    <div class="time small opacity-75 text-end" style="font-size: 0.7rem;">
+                        {{ msg.timestamp | date:'shortTime' }}
+                        @if (msg.senderId === currentUser.id) {
+                            <i class="bi" [class.bi-check]="!msg.isRead" [class.bi-check-all]="msg.isRead"></i>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (isTyping()) {
+            <div class="typing-indicator small text-muted mb-2">
+                {{ receiverName }} is typing...
+            </div>
+        }
+    </div>
+
+    <div class="chat-input p-3 bg-white border-top rounded-bottom">
+        <form (submit)="send()" class="d-flex gap-2">
+            <input type="text" [(ngModel)]="newMessage" name="message" 
+                   class="form-control rounded-pill border-0 bg-light px-3" 
+                   placeholder="Type a message..." (keydown)="onType()">
+            <button type="submit" class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center" 
+                    style="width: 40px; height: 40px;" [disabled]="!newMessage.trim()">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </form>
+    </div>
+</div>

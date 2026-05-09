@@ -108,7 +108,16 @@ public class SellerOrderController {
             EOrderStatus newStatus = EOrderStatus.valueOf(statusStr.toUpperCase());
             String reason = request.get("reason");
             
-            OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, reason, null);
+            Integer estimatedDeliveryDays = null;
+            if (request.containsKey("estimatedDeliveryDays") && request.get("estimatedDeliveryDays") != null) {
+                try {
+                    estimatedDeliveryDays = Integer.parseInt(request.get("estimatedDeliveryDays"));
+                } catch (NumberFormatException e) {
+                    // Ignore or log error
+                }
+            }
+            
+            OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, reason, null, estimatedDeliveryDays);
             if (order != null) {
                 return ResponseEntity.ok(Map.of(
                     "message", "Order status updated successfully",

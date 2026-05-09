@@ -135,6 +135,26 @@ public class InventoryController {
     }
 
     /**
+     * Sync full inventory item details (called by products service).
+     */
+    @PutMapping("/seller/{sellerId}/product/{productId}")
+    public ResponseEntity<?> syncInventoryItem(@PathVariable String sellerId,
+                                              @PathVariable String productId,
+                                              @RequestBody InventoryItem details) {
+        try {
+            return inventoryService.syncProductDetails(sellerId, productId, details)
+                .map(item -> {
+                    inventoryService.updateInventoryStats(sellerId);
+                    return ResponseEntity.ok(toVisualInventoryItem(item));
+                })
+                .orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * Update stock quantity for a product.
      */
     @PutMapping("/seller/{sellerId}/product/{productId}/stock")
@@ -310,6 +330,7 @@ public class InventoryController {
         visual.put("id", item.getId());
         visual.put("productId", item.getProductId());
         visual.put("name", item.getProductName());
+        visual.put("productName", item.getProductName());
         visual.put("imageUrl", item.getImageUrl());
         visual.put("category", item.getCategory());
         visual.put("price", item.getPrice());

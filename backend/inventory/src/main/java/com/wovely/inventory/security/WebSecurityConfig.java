@@ -25,6 +25,9 @@ public class WebSecurityConfig {
             .cors(org.springframework.security.config.Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/inventory/seller/*/product/*/reduce-stock").permitAll()
+                .requestMatchers("/api/inventory/seller/*/product/*/restock").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/inventory/seller/*/product/*").permitAll()
                 .requestMatchers("/api/inventory/seller/**").hasAnyRole("SELLER", "ADMIN")
                 .anyRequest().authenticated()
             );

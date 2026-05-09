@@ -85,6 +85,7 @@ public class AdminUserController {
         return new UserCrmDTO(
                 user.getId(),
                 user.getUsername(),
+                user.getFullName(),
                 user.getEmail(),
                 roles,
                 user.getStrikes(),

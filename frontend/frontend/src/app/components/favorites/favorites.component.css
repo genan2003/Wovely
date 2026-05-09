@@ -1,0 +1,34 @@
+.favorites-page {
+    background-color: #F5E6D6;
+    min-height: 100vh;
+}
+
+.fav-card {
+    background-color: #FEF9F3 !important;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.fav-item {
+    border-top-color: rgba(166, 138, 100, 0.2) !important;
+}
+
+.fav-item:first-of-type {
+    border-top: none !important;
+}
+
+.btn-unheart {
+    background: none;
+    border: none;
+    padding: 0;
+    transition: transform 0.2s ease;
+}
+
+.btn-unheart:hover {
+    transform: scale(1.2);
+}
+
+.shop-header h4 {
+    color: #2D3A30 !important;
+}

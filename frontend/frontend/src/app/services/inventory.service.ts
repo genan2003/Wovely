@@ -89,6 +89,12 @@ export class InventoryService {
             sellerId: sellerId,
             imageUrl: item.imageUrl || '',
             category: item.category || 'Uncategorized',
+            categoryPath: item.categoryPath || '',
+            materials: [], // Default to empty list
+            city: item.city || 'Local',
+            region: item.region || 'Artisan Workshop',
+            latitude: 0.0,
+            longitude: 0.0,
             co2EmissionScore: item.co2EmissionScore || 'Low',
             shippingMethod: item.shippingMethod || 'Standard',
             isHandmade: item.isHandmade ?? true,
@@ -100,10 +106,32 @@ export class InventoryService {
     }
 
     /**
-     * Remove a product from inventory (not implemented - products are never deleted).
+     * Update full product details in products service.
      */
-    removeProduct(sellerId: string, productId: string): Observable<{ message: string; productId: string }> {
-        throw new Error('Product removal not supported');
+    updateProduct(sellerId: string, productId: string, item: Partial<InventoryItem>): Observable<InventoryItem> {
+        const product = {
+            name: item.productName,
+            description: item.description,
+            price: item.price,
+            imageUrl: item.imageUrl,
+            category: item.category,
+            categoryPath: item.categoryPath,
+            city: item.city,
+            region: item.region,
+            co2EmissionScore: item.co2EmissionScore,
+            shippingMethod: item.shippingMethod,
+            isHandmade: item.isHandmade,
+            lowStockThreshold: item.lowStockThreshold,
+            stockQuantity: item.stockQuantity
+        };
+        return this.http.put<InventoryItem>(`${PRODUCTS_API}/seller/${sellerId}/product/${productId}`, product);
+    }
+
+    /**
+     * Remove a product from inventory (deletes from products service).
+     */
+    removeProduct(sellerId: string, productId: string): Observable<{ message: string }> {
+        return this.http.delete<{ message: string }>(`${PRODUCTS_API}/seller/${sellerId}/product/${productId}`);
     }
 
     /**
@@ -140,8 +168,8 @@ export class InventoryService {
     /**
      * Update order status (e.g., to PROCESSING, SHIPPED, etc.).
      */
-    updateOrderStatus(orderId: string, status: string, reason?: string): Observable<any> {
-        return this.http.patch<any>(`${SELLER_API}/orders/${orderId}/status`, { status, reason });
+    updateOrderStatus(orderId: string, status: string, reason?: string, estimatedDeliveryDays?: number): Observable<any> {
+        return this.http.patch<any>(`${SELLER_API}/orders/${orderId}/status`, { status, reason, estimatedDeliveryDays });
     }
 
     /**
