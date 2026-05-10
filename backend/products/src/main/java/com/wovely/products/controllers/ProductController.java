@@ -21,7 +21,9 @@ public class ProductController {
   ProductRepository productRepository;
 
   private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-  private final String INVENTORY_API = "http://localhost:8083/api/inventory";
+
+  @org.springframework.beans.factory.annotation.Value("${inventory.api.url:http://localhost:8083/api/inventory}")
+  private String INVENTORY_API;
 
   /**
    * Sync changes with the inventory service.

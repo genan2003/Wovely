@@ -39,8 +39,11 @@ public class OrderService {
     @Autowired
     EcoCarrierService ecoCarrierService;
 
-    private static final String PRODUCTS_API = "http://localhost:8082/api/products";
-    private static final String INVENTORY_API = "http://localhost:8083/api/inventory";
+    @org.springframework.beans.factory.annotation.Value("${products.api.url:http://localhost:8082/api/products}")
+    private String PRODUCTS_API;
+
+    @org.springframework.beans.factory.annotation.Value("${inventory.api.url:http://localhost:8083/api/inventory}")
+    private String INVENTORY_API;
 
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();

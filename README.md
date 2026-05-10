@@ -56,3 +56,41 @@ Wovely is a web application designed to provide users with a space in which they
 * Search results must be filterable by "Zero-Emission" or "Eco-friendly" delivery.
 * The chat interface must support real-time notifications for both parties.
 * Reviews must clearly distinguish "Verified Purchase" entries to ensure trust.
+
+---
+
+## Docker Setup
+
+To run the entire Wovely application stack using Docker, follow these steps:
+
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+### Quick Start
+1.  **Build and Start the Application**:
+    ```bash
+    docker-compose up -d --build
+    ```
+    This command will build the Docker images for all microservices and the frontend, then start them along with a MongoDB instance.
+
+2.  **Access the Services**:
+    - **Frontend**: [http://localhost:4200](http://localhost:4200)
+    - **Wovely Backend**: [http://localhost:8081](http://localhost:8081)
+    - **Products Service**: [http://localhost:8082](http://localhost:8082)
+    - **Inventory Service**: [http://localhost:8083](http://localhost:8083)
+    - **MongoDB**: `localhost:27017` (Database: `wp2-project`)
+
+### Troubleshooting
+- **Logs**: To view logs for all services:
+  ```bash
+  docker-compose logs -f
+  ```
+- **Stop Services**:
+  ```bash
+  docker-compose down
+  ```
+- **Clean Start**: If you want to rebuild everything from scratch and clear volumes:
+  ```bash
+  docker-compose down -v
+  docker-compose up -d --build
+  ```

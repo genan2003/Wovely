@@ -1,0 +1,59 @@
+services:
+  wp2-project:
+    image: mongo:latest
+    container_name: wp2-project
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  inventory:
+    build:
+      context: ./backend/inventory
+    container_name: wovely-inventory
+    ports:
+      - "8083:8083"
+    command: ["--spring.data.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--spring.mongodb.uri=mongodb://wp2-project:27017/wp2-project"]
+    depends_on:
+      - wp2-project
+    restart: unless-stopped
+
+  products:
+    build:
+      context: ./backend/products
+    container_name: wovely-products
+    ports:
+      - "8082:8082"
+    command: ["--spring.data.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--spring.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--inventory.api.url=http://inventory:8083/api/inventory"]
+    depends_on:
+      - wp2-project
+      - inventory
+    restart: unless-stopped
+
+  wovely-backend:
+    build:
+      context: ./backend/wovely
+    container_name: wovely-backend
+    ports:
+      - "8081:8081"
+    command: ["--spring.data.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--spring.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--products.api.url=http://products:8082/api/products", "--inventory.api.url=http://inventory:8083/api/inventory"]
+    depends_on:
+      - wp2-project
+      - products
+      - inventory
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend/frontend
+    container_name: wovely-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - wovely-backend
+      - products
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
