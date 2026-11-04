@@ -1,0 +1,43 @@
+@startuml docker-compose
+!include ../_theme.puml
+title Deployment — docker compose (local / CI)
+
+' Derived from: docker-compose.yml, frontend/frontend/nginx.conf, backend/Dockerfile
+left to right direction
+actor "Browser" as Browser
+node "Docker host" {
+  node "frontend\nnginx (SPA)" as fe
+  node "gateway\nJRE 17 · :8090" as gw
+  node "wovely-backend\ncore · :8081" as core
+  node "products\n:8082" as prod
+  node "inventory\n:8083" as inv
+  database "wp2-project\nmongo:9.0.4" as mongo
+  queue "rabbitmq\n4.4.0-management" as mq
+  database "redis\n7.4.1" as redis
+}
+note right of gw
+  Host ports: 4200 public;
+  8090, 8081-8083, 15672, 27017
+  bound to 127.0.0.1 only (tooling)
+end note
+note bottom of core
+  Every service: non-root user,
+  /actuator/health healthcheck,
+  depends_on: service_healthy
+end note
+
+Browser --> fe : http://localhost:4200
+fe --> gw : /api, /ws (proxy)
+gw --> core
+gw --> prod
+gw --> inv
+gw --> redis
+core --> prod : REST
+core --> inv : /internal
+prod --> inv : /internal
+inv --> mq : StockChanged
+mq --> prod : consume
+core --> mongo
+prod --> mongo
+inv --> mongo
+@enduml

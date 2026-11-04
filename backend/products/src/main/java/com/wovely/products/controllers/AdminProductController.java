@@ -19,7 +19,10 @@ public class AdminProductController {
   ProductRepository productRepository;
 
   @Autowired
-  com.wovely.products.clients.InventorySyncClient inventorySync;
+  com.wovely.products.services.StockService stockService;
+
+  @Autowired
+  com.wovely.products.clients.AuditClient auditClient;
 
   @GetMapping("/pending")
   public ResponseEntity<List<Product>> getPendingProducts() {
@@ -54,11 +57,16 @@ public class AdminProductController {
     if (productData.isPresent()) {
       Product product = productData.get();
       String newStatus = body.get("status");
-      if (newStatus != null) {
-        product.setStatus(newStatus);
-        return new ResponseEntity<>(productRepository.save(product), HttpStatus.OK);
+      if (newStatus == null || !Product.STATUSES.contains(newStatus)) {
+        throw com.wovely.common.error.ApiException.badRequest("status must be one of " + Product.STATUSES);
       }
-      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+      String before = product.getStatus();
+      product.setStatus(newStatus);
+      Product saved = productRepository.save(product);
+      stockService.afterListingSaved(saved);
+      auditClient.record("PRODUCT_STATUS", id, before + " -> " + newStatus
+          + (body.get("reason") != null ? ", Reason: " + body.get("reason") : ""));
+      return new ResponseEntity<>(saved, HttpStatus.OK);
     } else {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -84,12 +92,21 @@ public class AdminProductController {
       _product.setCo2EmissionScore(product.getCo2EmissionScore());
       _product.setShippingMethod(product.getShippingMethod());
       _product.setHandmade(product.getHandmade());
-      _product.setStockQuantity(product.getStockQuantity() != null ? product.getStockQuantity() : 0);
-      _product.setLowStockThreshold(product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5);
+      if (product.getLocalPickup() != null) {
+        _product.setLocalPickup(product.getLocalPickup());
+      }
+      _product.refreshDeliveryEmission();
+      if (product.getLowStockThreshold() != null) {
+        _product.setLowStockThreshold(product.getLowStockThreshold());
+      }
       // We do not change sellerId
       
       Product saved = productRepository.save(_product);
-      inventorySync.sync(saved);
+      stockService.afterListingSaved(saved);
+      if (product.getStockQuantity() != null) {
+        saved = stockService.setLevel(saved.getSellerId(), id, Math.max(0, product.getStockQuantity()));
+      }
+      auditClient.record("PRODUCT_EDIT_BY_ADMIN", id, "Listing content edited by admin");
       
       return new ResponseEntity<>(saved, HttpStatus.OK);
     } else {

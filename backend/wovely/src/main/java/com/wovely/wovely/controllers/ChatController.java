@@ -1,9 +1,6 @@
 package com.wovely.wovely.controllers;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.wovely.wovely.exception.ApiException;
+import com.wovely.common.error.ApiException;
 import com.wovely.wovely.models.ChatMessage;
 import com.wovely.wovely.repository.ChatMessageRepository;
 import com.wovely.wovely.repository.UserRepository;
@@ -32,11 +29,17 @@ import com.wovely.wovely.security.services.UserDetailsImpl;
 @RequestMapping("/api/chat")
 public class ChatController {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    com.wovely.wovely.realtime.ChatNotifier chatNotifier;
+
     @Autowired
     ChatMessageRepository chatMessageRepository;
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    com.wovely.wovely.services.ChatQueryService chatQueryService;
 
     /** Conversation between the caller ({@code user1}, must be you) and {@code user2}; marks received messages read. */
     @GetMapping("/conversation")
@@ -75,6 +78,7 @@ public class ChatController {
             message.getProductId(),
             message.getProductThumbnail(),
             message.getContent()));
+        chatNotifier.messageSent(saved);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
@@ -84,19 +88,10 @@ public class ChatController {
         return chatMessageRepository.findByReceiverIdAndIsReadFalse(userId);
     }
 
-    /** Latest message per conversation partner. Aggregation instead of findAll: PLAN.md 2.10. */
+    /** Latest message per conversation partner (MongoDB aggregation, PLAN.md 2.10). */
     @GetMapping("/conversations/{userId}")
     @PreAuthorize("#userId == authentication.principal.id")
-    public Collection<ChatMessage> getConversations(@PathVariable String userId) {
-        List<ChatMessage> allMessages = chatMessageRepository.findAll().stream()
-            .filter(m -> userId.equals(m.getSenderId()) || userId.equals(m.getReceiverId()))
-            .sorted((m1, m2) -> m2.getTimestamp().compareTo(m1.getTimestamp()))
-            .toList();
-        Map<String, ChatMessage> conversations = new LinkedHashMap<>();
-        for (ChatMessage m : allMessages) {
-            String otherId = m.getSenderId().equals(userId) ? m.getReceiverId() : m.getSenderId();
-            conversations.putIfAbsent(otherId, m);
-        }
-        return conversations.values();
+    public List<ChatMessage> getConversations(@PathVariable String userId) {
+        return chatQueryService.latestPerConversation(userId);
     }
 }

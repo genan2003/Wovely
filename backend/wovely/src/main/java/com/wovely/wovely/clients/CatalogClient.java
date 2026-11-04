@@ -11,7 +11,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import com.wovely.wovely.exception.ApiException;
+import com.wovely.common.error.ApiException;
 
 /**
  * Calls to the products service (catalog reads + internal stock endpoints) and the
@@ -30,17 +30,12 @@ public class CatalogClient {
 
     private final RestTemplate restTemplate;
     private final String productsApi;
-    private final String productsInternal;
-    private final String inventoryInternal;
 
+    /** Read-only view of the catalog (name, price, seller, status). Stock lives in inventory: see InventoryClient. */
     public CatalogClient(RestTemplate restTemplate,
-            @Value("${products.api.url:http://localhost:8082/api/products}") String productsApi,
-            @Value("${products.internal.url:http://localhost:8082/internal/products}") String productsInternal,
-            @Value("${inventory.internal.url:http://localhost:8083/internal/inventory}") String inventoryInternal) {
+            @Value("${products.api.url:http://localhost:8082/api/products}") String productsApi) {
         this.restTemplate = restTemplate;
         this.productsApi = productsApi;
-        this.productsInternal = productsInternal;
-        this.inventoryInternal = inventoryInternal;
     }
 
     /** Server-side source of truth for name, price and seller of a product. 400 if it does not exist. */
@@ -56,43 +51,6 @@ public class CatalogClient {
         } catch (RestClientException e) {
             logger.error("Products service unavailable: {}", e.getMessage());
             throw new ApiException(HttpStatus.BAD_GATEWAY, "Products service unavailable");
-        }
-    }
-
-    /** Deducts stock in the products service (authoritative); 409 when stock is short. */
-    public void reduceStock(String sellerId, String productId, int quantity) {
-        try {
-            restTemplate.postForEntity(productsInternal + "/seller/{s}/product/{p}/reduce-stock",
-                    Map.of("quantity", quantity), Map.class, sellerId, productId);
-        } catch (HttpClientErrorException.Conflict e) {
-            throw ApiException.conflict("Insufficient stock for product " + productId);
-        } catch (HttpClientErrorException.NotFound e) {
-            throw ApiException.badRequest("Product not found: " + productId);
-        } catch (RestClientException e) {
-            logger.error("Stock deduction failed for {}: {}", productId, e.getMessage());
-            throw new ApiException(HttpStatus.BAD_GATEWAY, "Stock deduction failed");
-        }
-        mirrorInventory("/reduce-stock", sellerId, productId, quantity);
-    }
-
-    /** Restores stock; failures are logged, never thrown (used in compensation paths). */
-    public void restock(String sellerId, String productId, int quantity) {
-        try {
-            restTemplate.postForEntity(productsInternal + "/seller/{s}/product/{p}/restock",
-                    Map.of("quantity", quantity), Map.class, sellerId, productId);
-        } catch (RestClientException e) {
-            logger.error("Restock failed for {} (qty {}): {}", productId, quantity, e.getMessage());
-            return;
-        }
-        mirrorInventory("/restock", sellerId, productId, quantity);
-    }
-
-    private void mirrorInventory(String op, String sellerId, String productId, int quantity) {
-        try {
-            restTemplate.postForEntity(inventoryInternal + "/seller/{s}/product/{p}" + op,
-                    Map.of("quantity", quantity), Map.class, sellerId, productId);
-        } catch (RestClientException e) {
-            logger.warn("Inventory mirror {} failed for {}: {}", op, productId, e.getMessage());
         }
     }
 }

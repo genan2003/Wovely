@@ -1,0 +1,92 @@
+server:
+  port: ${GATEWAY_PORT:8090}
+
+spring:
+  application:
+    name: gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: "${CORS_ALLOWED_ORIGINS:http://localhost:4200}"
+                allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+                allowed-headers: [Authorization, Content-Type, X-Correlation-Id]
+                exposed-headers: [X-Total-Count, X-Correlation-Id, X-RateLimit-Remaining]
+                allow-credentials: true
+                max-age: 3600
+          default-filters:
+            # Services set their own CORS headers too; keep one copy
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials X-Correlation-Id, RETAIN_FIRST
+          routes:
+            - id: auth
+              uri: ${CORE_URL:http://localhost:8081}
+              order: 0
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                # brute-force brake on sign-in / sign-up / refresh
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${AUTH_RATE_PER_SEC:2}
+                    redis-rate-limiter.burstCapacity: ${AUTH_BURST:10}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userOrIpKeyResolver}"
+            - id: products
+              uri: ${PRODUCTS_URL:http://localhost:8082}
+              order: 10
+              predicates:
+                - Path=/api/products/**,/api/categories/**,/api/reviews/**
+              filters: &default-limit
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${API_RATE_PER_SEC:20}
+                    redis-rate-limiter.burstCapacity: ${API_BURST:60}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userOrIpKeyResolver}"
+            - id: inventory
+              uri: ${INVENTORY_URL:http://localhost:8083}
+              order: 10
+              predicates:
+                - Path=/api/inventory/**
+              filters: *default-limit
+            - id: realtime
+              uri: ${CORE_WS_URL:ws://localhost:8081}
+              order: 10
+              predicates:
+                - Path=/ws,/ws/**
+            - id: core
+              uri: ${CORE_URL:http://localhost:8081}
+              order: 100
+              predicates:
+                - Path=/api/**
+              filters: *default-limit
+
+wovely:
+  app:
+    jwtSecret: ${JWT_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    redis:
+      # Rate limiting fails open without Redis; don't mark the gateway unhealthy for it
+      enabled: false
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

@@ -1,13 +1,15 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { VerifiedBadgeComponent } from '../shared/verified-badge/verified-badge.component';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { PublicUserService } from '../../services/public-user.service';
 import { SellerProfile } from '../../models/seller-profile.model';
+import { SellerReview } from '../../models/seller-review.model';
 
 @Component({
     selector: 'app-seller-profile',
     standalone: true,
-    imports: [CommonModule, RouterModule],
+    imports: [CommonModule, RouterModule, VerifiedBadgeComponent],
     templateUrl: './seller-profile.component.html',
     styleUrl: './seller-profile.component.css'
 })
@@ -17,7 +19,7 @@ export class SellerProfileComponent implements OnInit {
 
     public seller = signal<SellerProfile | null>(null);
     public safeSeller = computed(() => this.seller() || ({} as SellerProfile));
-    public reviews = signal<any[]>([]);
+    public reviews = signal<SellerReview[]>([]);
     public loading = signal<boolean>(true);
 
     public averageRatings = computed(() => {

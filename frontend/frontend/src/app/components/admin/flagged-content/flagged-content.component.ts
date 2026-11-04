@@ -1,14 +1,20 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService } from '../../../services/admin.service';
+import { Report } from '../../../models/report.model';
+import { ChatMessage } from '../../../models/chat.model';
 
 @Component({
     selector: 'app-flagged-content',
     standalone: true,
     imports: [CommonModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     template: `
         <div class="flagged-content p-4">
             <h4 class="fw-bold mb-4">Safety Monitoring: Flagged Content</h4>
+            @if (actionError()) {
+                <div class="alert alert-danger py-2" role="alert">{{ actionError() }}</div>
+            }
             <div class="row g-4">
                 @for (report of reports(); track report.id) {
                     <div class="col-12">
@@ -18,7 +24,7 @@ import { AdminService } from '../../../services/admin.service';
                                     <span class="badge bg-danger me-2">{{ report.targetType }}</span>
                                     <span class="text-muted extra-small">Report #{{ report.id }}</span>
                                 </div>
-                                <span class="badge rounded-pill" [class.bg-warning]="report.status === 'PENDING'" [class.bg-success]="report.status === 'RESOLVED'">
+                                <span class="badge rounded-pill" [class.bg-warning]="report.status === 'PENDING'" [class.bg-success]="report.status === 'RESOLVED'" [class.bg-secondary]="report.status === 'DISMISSED'">
                                     {{ report.status }}
                                 </span>
                             </div>
@@ -39,12 +45,14 @@ import { AdminService } from '../../../services/admin.service';
                                                     <i class="bi bi-eye-fill me-1"></i> View Reported Log
                                                 </button>
                                             }
-                                            <button class="btn btn-success btn-sm rounded-pill" (click)="resolve(report.id, 'RESOLVED')">
-                                                Resolve
-                                            </button>
-                                            <button class="btn btn-outline-secondary btn-sm rounded-pill" (click)="resolve(report.id, 'DISMISSED')">
-                                                Dismiss
-                                            </button>
+                                            @if (report.status === 'PENDING') {
+                                                <button class="btn btn-success btn-sm rounded-pill" (click)="resolve(report.id, 'RESOLVED')">
+                                                    Resolve
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm rounded-pill" (click)="resolve(report.id, 'DISMISSED')">
+                                                    Dismiss
+                                                </button>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -83,8 +91,9 @@ import { AdminService } from '../../../services/admin.service';
 })
 export class FlaggedContentComponent implements OnInit {
     private adminService = inject(AdminService);
-    public reports = signal<any[]>([]);
-    public activeChatLog = signal<any[] | null>(null);
+    public reports = signal<Report[]>([]);
+    public activeChatLog = signal<ChatMessage[] | null>(null);
+    public actionError = signal<string | null>(null);
     public selectedReportId = signal<string | null>(null);
 
     ngOnInit(): void {
@@ -95,11 +104,18 @@ export class FlaggedContentComponent implements OnInit {
         this.adminService.getAllReports().subscribe(data => this.reports.set(data));
     }
 
-    resolve(id: string, status: string): void {
-        this.adminService.updateReportStatus(id, status).subscribe(() => this.loadReports());
+    resolve(id: string, status: 'RESOLVED' | 'DISMISSED'): void {
+        this.actionError.set(null);
+        this.adminService.updateReportStatus(id, status).subscribe({
+            next: () => this.loadReports(),
+            error: (err) => {
+                this.actionError.set(err.error?.message || 'Could not update the report. Refresh and try again.');
+                this.loadReports();
+            },
+        });
     }
 
-    viewChatLog(report: any): void {
+    viewChatLog(report: Report): void {
         if (this.selectedReportId() === report.id) {
             this.selectedReportId.set(null);
             this.activeChatLog.set(null);
@@ -112,7 +128,7 @@ export class FlaggedContentComponent implements OnInit {
         });
     }
 
-    resolveParticipantName(report: any, senderId: string): string {
+    resolveParticipantName(report: Report, senderId: string): string {
         if (senderId === report.reporterId) {
             return report.reporterName || 'Reporter';
         }

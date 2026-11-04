@@ -13,6 +13,9 @@ import { Product } from '../../models/product.model';
 import { Review } from '../../models/review.model';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { AddressService } from '../../services/address.service';
+import { WalletService } from '../../services/wallet.service';
+import { Address, formatAddress } from '../../models/address.model';
 
 @Component({
     selector: 'app-cart',
@@ -31,6 +34,14 @@ export class CartComponent implements OnInit {
     private returnService = inject(ReturnService);
     private reviewService = inject(ReviewService);
     private publicUserService = inject(PublicUserService);
+    private addressService = inject(AddressService);
+
+    /** Checkout destination (address book); the default entry is preselected. */
+    public addresses = signal<Address[]>([]);
+    public addressesLoaded = signal(false);
+    public selectedAddressId = signal<string | null>(null);
+    public readonly formatAddress = formatAddress;
+    public wallet = inject(WalletService);
 
     public activeTab = signal<string>('cart');
     public orders = signal<Order[]>([]);
@@ -64,6 +75,7 @@ export class CartComponent implements OnInit {
     public sellerInfo = signal<{[key: string]: {name: string, avatar: string}}>({});
 
     ngOnInit(): void {
+        this.loadAddresses();
         this.loadOrders();
         this.loadEligibleOrders();
         
@@ -74,6 +86,35 @@ export class CartComponent implements OnInit {
             } else {
                 this.activeTab.set('cart');
             }
+        });
+    }
+
+    /** What the server debits from the wallet at checkout: the items, at server prices (PLAN.md 3.7). */
+    chargedNowCents(group: CartGroup): number {
+        return Math.round(group.items.reduce((t, i) => t + i.price * i.quantity, 0) * 100);
+    }
+
+    canAfford(group: CartGroup): boolean {
+        const balance = this.wallet.balanceCents();
+        return balance !== null && balance >= this.chargedNowCents(group);
+    }
+
+    loadAddresses(): void {
+        if (this.storageService.getUser()) {
+            this.wallet.refresh().subscribe({ error: () => {} });
+        }
+        if (!this.storageService.getUser()) {
+            this.addressesLoaded.set(true);
+            return;
+        }
+        this.addressService.list().subscribe({
+            next: (list) => {
+                this.addresses.set(list ?? []);
+                const preferred = list?.find((a) => a.default) ?? list?.[0];
+                this.selectedAddressId.set(preferred?.id ?? null);
+                this.addressesLoaded.set(true);
+            },
+            error: () => this.addressesLoaded.set(true),
         });
     }
 
@@ -301,6 +342,24 @@ export class CartComponent implements OnInit {
             alert('Please login to checkout.');
             return;
         }
+        if (!this.selectedAddressId() || (group && !this.canAfford(group))) {
+            return; // the template explains what is missing
+        }
+        // Drop items that were archived/unapproved since they were added (PLAN.md 2.8)
+        this.cartService.pruneUnavailable().subscribe((removed) => {
+            if (removed.length > 0) {
+                alert('Some items are no longer available and were removed from your cart: '
+                    + removed.map((r) => r.name).join(', '));
+            }
+            const fresh = group ? this.cartService.getGroupedItems().find((g) => g.sellerId === group.sellerId) : undefined;
+            if (group && !fresh) {
+                return;
+            }
+            this.placeOrders(fresh);
+        });
+    }
+
+    private placeOrders(group?: CartGroup) {
 
         let grouped: CartGroup[] = this.cartService.getGroupedItems();
         if (grouped.length === 0) return;
@@ -322,7 +381,7 @@ export class CartComponent implements OnInit {
                     productId: i.id!,
                     quantity: Number(i.quantity)
                 })),
-                shippingAddress: 'Buyer Default Address'
+                addressId: this.selectedAddressId() ?? undefined
             };
             return this.orderService.createOrder(orderData);
         });

@@ -1,0 +1,28 @@
+@startuml return-status
+!include ../_theme.puml
+title Return request lifecycle (EReturnStatus)
+
+' Derived from: wovely models/EReturnStatus, services/ReturnService
+hide empty description
+
+[*] --> PICKED_UP : buyer opens return\n(order DELIVERED / COMPLETED)
+PICKED_UP --> ARRIVED : seller / admin
+PICKED_UP --> DENIED : seller / admin
+ARRIVED --> INSPECTION : seller / admin
+ARRIVED --> REFUNDED : seller / admin
+ARRIVED --> DENIED : seller / admin
+INSPECTION --> REFUNDED : seller / admin
+INSPECTION --> DENIED : seller / admin
+REFUNDED --> [*]
+DENIED --> [*]
+
+note right of REFUNDED
+  restock returned items
+  order.refundedAmount += amount
+  order → REFUNDED when fully refunded
+end note
+note left of DENIED
+  item stays flagged "returned",
+  so it can't be re-requested
+end note
+@enduml

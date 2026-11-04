@@ -1,0 +1,4 @@
+{
+  "/api": { "target": "http://localhost:8090", "secure": false, "changeOrigin": false },
+  "/ws": { "target": "http://localhost:8090", "ws": true, "secure": false }
+}

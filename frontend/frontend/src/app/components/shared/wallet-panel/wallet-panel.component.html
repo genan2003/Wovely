@@ -1,0 +1,53 @@
+<section class="wallet" aria-labelledby="walletTitle">
+  <h3 id="walletTitle" class="wallet-title">Wallet</h3>
+  <p class="wallet-balance" aria-live="polite">
+    @if (wallet.balanceCents() !== null) {
+      <span class="amount">{{ wallet.balanceCents()! / 100 | number: '1.2-2' }}</span>
+      <span class="currency">RON</span>
+    } @else {
+      <span class="muted">Loading balance…</span>
+    }
+  </p>
+  <p class="muted demo-note">
+    Demo wallet: no real money moves and no card details are stored.
+    @if (seller()) { Sale payouts arrive here when a buyer completes an order. }
+    @else { Orders are paid from this balance and refunds come back to it. }
+  </p>
+
+  <div class="topup" role="group" aria-labelledby="topupLabel">
+    <span id="topupLabel" class="topup-label">Add funds</span>
+    <div class="topup-row">
+      @for (a of quickAmounts; track a) {
+        <button type="button" class="btn btn-outline-dark btn-sm" [disabled]="toppingUp()" (click)="topUp(a)">+{{ a }} RON</button>
+      }
+      <label class="visually-hidden" for="customTopUp">Other amount in RON</label>
+      <input id="customTopUp" type="number" min="0.01" max="5000" step="0.01" class="form-control form-control-sm topup-input"
+             placeholder="Other amount" [(ngModel)]="customAmount" (keyup.enter)="topUp(customAmount)">
+      <button type="button" class="btn btn-sm btn-wallet" [disabled]="toppingUp()" (click)="topUp(customAmount)">Add</button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="wallet-error" role="alert">{{ error() }}</p>
+  }
+
+  <h4 class="activity-title">Recent activity</h4>
+  @if (transactions().length === 0) {
+    <p class="muted">No wallet activity yet.</p>
+  } @else {
+    <ul class="activity">
+      @for (t of transactions(); track t.id) {
+        <li class="activity-row">
+          <span class="activity-what">
+            <span class="activity-type">{{ labels[t.type] }}</span>
+            @if (t.description) { <span class="muted activity-desc">{{ t.description }}</span> }
+          </span>
+          <span class="activity-when muted">{{ t.createdAt | date: 'mediumDate' }}</span>
+          <span class="activity-amount" [class.in]="t.amountCents > 0" [class.out]="t.amountCents < 0">
+            {{ t.amountCents > 0 ? '+' : '−' }}{{ (t.amountCents < 0 ? -t.amountCents : t.amountCents) / 100 | number: '1.2-2' }}
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</section>

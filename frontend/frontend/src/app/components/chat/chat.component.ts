@@ -2,6 +2,8 @@ import { Component, Input, OnInit, inject, signal, EventEmitter, OnDestroy } fro
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../services/chat.service';
+import { RealtimeService } from '../../services/realtime.service';
+import { Subscription } from 'rxjs';
 import { StorageService } from '../../services/storage.service';
 import { ChatMessage } from '../../models/chat.model';
 import { Product } from '../../models/product.model';
@@ -26,17 +28,24 @@ export class ChatComponent implements OnInit, OnDestroy {
     public messages = signal<ChatMessage[]>([]);
     public newMessage = '';
     public isTyping = signal<boolean>(false);
-    private pollingInterval: any;
+    private realtime = inject(RealtimeService);
+    private realtimeSub?: Subscription;
 
     ngOnInit(): void {
         this.loadMessages();
-        this.startPolling();
+        // Real-time updates replace the old 3 s polling (PLAN.md 3.4)
+        this.realtimeSub = this.realtime.messages$.subscribe((m) => {
+            const mine = (m.senderId === this.currentUser.id && m.receiverId === this.receiverId)
+                || (m.senderId === this.receiverId && m.receiverId === this.currentUser.id);
+            if (mine && !this.messages().some((x) => x.id && x.id === m.id)) {
+                this.messages.update((list) => [...list, m]);
+                this.scrollToBottom();
+            }
+        });
     }
 
     ngOnDestroy(): void {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-        }
+        this.realtimeSub?.unsubscribe();
     }
 
     loadMessages(): void {
@@ -44,12 +53,6 @@ export class ChatComponent implements OnInit, OnDestroy {
             this.messages.set(msgs);
             this.scrollToBottom();
         });
-    }
-
-    startPolling(): void {
-        this.pollingInterval = setInterval(() => {
-            this.loadMessages();
-        }, 3000);
     }
 
     send(): void {

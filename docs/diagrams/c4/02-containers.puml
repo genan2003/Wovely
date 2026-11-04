@@ -1,0 +1,40 @@
+@startuml 02-containers
+!include <C4/C4_Container>
+title Wovely — containers (C4 level 2)
+
+' Derived from: docker-compose.yml, backend/gateway application.yml, ADR 0001–0003
+LAYOUT_WITH_LEGEND()
+
+Person(buyer, "Buyer", "Browses, buys, reviews, chats")
+Person(seller, "Seller", "Lists products, manages stock and orders")
+Person(admin, "Admin", "Moderates users, listings, orders")
+
+System_Boundary(wovely, "Wovely") {
+  Container(web, "Web app", "Angular 21 SPA on nginx", "UI; same-origin /api and /ws, no hardcoded backend URLs")
+  Container(gateway, "API gateway", "Spring Cloud Gateway (reactive)", "Routing, edge JWT check, /internal blocked, rate limits, correlation ids")
+  Container(core, "Core service", "Spring Boot 4", "Auth/JWT, users, orders, wallet escrow, returns, reports, audit, chat (+ STOMP push)")
+  Container(products, "Products service", "Spring Boot 4", "Catalog, categories, reviews, moderation; stock read model")
+  Container(inventory, "Inventory service", "Spring Boot 4", "Single owner of stock: atomic reserve/release; outbox relay")
+  ContainerDb(mongo, "MongoDB 9", "Document DB", "Shared database wp2-project, one set of collections per service")
+  Container(rabbit, "RabbitMQ 4", "Message broker", "Exchange wovely.inventory: StockChanged events (quorum queue + DLQ)")
+  ContainerDb(redis, "Redis 7", "In-memory store", "Gateway rate-limit token buckets")
+}
+
+Rel(buyer, web, "Uses", "HTTPS")
+Rel(seller, web, "Uses", "HTTPS")
+Rel(admin, web, "Uses", "HTTPS")
+Rel(web, gateway, "REST /api/**, STOMP /ws", "HTTP, WebSocket")
+Rel(gateway, core, "/api/** (rest), /ws")
+Rel(gateway, products, "/api/products|categories|reviews/**")
+Rel(gateway, inventory, "/api/inventory/**")
+Rel(gateway, redis, "Token buckets")
+Rel(core, products, "Product snapshot (price, status)", "REST")
+Rel(core, inventory, "Reserve / release stock", "REST /internal, API key")
+Rel(products, inventory, "Register / set / restock / deactivate", "REST /internal, API key")
+Rel(products, core, "Verified purchase, audit", "REST /internal, API key")
+Rel(inventory, rabbit, "Publishes StockChanged", "AMQP, publisher confirms")
+Rel(rabbit, products, "Delivers StockChanged", "AMQP")
+Rel(core, mongo, "users, orders, wallets, chat…")
+Rel(products, mongo, "products, reviews, categories")
+Rel(inventory, mongo, "inventory_items (+ outbox mark)")
+@enduml

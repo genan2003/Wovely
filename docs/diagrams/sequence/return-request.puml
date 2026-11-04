@@ -1,0 +1,52 @@
+@startuml return-request
+!include ../_theme.puml
+title Return and refund
+
+' Derived from: wovely ReturnRequestController, services/ReturnService, clients/CatalogClient
+autonumber
+actor "Buyer" as B
+actor "Seller" as S
+participant "Angular SPA" as Web
+box "core service :8081" #FAF6EF
+  participant "ReturnRequestController" as Ctl
+  participant "ReturnService" as Svc
+  participant "AuditService" as Audit
+end box
+participant "products :8082" as Prod
+database "MongoDB" as DB
+
+B -> Web : request return for item(s)
+Web -> Ctl ++ : POST /api/returns {orderId, items[productId], reason}
+Ctl -> Svc ++ : create(request)
+Svc -> DB : load order
+alt not the order's buyer
+  Svc --> Web : 403
+else order not DELIVERED / COMPLETED
+  Svc --> Web : 409
+else item already returned
+  Svc --> Web : 400
+end
+Svc -> DB : mark items returned;\nsave ReturnRequest(PICKED_UP, amount from order prices)
+Svc -> Audit : RETURN_REQUESTED
+Svc --> Ctl -- : return
+Ctl --> Web -- : 200
+
+S -> Web : Arrived / Refund / Deny
+Web -> Ctl ++ : PATCH /api/returns/{id}/status {status}
+Ctl -> Svc ++ : updateStatus(id, status)
+alt not the order's seller (or admin)
+  Svc --> Web : 403
+else illegal transition (e.g. REFUNDED → ARRIVED)
+  Svc --> Web : 409
+end
+opt status == REFUNDED
+  loop each returned item
+    Svc -> Prod : POST /internal/products/.../restock (X-Internal-Api-Key)
+  end
+  Svc -> DB : order.refundedAmount += amount\n(order → REFUNDED if fully refunded)
+end
+Svc -> DB : save return status
+Svc -> Audit : RETURN_STATUS_UPDATE (from → to)
+Svc --> Ctl -- : return
+Ctl --> Web -- : 200
+@enduml

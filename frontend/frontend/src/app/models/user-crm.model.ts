@@ -8,3 +8,5 @@ export interface UserCrm {
   accountStatus: string;
   suspendedUntil?: any; // Changed from Date to any just to see if it helps re-trigger
 }
+
+export type AccountStatusFilter = 'ALL' | 'ACTIVE' | 'SUSPENDED' | 'BANNED';

@@ -3,9 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { InventoryItem, InventoryDashboard, InventoryResponse } from '../models/inventory.model';
 import { ManualOrderRequest, ManualOrderResponse } from '../models/manual-order.model';
+import { environment } from '../../environments/environment';
 
-const PRODUCTS_API = 'http://localhost:8082/api/products';
-const SELLER_API = 'http://localhost:8081/api/seller';
+const PRODUCTS_API = environment.apiUrl + '/products';
+const SELLER_API = environment.apiUrl + '/seller';
 
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
@@ -98,6 +99,7 @@ export class InventoryService {
             co2EmissionScore: item.co2EmissionScore || 'Low',
             shippingMethod: item.shippingMethod || 'Standard',
             isHandmade: item.isHandmade ?? true,
+            localPickup: item.localPickup ?? false,
             stockQuantity: item.stockQuantity || 0,
             lowStockThreshold: item.lowStockThreshold || 5,
             status: 'PENDING'

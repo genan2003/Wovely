@@ -1,48 +1,65 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { catchError, debounceTime, of, switchMap, tap } from 'rxjs';
 import { AdminService } from '../../../services/admin.service';
-import { UserCrm } from '../../../models/user-crm.model';
+import { AccountStatusFilter, UserCrm } from '../../../models/user-crm.model';
 import { UserProfileComponent } from '../user-profile/user-profile';
+
+/** Debounce for the CRM search box, so typing doesn't fire one request per key. */
+export const USER_SEARCH_DEBOUNCE_MS = 250;
 
 @Component({
   selector: 'app-user-crm',
   standalone: true,
-  imports: [CommonModule, FormsModule, UserProfileComponent],
+  imports: [DatePipe, FormsModule, UserProfileComponent],
   templateUrl: './user-crm.html',
-  styleUrls: ['./user-crm.css']
+  styleUrls: ['./user-crm.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UserCrmComponent implements OnInit {
+export class UserCrmComponent {
   private adminService = inject(AdminService);
 
   users = signal<UserCrm[]>([]);
+  loading = signal(true);
+  loadError = signal(false);
   selectedUser = signal<UserCrm | null>(null);
   searchQuery = signal('');
-  statusFilter = signal<'ALL' | 'ACTIVE' | 'SUSPENDED' | 'BANNED'>('ALL');
+  statusFilter = signal<AccountStatusFilter>('ALL');
+  private reloadTick = signal(0);
 
-  filteredUsers = computed(() => {
-    const query = this.searchQuery().toLowerCase();
-    const status = this.statusFilter();
-    
-    return this.users().filter(user => {
-      const matchesSearch = user.username.toLowerCase().includes(query) || 
-                           user.email.toLowerCase().includes(query) ||
-                           user.id.toLowerCase().includes(query) ||
-                           (user.fullName && user.fullName.toLowerCase().includes(query));
-      const matchesStatus = status === 'ALL' || user.accountStatus === status;
-      return matchesSearch && matchesStatus;
-    });
-  });
+  /** Search runs on the server (PLAN.md 3.1); the table shows exactly what it returns. */
+  private filters = computed(() => ({
+    query: this.searchQuery(),
+    status: this.statusFilter(),
+    tick: this.reloadTick(),
+  }));
 
-  ngOnInit(): void {
-    this.loadUsers();
+  constructor() {
+    toObservable(this.filters)
+      .pipe(
+        debounceTime(USER_SEARCH_DEBOUNCE_MS),
+        tap(() => this.loading.set(true)),
+        switchMap(({ query, status }) =>
+          this.adminService.searchUsers(query, status).pipe(
+            tap(() => this.loadError.set(false)),
+            catchError(() => {
+              this.loadError.set(true);
+              return of([] as UserCrm[]);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((users) => {
+        this.users.set(users ?? []);
+        this.loading.set(false);
+      });
   }
 
   loadUsers(): void {
-    this.adminService.getAllUsers().subscribe({
-      next: (data) => this.users.set(data || []),
-      error: (err) => console.error('Failed to load users', err)
-    });
+    this.reloadTick.update((n) => n + 1);
   }
 
   viewProfile(user: UserCrm): void {

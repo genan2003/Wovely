@@ -24,6 +24,7 @@ import com.wovely.wovely.models.Order;
 import com.wovely.wovely.repository.AuditLogRepository;
 import com.wovely.wovely.repository.OrderRepository;
 import com.wovely.wovely.services.EcoCarrierService;
+import com.wovely.wovely.services.AuditService;
 import com.wovely.wovely.services.OrderService;
 import com.wovely.wovely.support.Orders;
 import com.wovely.wovely.support.SecuredWebMvcTest;
@@ -31,12 +32,14 @@ import com.wovely.wovely.support.TestTokens;
 
 /** PLAN.md 1.4 — sellers may only manage their own orders. */
 @WebMvcTest(SellerOrderController.class)
-@Import(OrderService.class)
+@Import({ OrderService.class, AuditService.class, com.wovely.wovely.services.AddressService.class })
 class SellerOrderControllerTest extends SecuredWebMvcTest {
 
     @MockitoBean OrderRepository orderRepository;
     @MockitoBean AuditLogRepository auditLogRepository;
     @MockitoBean CatalogClient catalogClient;
+    @MockitoBean com.wovely.wovely.clients.InventoryClient inventoryClient;
+    @MockitoBean com.wovely.wovely.services.WalletService walletService;
     @MockitoBean EcoCarrierService ecoCarrierService;
 
     @BeforeEach
@@ -114,5 +117,44 @@ class SellerOrderControllerTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/seller/orders/manual").header(AUTH, bearer(TestTokens.seller()))
                 .contentType(MediaType.APPLICATION_JSON).content(body.formatted(TestTokens.SELLER_ID)))
             .andExpect(status().isCreated());
+    }
+
+    // ---------------------------------------------------------------- 3.6 ship with platform
+
+    @Test
+    void shipWithPlatformLabelThenShip() throws Exception {
+        Order processing = Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.PROCESSING);
+        when(orderRepository.findById("o-1")).thenReturn(Optional.of(processing));
+        when(ecoCarrierService.generateLabel(any(), any())).thenReturn(new EcoCarrierService.ShippingLabel(
+            new EcoCarrierService.EcoCarrier("GRL", "GreenLogistics", "Bicycle & Electric Van", 0.05, 40),
+            "WVL-GRL-2345678ABC", 12, 0.6, "--- LABEL ---"));
+
+        mvc.perform(patch("/api/seller/orders/o-1/status").header(AUTH, bearer(TestTokens.seller()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"SHIPPED\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("shipping label")));
+
+        mvc.perform(post("/api/seller/orders/o-1/eco-label").header(AUTH, bearer(TestTokens.seller())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.label").value("--- LABEL ---"))
+            .andExpect(jsonPath("$.order.trackingNumber").value("WVL-GRL-2345678ABC"))
+            .andExpect(jsonPath("$.order.carrierName").value("GreenLogistics"))
+            .andExpect(jsonPath("$.order.estimatedCo2Kg").value(0.6));
+
+        mvc.perform(post("/api/seller/orders/o-1/eco-label").header(AUTH, bearer(TestTokens.seller())))
+            .andExpect(status().isConflict());
+
+        mvc.perform(patch("/api/seller/orders/o-1/status").header(AUTH, bearer(TestTokens.seller()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"SHIPPED\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.order.status").value("SHIPPED"));
+    }
+
+    @Test
+    void labelForPendingOrderIsConflictAndMissingOrderIs404() throws Exception {
+        mvc.perform(post("/api/seller/orders/o-1/eco-label").header(AUTH, bearer(TestTokens.seller())))
+            .andExpect(status().isConflict());
+        mvc.perform(post("/api/seller/orders/missing/eco-label").header(AUTH, bearer(TestTokens.seller())))
+            .andExpect(status().isNotFound());
     }
 }

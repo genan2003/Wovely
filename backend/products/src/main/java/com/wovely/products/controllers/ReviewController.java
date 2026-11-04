@@ -6,9 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.wovely.products.models.Review;
 import com.wovely.products.repository.ReviewRepository;
-import com.wovely.products.exception.ApiException;
-import com.wovely.products.security.JwtPrincipal;
-import com.wovely.products.security.OwnershipGuard;
+import com.wovely.common.error.ApiException;
+import com.wovely.common.security.JwtPrincipal;
+import com.wovely.common.security.OwnershipGuard;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -19,6 +19,9 @@ public class ReviewController {
 
   @Autowired
   ReviewRepository reviewRepository;
+
+  @Autowired
+  com.wovely.products.clients.PurchaseVerificationClient purchaseVerification;
 
   @GetMapping("/product/{productId}")
   public ResponseEntity<?> getProductReviews(@PathVariable String productId) {
@@ -43,7 +46,8 @@ public class ReviewController {
 
   /**
    * Create a review as the authenticated caller. {@code userId}/{@code username} from the body are ignored.
-   * One review per user and product (409 otherwise). Verified-purchase flag: PLAN.md 3.3.
+   * One review per user and product (409 otherwise). {@code verifiedPurchase} is asked from core and
+   * never taken from the body (PLAN.md 3.3).
    */
   @PostMapping
   public ResponseEntity<Review> createReview(@RequestBody Review review) {
@@ -60,13 +64,14 @@ public class ReviewController {
     if (reviewRepository.existsByProductIdAndUserId(review.getProductId(), caller.userId())) {
       throw ApiException.conflict("You have already reviewed this product");
     }
-    Review saved = reviewRepository.save(new Review(
+    Review toSave = new Review(
         review.getProductId(),
         caller.userId(),
         caller.username(),
         review.getRating(),
         review.getComment(),
-        review.getPhotoUrls()));
-    return new ResponseEntity<>(saved, HttpStatus.CREATED);
+        review.getPhotoUrls());
+    toSave.setVerifiedPurchase(purchaseVerification.hasReceived(caller.userId(), review.getProductId()));
+    return new ResponseEntity<>(reviewRepository.save(toSave), HttpStatus.CREATED);
   }
 }

@@ -94,13 +94,43 @@
                             </div>
                         </div>
 
+                        <fieldset class="ship-to mb-4">
+                            <legend class="fw-bold h5">Ship to</legend>
+                            @if (addresses().length > 0) {
+                                @for (a of addresses(); track a.id) {
+                                    <div class="form-check ship-to-option">
+                                        <input class="form-check-input" type="radio" [name]="'shipTo-' + group.sellerId"
+                                               [id]="'shipTo-' + group.sellerId + '-' + a.id" [value]="a.id"
+                                               [checked]="selectedAddressId() === a.id" (change)="selectedAddressId.set(a.id)">
+                                        <label class="form-check-label" [for]="'shipTo-' + group.sellerId + '-' + a.id">
+                                            @if (a.label) { <strong>{{ a.label }}</strong><br> }{{ formatAddress(a) }}
+                                        </label>
+                                    </div>
+                                }
+                                <a routerLink="/settings" fragment="addresses" class="small">Manage addresses</a>
+                            } @else if (addressesLoaded()) {
+                                <p class="mb-1">Add a shipping address before checking out.</p>
+                                <a routerLink="/settings" fragment="addresses" class="small fw-bold">Add an address in Settings</a>
+                            }
+                        </fieldset>
+
                         <div class="checkout-section">
                             <div class="text-end mb-3">
                                 <div class="total-label">Subtotal:</div>
                                 <div class="total-price">{{ calculateGroupTotal(group) }} RON</div>
                             </div>
+                            <p class="wallet-line text-end mb-3" aria-live="polite">
+                                Paid from your wallet: <strong>{{ chargedNowCents(group) / 100 | number: '1.2-2' }} RON</strong>
+                                @if (wallet.balanceCents() !== null) {
+                                    <br><span class="small">Balance {{ wallet.balanceCents()! / 100 | number: '1.2-2' }} RON</span>
+                                }
+                                @if (wallet.balanceCents() !== null && !canAfford(group)) {
+                                    <br><span class="small wallet-short">Your balance doesn't cover this order.</span>
+                                    <a routerLink="/settings" fragment="wallet" class="small fw-bold ms-1">Add funds</a>
+                                }
+                            </p>
                             <button class="btn btn-dark w-100 checkout-btn rounded-pill py-3 fw-bold shadow-sm" 
-                                    (click)="checkout(group)" [disabled]="isCheckingOut()">
+                                    (click)="checkout(group)" [disabled]="isCheckingOut() || !selectedAddressId() || !canAfford(group)">
                                 <i class="bi bi-shield-lock-fill me-2"></i>
                                 {{ isCheckingOut() ? 'Processing Securely...' : 'Checkout for this Shop' }}
                             </button>
@@ -254,7 +284,7 @@
                                     <button class="btn btn-outline-danger rounded-pill px-4" (click)="cancelOrder(order.id)" *ngIf="order.status === 'PENDING' || order.status === 'CONFIRMED'">
                                         Cancel Order
                                     </button>
-                                    <button class="btn btn-success rounded-pill px-4" (click)="confirmReceipt(order.id)" *ngIf="['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED'].includes(order.status)">
+                                    <button class="btn btn-success rounded-pill px-4" (click)="confirmReceipt(order.id)" *ngIf="order.status === 'SHIPPED'">
                                         Confirm Receipt
                                     </button>
                                     <div class="total-section text-end">

@@ -99,3 +99,47 @@ h1, h2, h3, h4, h5, h6, .fw-bold {
     margin-top: 0;
     translate: -10px 0;
 }
+
+/* Review trust tokens (PLAN.md 3.3) — to be folded into the full token set in 5.2 */
+:root {
+    --wv-verified-ink: #3F5B3A;
+    --wv-verified-bg: #E7EEDF;
+    --wv-verified-stitch: #7E9A6E;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --wv-verified-ink: #CFE3C2;
+        --wv-verified-bg: #24331F;
+        --wv-verified-stitch: #6F8C60;
+    }
+}
+:root[data-theme="dark"] {
+    --wv-verified-ink: #CFE3C2;
+    --wv-verified-bg: #24331F;
+    --wv-verified-stitch: #6F8C60;
+}
+
+/* Delivery emission tokens (PLAN.md 3.5) */
+:root {
+    --wv-eco-zero-ink: #F4F7EF;
+    --wv-eco-zero-bg: #3F5B3A;
+    --wv-eco-low-ink: #3F5B3A;
+    --wv-eco-low-bg: #EEF3E7;
+    --wv-eco-low-border: #A9BE9B;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --wv-eco-zero-ink: #16210F;
+        --wv-eco-zero-bg: #A8C99A;
+        --wv-eco-low-ink: #CFE3C2;
+        --wv-eco-low-bg: #24331F;
+        --wv-eco-low-border: #5E7A52;
+    }
+}
+:root[data-theme="dark"] {
+    --wv-eco-zero-ink: #16210F;
+    --wv-eco-zero-bg: #A8C99A;
+    --wv-eco-low-ink: #CFE3C2;
+    --wv-eco-low-bg: #24331F;
+    --wv-eco-low-border: #5E7A52;
+}

@@ -12,6 +12,7 @@ import java.util.Date;
  * SKU-free design: sellers identify items by image and name.
  */
 @Document(collection = "inventory_items")
+@org.springframework.data.mongodb.core.index.CompoundIndex(name = "product_seller", def = "{'productId': 1, 'sellerId': 1}")
 public class InventoryItem {
 
     @Id
@@ -45,6 +46,12 @@ public class InventoryItem {
     private Date createdAt;
     private Date updatedAt;
     private Date lastRestockedAt;
+
+    /** Grows by one on every stock change; consumers ignore events older than what they hold (PLAN.md 4.2). */
+    private Long version;
+    /** Set in the same atomic update as the change; cleared by StockEventRelay once published. */
+    @org.springframework.data.mongodb.core.index.Indexed(sparse = true)
+    private Boolean outboxPending;
 
     public InventoryItem() {
         this.isActive = true;
@@ -148,4 +155,9 @@ public class InventoryItem {
             this.lastRestockedAt = new Date();
         }
     }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
+    public Boolean getOutboxPending() { return outboxPending; }
+    public void setOutboxPending(Boolean outboxPending) { this.outboxPending = outboxPending; }
 }

@@ -49,6 +49,9 @@ public class AuthController {
     @Autowired
     JwtUtils jwtUtils;
 
+    @Autowired
+    com.wovely.wovely.services.RefreshTokenService refreshTokenService;
+
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
@@ -67,7 +70,35 @@ public class AuthController {
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
-                roles));
+                roles).withRefresh(refreshTokenService.issue(userDetails.getId()), jwtUtils.getJwtExpirationMs()));
+    }
+
+    /**
+     * Exchange a refresh token for a new access token + rotated refresh token (PLAN.md 2.9).
+     * Banned/suspended users are refused and signed out everywhere.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody java.util.Map<String, String> body) {
+        var rotation = refreshTokenService.rotate(body.get("refreshToken"))
+                .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Invalid refresh token"));
+        User user = userRepository.findById(rotation.userId())
+                .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Invalid refresh token"));
+        UserDetailsImpl details = UserDetailsImpl.build(user);
+        if (!details.isAccountNonLocked()) {
+            refreshTokenService.revokeAll(user.getId());
+            throw new org.springframework.security.authentication.LockedException("Account is locked");
+        }
+        List<String> roles = details.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toList());
+        return ResponseEntity.ok(new JwtResponse(jwtUtils.generateJwtToken(details), details.getId(),
+                details.getUsername(), details.getEmail(), roles)
+                .withRefresh(rotation.newToken(), jwtUtils.getJwtExpirationMs()));
+    }
+
+    /** Revokes the given refresh token. Always 200 (idempotent). */
+    @PostMapping("/signout")
+    public ResponseEntity<?> signout(@RequestBody(required = false) java.util.Map<String, String> body) {
+        refreshTokenService.revoke(body != null ? body.get("refreshToken") : null);
+        return ResponseEntity.ok(new MessageResponse("Signed out"));
     }
 
     @PostMapping("/signup")

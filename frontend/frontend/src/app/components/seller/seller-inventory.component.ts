@@ -2,6 +2,8 @@ import { Component, OnInit, signal, computed, inject, PLATFORM_ID } from '@angul
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { classifyDelivery } from '../../models/delivery-emission';
+import { EmissionBadgeComponent } from '../shared/emission-badge/emission-badge.component';
 import { InventoryService } from '../../services/inventory.service';
 import { InventoryItem } from '../../models/inventory.model';
 import { StorageService } from '../../services/storage.service';
@@ -13,7 +15,7 @@ import { forkJoin, map, switchMap, of, catchError } from 'rxjs';
 @Component({
     selector: 'app-seller-inventory',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, EmissionBadgeComponent],
     templateUrl: './seller-inventory.component.html',
     styleUrls: ['./seller-inventory.component.css']
 })
@@ -50,6 +52,9 @@ export class SellerInventoryComponent implements OnInit {
     formCo2Score = signal<string>('Low');
     formShipping = signal<string>('Standard');
     formIsHandmade = signal<boolean>(true);
+    formLocalPickup = signal<boolean>(false);
+    /** What buyers will see; the server applies the same rule (PLAN.md 3.5). */
+    formDeliveryPreview = computed(() => classifyDelivery(this.formShipping(), this.formCo2Score(), this.formLocalPickup()));
     formStockQuantity = signal<number>(0);
     formLowStockThreshold = signal<number>(5);
     formCity = signal<string>('');
@@ -246,6 +251,7 @@ export class SellerInventoryComponent implements OnInit {
         this.formImageUrl.set('');
         this.formCo2Score.set('Low');
         this.formShipping.set('Standard');
+        this.formLocalPickup.set(false);
         this.formIsHandmade.set(true);
         this.formStockQuantity.set(0);
         this.formLowStockThreshold.set(5);
@@ -285,6 +291,7 @@ export class SellerInventoryComponent implements OnInit {
             categoryPath: this.selectedCategoryPath(),
             co2EmissionScore: this.formCo2Score(),
             shippingMethod: this.formShipping(),
+            localPickup: this.formLocalPickup(),
             isHandmade: this.formIsHandmade(),
             stockQuantity: this.formStockQuantity(),
             lowStockThreshold: this.formLowStockThreshold(),

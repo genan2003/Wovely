@@ -2,8 +2,9 @@ import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
-const API_URL = 'http://localhost:8081/api/returns';
+const API_URL = environment.apiUrl + '/returns';
 
 export interface ReturnRequest {
     id?: string;

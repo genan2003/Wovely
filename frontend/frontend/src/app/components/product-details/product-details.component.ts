@@ -1,5 +1,8 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, PLATFORM_ID, inject, signal, computed } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { VerifiedBadgeComponent } from '../shared/verified-badge/verified-badge.component';
+import { EmissionBadgeComponent } from '../shared/emission-badge/emission-badge.component';
+import { classifyDelivery } from '../../models/delivery-emission';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ProductService } from '../../services/product.service';
 import { ReviewService } from '../../services/review.service';
@@ -17,7 +20,7 @@ import { CartService } from '../../services/cart.service';
 @Component({
     selector: 'app-product-details',
     standalone: true,
-    imports: [CommonModule, RouterModule, ChatComponent],
+    imports: [CommonModule, RouterModule, ChatComponent, VerifiedBadgeComponent, EmissionBadgeComponent],
     templateUrl: './product-details.component.html',
     styleUrl: './product-details.component.css'
 })
@@ -32,9 +35,15 @@ export class ProductDetailsComponent implements OnInit {
     private cartService = inject(CartService);
     public favoriteService = inject(FavoriteService);
     private adminService = inject(AdminService);
+    private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
     public product = signal<Product | null>(null);
     public safeProduct = computed(() => this.product() || ({} as Product));
+    /** Server value; demo products without one are classified locally (PLAN.md 3.5). */
+    public emissionLevel = computed(() => {
+        const p = this.product();
+        return p ? (p.deliveryEmission ?? classifyDelivery(p.shippingMethod, p.co2EmissionScore, p.localPickup)) : null;
+    });
     public reviews = signal<Review[]>([]);
     public averageRating = signal<number>(0);
     public sellerProfile = signal<SellerProfile | null>(null);
@@ -80,7 +89,9 @@ export class ProductDetailsComponent implements OnInit {
                 if (mock) {
                     this.product.set(mock);
                     this.loadAdditionalData(mock);
-                } else {
+                } else if (this.isBrowser) {
+                    // Only the browser decides the product is gone: during SSR the API may simply be
+                    // unreachable, and a server-side redirect would bounce real visitors to the catalog.
                     this.router.navigate(['/products']);
                 }
                 this.loading.set(false);
@@ -145,15 +156,7 @@ export class ProductDetailsComponent implements OnInit {
         const reason = prompt('Please describe why you are reporting this listing:');
         if (!reason) return;
 
-        const user = this.storageService.getUser();
-        this.adminService.createReport({
-            reporterId: user ? user.id : 'GUEST',
-            reporterName: user ? (user.fullName || user.username) : 'Guest User',
-            targetType: 'PRODUCT',
-            targetId: product.id,
-            targetName: product.name,
-            reason: reason
-        }).subscribe({
+        this.adminService.createReport({ targetType: 'PRODUCT', targetId: product.id!, reason }).subscribe({
             next: () => alert('Thank you. The listing has been flagged for admin review.'),
             error: (err: any) => alert('Failed to submit report: ' + (err.error?.message || err.message))
         });

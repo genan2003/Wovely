@@ -9,6 +9,8 @@ import { ReviewService } from '../../services/review.service';
 import { ChatService } from '../../services/chat.service';
 import { PublicUserService } from '../../services/public-user.service';
 import { FavoriteService } from '../../services/favorite.service';
+import { DeliveryEmission, DeliveryEmissionFilter, classifyDelivery, withinCeiling } from '../../models/delivery-emission';
+import { EmissionBadgeComponent } from '../shared/emission-badge/emission-badge.component';
 import { Product } from '../../models/product.model';
 import { Review } from '../../models/review.model';
 import { SellerProfile } from '../../models/seller-profile.model';
@@ -16,10 +18,25 @@ import { ChatComponent } from '../chat/chat.component';
 
 import { CartService } from '../../services/cart.service';
 
+/** Query params sent to GET /api/products (empty values are dropped by ProductService). */
+export interface CatalogFilters {
+    categoryPath: string;
+    deliveryEmission: DeliveryEmissionFilter;
+    localPickup: boolean;
+    isHandmade: boolean;
+    minPrice: number | null;
+    maxPrice: number | null;
+    city: string;
+}
+
+export function emptyFilters(): CatalogFilters {
+    return { categoryPath: '', deliveryEmission: '', localPickup: false, isHandmade: false, minPrice: null, maxPrice: null, city: '' };
+}
+
 @Component({
     selector: 'app-product-list',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, EmissionBadgeComponent],
     templateUrl: './product-list.component.html',
     styleUrl: './product-list.component.css'
 })
@@ -42,14 +59,13 @@ export class ProductListComponent implements OnInit {
     public error = signal<string | null>(null);
 
     // Filters
-    public filters = {
-        categoryPath: '',
-        isEco: false,
-        isHandmade: false,
-        minPrice: null,
-        maxPrice: null,
-        city: ''
-    };
+    public filters: CatalogFilters = emptyFilters();
+
+    readonly deliveryOptions: { value: DeliveryEmissionFilter; label: string; hint?: string }[] = [
+        { value: '', label: 'Any delivery' },
+        { value: 'LOW', label: 'Eco-friendly', hint: 'low or zero emission' },
+        { value: 'ZERO', label: 'Zero-emission only', hint: 'bicycle, on foot or pickup' },
+    ];
 
     // Chat
     public showChat = signal<boolean>(false);
@@ -71,6 +87,16 @@ export class ProductListComponent implements OnInit {
 
     applyFilters(): void {
         this.fetchProducts();
+    }
+
+    clearFilters(): void {
+        this.filters = { ...emptyFilters(), categoryPath: this.filters.categoryPath };
+        this.applyFilters();
+    }
+
+    /** Server value when present; demo products without one are classified locally. */
+    emissionOf(p: Product): DeliveryEmission {
+        return p.deliveryEmission ?? classifyDelivery(p.shippingMethod, p.co2EmissionScore, p.localPickup);
     }
 
     openDetails(product: Product): void {
@@ -127,13 +153,17 @@ export class ProductListComponent implements OnInit {
         productList.forEach((product, index) => {
             // Fetch Reviews
             if (product.id) {
-                this.reviewService.getReviewsByProductId(product.id).subscribe(res => {
-                    enrichedList[index] = {
-                        ...enrichedList[index],
-                        totalReviews: res.totalReviews,
-                        averageRating: res.averageRating
-                    };
-                    this.products.set([...enrichedList]);
+                this.reviewService.getReviewsByProductId(product.id).subscribe({
+                    next: res => {
+                        enrichedList[index] = {
+                            ...enrichedList[index],
+                            totalReviews: res.totalReviews,
+                            averageRating: res.averageRating
+                        };
+                        this.products.set([...enrichedList]);
+                    },
+                    // Ratings are optional decoration; an unhandled error here used to crash the SSR server.
+                    error: () => {}
                 });
             }
 
@@ -174,8 +204,11 @@ export class ProductListComponent implements OnInit {
         if (this.filters.maxPrice !== null) {
             mocks = mocks.filter(p => p.price <= this.filters.maxPrice!);
         }
-        if (this.filters.isEco) {
-            mocks = mocks.filter(p => p.co2EmissionScore === 'Low');
+        if (this.filters.deliveryEmission) {
+            mocks = mocks.filter(p => withinCeiling(this.emissionOf(p), this.filters.deliveryEmission));
+        }
+        if (this.filters.localPickup) {
+            mocks = mocks.filter(p => p.localPickup);
         }
         if (this.filters.isHandmade) {
             mocks = mocks.filter(p => p.isHandmade);

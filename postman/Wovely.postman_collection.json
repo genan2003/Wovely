@@ -49,6 +49,10 @@
                   "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
                   "  pm.expect(body.roles).to.be.an(\"array\").that.is.not.empty;",
                   "});",
+                  "pm.test(\"returns a refresh token and short TTL (PLAN 2.9)\", () => {",
+                  "  pm.expect(body.refreshToken).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(body.expiresInMs).to.be.at.most(3600000);",
+                  "});",
                   "pm.collectionVariables.set(\"adminToken\", body.accessToken);",
                   "pm.collectionVariables.set(\"adminId\", body.id);"
                 ]
@@ -95,6 +99,10 @@
                   "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
                   "  pm.expect(body.roles).to.be.an(\"array\").that.is.not.empty;",
                   "});",
+                  "pm.test(\"returns a refresh token and short TTL (PLAN 2.9)\", () => {",
+                  "  pm.expect(body.refreshToken).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(body.expiresInMs).to.be.at.most(3600000);",
+                  "});",
                   "pm.collectionVariables.set(\"sellerToken\", body.accessToken);",
                   "pm.collectionVariables.set(\"sellerId\", body.id);"
                 ]
@@ -140,6 +148,10 @@
                   "  pm.expect(body.tokenType).to.eql(\"Bearer\");",
                   "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
                   "  pm.expect(body.roles).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "pm.test(\"returns a refresh token and short TTL (PLAN 2.9)\", () => {",
+                  "  pm.expect(body.refreshToken).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(body.expiresInMs).to.be.at.most(3600000);",
                   "});",
                   "pm.collectionVariables.set(\"buyerToken\", body.accessToken);",
                   "pm.collectionVariables.set(\"buyerId\", body.id);"
@@ -271,6 +283,236 @@
                   "pm.test(\"new user has only ROLE_USER\", () => pm.expect(body.roles).to.eql([\"ROLE_USER\"]));",
                   "pm.collectionVariables.set(\"newUserToken\", body.accessToken);",
                   "pm.collectionVariables.set(\"newUserId\", body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Second session for refresh tests",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signin",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"refreshA\", pm.response.json().refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh → new access + rotated refresh (PLAN 2.9)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/refresh",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshA}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"new tokens\", () => {",
+                  "  pm.expect(body.accessToken).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(body.refreshToken).to.not.eql(pm.collectionVariables.get(\"refreshA\"));",
+                  "  pm.expect(body.username).to.eql(pm.collectionVariables.get(\"newUsername\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"refreshB\", body.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reusing a rotated refresh token → 401 (theft detection)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/refresh",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshA}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "…and it revoked the whole family → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/refresh",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshB}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign out is idempotent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signout",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshB}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh with garbage → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/refresh",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"nope\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
                 ]
               }
             }
@@ -666,6 +908,276 @@
       ]
     },
     {
+      "name": "Gateway",
+      "description": "Single entry point (Spring Cloud Gateway): routing, edge JWT check, /internal blocked, correlation ids, Redis rate limiting. The browser reaches it through nginx on :4200.",
+      "item": [
+        {
+          "name": "Catalog is routed to products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/products?page=0&size=1",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"array of products\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));",
+                  "pm.test(\"rate-limit headers present\", () => pm.expect(pm.response.headers.has(\"X-RateLimit-Remaining\")).to.be.true);",
+                  "pm.test(\"exactly one X-Correlation-Id\", () => {",
+                  "  const ids = pm.response.headers.all().filter(h => h.key.toLowerCase() === \"x-correlation-id\");",
+                  "  pm.expect(ids).to.have.lengthOf(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wallet is routed to core (token passes the edge)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/wallet",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"wallet shape\", () => pm.expect(pm.response.json()).to.have.property(\"balanceCents\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory is routed to inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/inventory/seller/{{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid token stops at the edge → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/wallet",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{garbageToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"edge error shape\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.message).to.eql(\"Invalid or expired token\");",
+                  "  pm.expect(b).to.include.keys(\"status\", \"error\", \"path\", \"timestamp\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anonymous call is passed on and refused by the service → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/wallet",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "/internal is not reachable through the gateway → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlGateway}}/internal/products/seller/{{sellerId}}/product/x/reduce-stock",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.add({ key: \"X-Internal-Api-Key\", value: \"guessed-key\" });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Client correlation id is reused and echoed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/categories",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.add({ key: \"X-Correlation-Id\", value: \"postman-run-0001\" });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"same id back\", () => pm.expect(pm.response.headers.get(\"X-Correlation-Id\")).to.eql(\"postman-run-0001\"));",
+                  "pm.test(\"exactly one X-Correlation-Id\", () => {",
+                  "  const ids = pm.response.headers.all().filter(h => h.key.toLowerCase() === \"x-correlation-id\");",
+                  "  pm.expect(ids).to.have.lengthOf(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unsafe correlation id is replaced",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlGateway}}/api/categories",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.add({ key: \"X-Correlation-Id\", value: \"bad id; <script>\" });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"fresh uuid instead\", () => pm.expect(pm.response.headers.get(\"X-Correlation-Id\")).to.match(/^[0-9a-f-]{36}$/));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Products",
       "description": "Catalog, categories, seller product management and admin listing moderation.",
       "item": [
@@ -868,6 +1380,7 @@
                   "pm.test(\"belongs to the seller\", () => pm.expect(body.sellerId).to.eql(pm.collectionVariables.get(\"sellerId\")));",
                   "pm.test(\"stock is 5\", () => pm.expect(body.stockQuantity).to.eql(5));",
                   "pm.test(\"new listings await moderation (PENDING)\", () => pm.expect(body.status).to.eql(\"PENDING\"));",
+                  "pm.test(\"carbon-neutral courier → LOW delivery emission (PLAN 3.5)\", () => pm.expect(body.deliveryEmission).to.eql(\"LOW\"));",
                   "pm.collectionVariables.set(\"productId\", body.id);",
                   "pm.collectionVariables.set(\"productPrice\", body.price);"
                 ]
@@ -939,6 +1452,50 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"status is APPROVED\", () => pm.expect(pm.response.json().status).to.eql(\"APPROVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid moderation status → 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/admin/{{productId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"MAYBE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
                 ]
               }
             }
@@ -1065,11 +1622,60 @@
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "const list = pm.response.json();",
                   "pm.test(\"all results match filters\", () => list.forEach(p => {",
-                  "  pm.expect(p.co2EmissionScore.toLowerCase()).to.eql(\"low\");",
+                  "  pm.expect(p.deliveryEmission).to.be.oneOf([\"ZERO\", \"LOW\"]);",
                   "  pm.expect(p.price).to.be.within(10, 100);",
                   "  pm.expect(p.city.toLowerCase()).to.include(\"sib\");",
                   "}));",
                   "pm.test(\"new product matches\", () => pm.expect(list.map(p => p.id)).to.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog pagination (PLAN 2.10)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products?page=0&size=1",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"at most one item\", () => pm.expect(pm.response.json().length).to.be.at.most(1));",
+                  "pm.test(\"X-Total-Count header\", () => pm.expect(Number(pm.response.headers.get(\"X-Total-Count\"))).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog filter input is regex-quoted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products?city=.*",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"'.*' matches literally, not everything\", () => pm.response.json().forEach(p => pm.expect(p.city).to.include(\".*\")));"
                 ]
               }
             }
@@ -1283,6 +1889,154 @@
           ]
         },
         {
+          "name": "Seller offers local pickup; claimed level is ignored (PLAN 3.5)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/{{productId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"QA Woven Basket\",\n  \"description\": \"Updated description.\",\n  \"price\": 45.0,\n  \"imageUrl\": \"https://images.unsplash.com/photo-1519710164239-da123dc03ef4\",\n  \"category\": \"{{rootCategoryName}}\",\n  \"categoryPath\": \"{{rootCategoryName}}\",\n  \"city\": \"Sibiu\",\n  \"region\": \"Sibiu\",\n  \"co2EmissionScore\": \"High\",\n  \"shippingMethod\": \"Express\",\n  \"localPickup\": true,\n  \"deliveryEmission\": \"STANDARD\",\n  \"isHandmade\": true,\n  \"lowStockThreshold\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"local pickup → ZERO\", () => pm.expect(body.deliveryEmission).to.eql(\"ZERO\"));",
+                  "pm.test(\"localPickup stored\", () => pm.expect(body.localPickup).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog: zero-emission only (PLAN 3.5)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products?deliveryEmission=ZERO",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test(\"every result is ZERO\", () => list.forEach(p => pm.expect(p.deliveryEmission).to.eql(\"ZERO\")));",
+                  "pm.test(\"contains the pickup product\", () => pm.expect(list.map(p => p.id)).to.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog: eco-friendly includes zero-emission",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products?deliveryEmission=LOW",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test(\"ZERO or LOW only\", () => list.forEach(p => pm.expect(p.deliveryEmission).to.be.oneOf([\"ZERO\", \"LOW\"])));",
+                  "pm.test(\"contains the pickup product\", () => pm.expect(list.map(p => p.id)).to.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog: local pickup filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products?localPickup=true",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test(\"every result offers pickup\", () => list.forEach(p => pm.expect(p.localPickup).to.be.true));",
+                  "pm.test(\"contains the pickup product\", () => pm.expect(list.map(p => p.id)).to.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalog: unknown emission level → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products?deliveryEmission=NEGATIVE",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Seller low-stock list",
           "request": {
             "method": "GET",
@@ -1448,7 +2202,7 @@
           ]
         },
         {
-          "name": "Internal stock endpoint without key → 401 (PLAN 1.3)",
+          "name": "Products has no stock API for other services any more (PLAN 4.2)",
           "request": {
             "method": "POST",
             "header": [
@@ -1485,7 +2239,7 @@
           ]
         },
         {
-          "name": "Internal stock endpoint with user JWT → 403 (PLAN 1.3)",
+          "name": "Inventory stock API with user JWT → 403 (PLAN 1.3 / 4.2)",
           "request": {
             "method": "POST",
             "header": [
@@ -1494,7 +2248,7 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrlProducts}}/internal/products/seller/{{sellerId}}/product/{{productId}}/reduce-stock",
+            "url": "{{baseUrlInventory}}/internal/inventory/stock/{{productId}}/reserve",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1524,12 +2278,23 @@
                 "exec": [
                   "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 10\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 10\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(10);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 10 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 10 (event-driven)\", () => pm.expect(seen).to.eql(10));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -1684,7 +2449,7 @@
           ]
         },
         {
-          "name": "Internal inventory endpoint without key → 401 (PLAN 1.3)",
+          "name": "Inventory stock API without key → 401 (PLAN 1.3 / 4.2)",
           "request": {
             "method": "POST",
             "header": [
@@ -1693,7 +2458,7 @@
                 "value": "application/json"
               }
             ],
-            "url": "{{baseUrlInventory}}/internal/inventory/seller/{{sellerId}}/product/{{productId}}/reduce-stock",
+            "url": "{{baseUrlInventory}}/internal/inventory/stock/{{productId}}/reserve",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -1770,10 +2535,545 @@
     },
     {
       "name": "Orders – Buyer",
-      "description": "Checkout with real-time stock deduction, cancellation with auto-restock, buyer order history.",
+      "description": "Address book, checkout with real-time stock deduction, cancellation with auto-restock, buyer order history.",
       "item": [
         {
-          "name": "Create order A (qty 2) → stock 10→8",
+          "name": "Wallet needs a token → 401 (PLAN 3.7)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/wallet",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid top-ups → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/wallet/top-up",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": -5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "const bad = [{ amount: 5000.01 }, { amount: 1.001 }, {}];",
+                  "bad.forEach(b => pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlCore}}/api/wallet/top-up\"), method: \"POST\",",
+                  "  header: { \"Content-Type\": \"application/json\", Authorization: \"Bearer \" + pm.collectionVariables.get(\"buyerToken\") },",
+                  "  body: { mode: \"raw\", raw: JSON.stringify(b) } }, (err, res) => pm.test(\"rejects \" + JSON.stringify(b), () => pm.expect(res.code).to.eql(400))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer tops up the demo wallet (amount only, card data ignored)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/wallet/top-up",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"cardNumber\": \"4111111111111111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"balance in cents and RON\", () => {",
+                  "  pm.expect(body.balanceCents).to.be.a(\"number\").and.at.least(100000);",
+                  "  pm.expect(body.currency).to.eql(\"RON\");",
+                  "});",
+                  "pm.test(\"no card data echoed\", () => pm.expect(JSON.stringify(body)).to.not.include(\"4111\"));",
+                  "pm.collectionVariables.set(\"walletBefore\", body.balanceCents);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Address book needs a token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/user/addresses",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer saves a shipping address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/user/addresses",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"QA\",\n  \"recipientName\": \"Ana Pop\",\n  \"street\": \"Str. Florilor 3\",\n  \"city\": \"Sibiu\",\n  \"postalCode\": \"550000\",\n  \"country\": \"Romania\",\n  \"phone\": \"+40 712 345 678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"has an id and the fields\", () => {",
+                  "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
+                  "  pm.expect(body.city).to.eql(\"Sibiu\");",
+                  "});",
+                  "pm.collectionVariables.set(\"addressId\", body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid address → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/user/addresses",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"QA\",\n  \"recipientName\": \"Ana Pop\",\n  \"street\": \"\",\n  \"city\": \"Sibiu\",\n  \"postalCode\": \"550000\",\n  \"country\": \"Romania\",\n  \"phone\": \"<script>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer lists own addresses (exactly one default)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/user/addresses",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json();",
+                  "pm.test(\"contains the new address\", () => pm.expect(list.map(a => a.id)).to.include(pm.collectionVariables.get(\"addressId\")));",
+                  "pm.test(\"exactly one default\", () => pm.expect(list.filter(a => a.default)).to.have.lengthOf(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer makes it the default",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/user/addresses/{{addressId}}/default",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"is default\", () => pm.expect(pm.response.json().default).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other user cannot touch the buyer's address → 404",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/user/addresses/{{addressId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"QA\",\n  \"recipientName\": \"Ana Pop\",\n  \"street\": \"Str. Florilor 3\",\n  \"city\": \"Sibiu\",\n  \"postalCode\": \"550000\",\n  \"country\": \"Romania\",\n  \"phone\": \"+40 712 345 678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout with someone else's address → 404, no stock change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 10\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(10);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 10 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 10 (event-driven)\", () => pm.expect(seen).to.eql(10));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout with an empty wallet → 409, no stock change (PLAN 3.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shippingAddress\": \"Str. Lipsei 1, Sibiu\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"explains the balance\", () => pm.expect(pm.response.json().message).to.match(/insufficient wallet balance/i));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 10\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(10);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 10 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 10 (event-driven)\", () => pm.expect(seen).to.eql(10));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout without any address → 400, no stock change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"asks for an address\", () => pm.expect(pm.response.json().message).to.match(/shipping address/i));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 10\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(10);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 10 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 10 (event-driven)\", () => pm.expect(seen).to.eql(10));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create order A (qty 2, saved address) → stock 10→8",
           "request": {
             "method": "POST",
             "header": [
@@ -1796,7 +3096,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1812,6 +3112,13 @@
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
+                  "pm.test(\"ships to the formatted address-book entry\", () =>",
+                  "  pm.expect(body.shippingAddress).to.eql(\"Ana Pop, Str. Florilor 3, 550000 Sibiu, Romania, tel. +40 712 345 678\"));",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlCore}}/api/wallet\"), method: \"GET\",",
+                  "  header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"buyerToken\") } }, (err, res) => {",
+                  "  pm.test(\"wallet debited by the order total (PLAN 3.7)\", () =>",
+                  "    pm.expect(res.json().balanceCents).to.eql(Number(pm.collectionVariables.get(\"walletBefore\")) - Math.round(body.totalAmount * 100)));",
+                  "});",
                   "pm.test(\"order is PENDING with an order number\", () => {",
                   "  pm.expect(body.status).to.eql(\"PENDING\");",
                   "  pm.expect(body.orderNumber).to.match(/^ORD-/);",
@@ -1822,11 +3129,56 @@
                   "});",
                   "pm.collectionVariables.set(\"orderAId\", body.id);",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 8\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 8\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(8);",
                   "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 8 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 8 (event-driven)\", () => pm.expect(seen).to.eql(8));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer deletes the address (keeps the book small across runs)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/user/addresses/{{addressId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 204\", () => pm.response.to.have.status(204));",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlCore}}/api/user/addresses\"), method: \"GET\",",
+                  "  header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"buyerToken\") } }, (err, res) => {",
+                  "  pm.test(\"address gone\", () => pm.expect(res.json().map(a => a.id)).to.not.include(pm.collectionVariables.get(\"addressId\")));",
                   "});"
                 ]
               }
@@ -1878,12 +3230,62 @@
                   "  pm.expect(body.cancellationReason).to.eql(\"Changed my mind\");",
                   "});",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 10\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 10\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(10);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 10 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 10 (event-driven)\", () => pm.expect(seen).to.eql(10));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelling refunded the wallet; ledger shows payment + refund (PLAN 3.7)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/wallet/transactions?limit=10",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const tx = pm.response.json().filter(t => t.orderId === pm.collectionVariables.get(\"orderAId\"));",
+                  "pm.test(\"PAYMENT and REFUND of the same amount\", () => {",
+                  "  const pay = tx.find(t => t.type === \"PAYMENT\"), ref = tx.find(t => t.type === \"REFUND\");",
+                  "  pm.expect(pay, \"payment\").to.exist;",
+                  "  pm.expect(ref, \"refund\").to.exist;",
+                  "  pm.expect(ref.amountCents).to.eql(-pay.amountCents);",
+                  "});",
+                  "pm.test(\"balance back to before the order\", () =>",
+                  "  pm.expect(pm.response.json()[0].balanceAfterCents).to.eql(Number(pm.collectionVariables.get(\"walletBefore\"))));"
                 ]
               }
             }
@@ -1929,12 +3331,23 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 10\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 10\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(10);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 10 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 10 (event-driven)\", () => pm.expect(seen).to.eql(10));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -1983,12 +3396,54 @@
                   "pm.collectionVariables.set(\"orderBId\", body.id);",
                   "pm.collectionVariables.set(\"orderBNumber\", body.orderNumber);",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 9\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(9);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirm receipt before shipping → 409 (PLAN 2.4)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}/confirm-receipt",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"explains the transition\", () => pm.expect(pm.response.json().message).to.match(/PENDING to DELIVERED/));"
                 ]
               }
             }
@@ -2035,12 +3490,23 @@
                   "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
                   "pm.test(\"explains insufficient stock\", () => pm.expect(pm.response.json().message).to.match(/insufficient stock/i));",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 9\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(9);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -2134,12 +3600,23 @@
                   "});",
                   "pm.collectionVariables.set(\"orderTamperedId\", body.id);",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 8\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 8\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(8);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 8 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 8 (event-driven)\", () => pm.expect(seen).to.eql(8));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -2185,12 +3662,23 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 9\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(9);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -2266,12 +3754,23 @@
                 "exec": [
                   "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 9\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(9);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -2495,6 +3994,193 @@
           ]
         },
         {
+          "name": "Seller edits items: qty 1→2 → stock 9→8 (PLAN 2.5)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/edit",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"total recomputed from server price\", () => pm.expect(pm.response.json().order.totalAmount).to.eql(2 * Number(pm.collectionVariables.get(\"productPrice\"))));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 8\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(8);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 8 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 8 (event-driven)\", () => pm.expect(seen).to.eql(8));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller edits items: qty 2→1 → stock 8→9",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/edit",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(9);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit to more than stock → 409, nothing changes",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/edit",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 999\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(9);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Seller moves order B to PROCESSING",
           "request": {
             "method": "PATCH",
@@ -2633,7 +4319,52 @@
           ]
         },
         {
-          "name": "Generate eco shipping label",
+          "name": "Cannot ship without a label/tracking → 409 (PLAN 3.6)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SHIPPED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"asks for a label\", () => pm.expect(pm.response.json().message).to.match(/shipping label/i));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ship with Wovely: generate eco shipping label (PLAN 3.6)",
           "request": {
             "method": "POST",
             "header": [],
@@ -2657,7 +4388,78 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"label returned\", () => pm.expect(pm.response.json().label).to.be.a(\"string\").and.not.empty);"
+                  "const body = pm.response.json();",
+                  "pm.test(\"label returned\", () => pm.expect(body.label).to.be.a(\"string\").and.not.empty);",
+                  "pm.test(\"tracking number issued by the carrier\", () => {",
+                  "  pm.expect(body.order.trackingNumber).to.match(/^WVL-(GRL|ECP|BIO|EFD)-[A-Z2-9]{10}$/);",
+                  "  pm.expect(body.label).to.include(body.order.trackingNumber);",
+                  "});",
+                  "pm.test(\"carrier and CO2 estimate stored\", () => {",
+                  "  pm.expect(body.order.carrierName).to.be.oneOf([\"GreenLogistics\", \"EcoParcel\", \"BioShip\", \"EarthFriendly Delivery\"]);",
+                  "  pm.expect(body.order.estimatedCo2Kg).to.be.a(\"number\").and.at.least(0);",
+                  "  pm.expect(body.order.shippingDistanceKm).to.be.within(5, 1200);",
+                  "});",
+                  "pm.collectionVariables.set(\"orderBTracking\", body.order.trackingNumber);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Second label for the same order → 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/eco-label",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Label for a cancelled order → 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderAId}}/eco-label",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
                 ]
               }
             }
@@ -2703,6 +4505,156 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"status SHIPPED\", () => pm.expect(pm.response.json().order.status).to.eql(\"SHIPPED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot move SHIPPED back to PENDING → 409 (PLAN 2.4)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PENDING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot refund → 409 (admin only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REFUNDED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer cannot cancel a shipped order → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}/cancel",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"too late\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(9);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -2797,12 +4749,23 @@
                   "  pm.expect(body.orderNumber).to.match(/^MAN-/);",
                   "});",
                   "",
-                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product stock is 8\", () => {",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 8\", () => {",
                   "    pm.expect(err).to.be.null;",
                   "    pm.expect(res.json().stockQuantity).to.eql(8);",
                   "  });",
-                  "});"
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 8 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 8 (event-driven)\", () => pm.expect(seen).to.eql(8));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);"
                 ]
               }
             }
@@ -2966,6 +4929,178 @@
           ]
         },
         {
+          "name": "Search users by email (case-insensitive, PLAN 3.1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/users?query={{upperEmail}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set(\"upperEmail\", encodeURIComponent(pm.collectionVariables.get(\"newEmail\").toUpperCase()));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const users = pm.response.json();",
+                  "pm.test(\"exactly the new user\", () => {",
+                  "  pm.expect(users).to.have.lengthOf(1);",
+                  "  pm.expect(users[0].username).to.eql(pm.collectionVariables.get(\"newUsername\"));",
+                  "});",
+                  "pm.test(\"no password in CRM view\", () => pm.expect(users[0]).to.not.have.property(\"password\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search users by username + status filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/users?query=seller&status=ACTIVE",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const users = pm.response.json();",
+                  "pm.test(\"every hit matches the query and status\", () => users.forEach(u => {",
+                  "  pm.expect((u.username + \" \" + u.email + \" \" + (u.fullName || \"\")).toLowerCase()).to.include(\"seller\");",
+                  "  pm.expect(u.accountStatus).to.eql(\"ACTIVE\");",
+                  "}));",
+                  "pm.test(\"seeded seller found\", () => pm.expect(users.map(u => u.username)).to.include(\"seller\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search treats regex metacharacters literally",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/users?query=.*",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"no regex injection\", () => pm.expect(pm.response.json()).to.have.lengthOf(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with unknown status → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/users?status=EXILED",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot search users → 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/users?query=a",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Get user by id",
           "request": {
             "method": "GET",
@@ -3072,6 +5207,44 @@
           ]
         },
         {
+          "name": "New user signs in again (refresh token for the ban test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signin",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"refreshC\", pm.response.json().refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Suspend new user for 7 days",
           "request": {
             "method": "POST",
@@ -3138,6 +5311,43 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"{{newUsername}}\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Suspension revoked the refresh token → 401 (PLAN 2.9)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/refresh",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshC}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3417,6 +5627,254 @@
           ]
         },
         {
+          "name": "Mark order B disputed (PLAN 2.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/orders/{{orderBId}}/intervene",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"MARK_DISPUTED\",\n  \"reason\": \"Buyer says parcel is damaged\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"DISPUTED\", () => pm.expect(pm.response.json().status).to.eql(\"DISPUTED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispute flag is persisted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/orders/{{orderBId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"isDisputed + reason survived the save\", () => {",
+                  "  pm.expect(body.isDisputed).to.eql(true);",
+                  "  pm.expect(body.disputeReason).to.eql(\"Buyer says parcel is damaged\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Disputed orders list contains order B",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/orders/disputed",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"listed\", () => pm.expect(pm.response.json().map(o => o.id)).to.include(pm.collectionVariables.get(\"orderBId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolve dispute without newStatus → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/orders/{{orderBId}}/intervene",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"RESOLVE_DISPUTE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolve dispute → back to SHIPPED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/orders/{{orderBId}}/intervene",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"RESOLVE_DISPUTE\",\n  \"newStatus\": \"SHIPPED\",\n  \"reason\": \"Photos show intact parcel\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"flag cleared, SHIPPED\", () => {",
+                  "  pm.expect(body.status).to.eql(\"SHIPPED\");",
+                  "  pm.expect(body.isDisputed).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown intervention → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/orders/{{orderBId}}/intervene",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"TELEPORT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Audit trail records the intervention",
           "request": {
             "method": "GET",
@@ -3443,7 +5901,13 @@
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "const logs = pm.response.json();",
                   "pm.test(\"has an ORDER_INTERVENTION entry for order B\", () => pm.expect(",
-                  "  logs.some(l => l.targetId === pm.collectionVariables.get(\"orderBId\") && l.actionType === \"ORDER_INTERVENTION\")).to.be.true);"
+                  "  logs.some(l => l.targetId === pm.collectionVariables.get(\"orderBId\") && l.actionType === \"ORDER_INTERVENTION\")).to.be.true);",
+                  "pm.test(\"records the admin as actor (PLAN 2.7)\", () => pm.expect(",
+                  "  logs.find(l => l.actionType === \"ORDER_INTERVENTION\").adminId).to.eql(pm.collectionVariables.get(\"adminId\")));",
+                  "pm.test(\"user penalties are audited (PLAN 2.7)\", () => pm.expect(",
+                  "  logs.some(l => l.actionType === \"USER_PENALTY\" && l.targetId === pm.collectionVariables.get(\"newUserId\"))).to.be.true);",
+                  "pm.test(\"product moderation is audited (PLAN 2.7)\", () => pm.expect(",
+                  "  logs.some(l => l.actionType === \"PRODUCT_STATUS\" && l.targetId === pm.collectionVariables.get(\"productId\"))).to.be.true);"
                 ]
               }
             }
@@ -3783,7 +6247,7 @@
     },
     {
       "name": "Reviews",
-      "description": "Product reviews (products service) and seller reviews (core).",
+      "description": "Product reviews (products service) and seller reviews (core). \"Verified Purchase\" = the author has a DELIVERED/COMPLETED order with the product / seller (PLAN 3.3).",
       "item": [
         {
           "name": "Anonymous cannot review → 401 (PLAN 1.7)",
@@ -3817,6 +6281,37 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer confirms receipt of order B (makes the purchase verifiable)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}/confirm-receipt",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"DELIVERED\", () => pm.expect(pm.response.json().status).to.eql(\"DELIVERED\"));"
                 ]
               }
             }
@@ -3865,7 +6360,8 @@
                   "pm.test(\"author comes from the token (PLAN 1.7)\", () => {",
                   "  pm.expect(pm.response.json().userId).to.eql(pm.collectionVariables.get(\"buyerId\"));",
                   "  pm.expect(pm.response.json().username).to.eql(\"testuser\");",
-                  "});"
+                  "});",
+                  "pm.test(\"Verified Purchase — buyer received order B (PLAN 3.3)\", () => pm.expect(pm.response.json().verifiedPurchase).to.be.true);"
                 ]
               }
             }
@@ -3916,6 +6412,51 @@
           ]
         },
         {
+          "name": "Non-buyer review is not verified, even if the client claims so (PLAN 3.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/reviews",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 4,\n  \"comment\": \"Saw it at a fair.\",\n  \"verifiedPurchase\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"verifiedPurchase forced to false\", () => pm.expect(pm.response.json().verifiedPurchase).to.be.false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Product reviews with average",
           "request": {
             "method": "GET",
@@ -3937,6 +6478,11 @@
                   "pm.test(\"has review and average\", () => {",
                   "  pm.expect(body.totalReviews).to.be.at.least(1);",
                   "  pm.expect(body.averageRating).to.be.within(1, 5);",
+                  "});",
+                  "pm.test(\"verified and unverified reviews are distinguishable\", () => {",
+                  "  const flags = body.reviews.map(r => r.verifiedPurchase);",
+                  "  pm.expect(flags).to.include(true);",
+                  "  pm.expect(flags).to.include(false);",
                   "});"
                 ]
               }
@@ -4068,7 +6614,53 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"bound to seller\", () => pm.expect(pm.response.json().sellerId).to.eql(pm.collectionVariables.get(\"sellerId\")));",
-                  "pm.test(\"buyer comes from the token\", () => pm.expect(pm.response.json().buyerId).to.eql(pm.collectionVariables.get(\"buyerId\")));"
+                  "pm.test(\"buyer comes from the token\", () => pm.expect(pm.response.json().buyerId).to.eql(pm.collectionVariables.get(\"buyerId\")));",
+                  "pm.test(\"Verified Purchase from this seller (PLAN 3.3)\", () => pm.expect(pm.response.json().verifiedPurchase).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-customer seller review is not verified (PLAN 3.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/public/users/seller/{{sellerId}}/reviews",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"overallRating\": 3,\n  \"communicationRating\": 3,\n  \"shippingRating\": 3,\n  \"comment\": \"Only chatted.\",\n  \"verifiedPurchase\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"verifiedPurchase forced to false\", () => pm.expect(pm.response.json().verifiedPurchase).to.be.false);"
                 ]
               }
             }
@@ -4105,11 +6697,11 @@
       "description": "Return requests on delivered orders.",
       "item": [
         {
-          "name": "Buyer confirms receipt of order B (precondition)",
+          "name": "Order B is already DELIVERED (precondition, confirmed in Reviews)",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
-            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}/confirm-receipt",
+            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -4174,6 +6766,50 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Return on a cancelled order → 409 (PLAN 2.6)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/returns",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderAId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
                 ]
               }
             }
@@ -4428,6 +7064,120 @@
           ]
         },
         {
+          "name": "Seller refunds the return → stock 8→9, order REFUNDED (PLAN 2.6)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/returns/{{returnId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REFUNDED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"REFUNDED\", () => pm.expect(pm.response.json().status).to.eql(\"REFUNDED\"));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
+                  "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
+                  "  pm.test(\"inventory (stock owner) shows 9\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(9);",
+                  "  });",
+                  "});",
+                  "(function pollCatalog(left) {",
+                  "  pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "    const seen = err ? undefined : res.json().stockQuantity;",
+                  "    if (seen === 9 || left === 0) {",
+                  "      pm.test(\"catalog read model caught up to 9 (event-driven)\", () => pm.expect(seen).to.eql(9));",
+                  "    } else {",
+                  "      setTimeout(() => pollCatalog(left - 1), 250);",
+                  "    }",
+                  "  });",
+                  "})(20);",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlCore}}/api/orders/{{orderBId}}\"), method: \"GET\",",
+                  "  header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"buyerToken\") } }, (err, res) => {",
+                  "  pm.test(\"order fully refunded\", () => {",
+                  "    pm.expect(res.json().refundedAmount).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
+                  "    pm.expect(res.json().status).to.eql(\"REFUNDED\");",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refunded return cannot move again → 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/returns/{{returnId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DENIED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Invalid return status → 400",
           "request": {
             "method": "PATCH",
@@ -4550,10 +7300,10 @@
     },
     {
       "name": "Reports",
-      "description": "Flagged content queue; admin may read chat logs only through a CHAT report.",
+      "description": "Flagged content queue; admin may read chat logs only through a CHAT report (PLAN 3.2).",
       "item": [
         {
-          "name": "Buyer reports chat",
+          "name": "Buyer reports chat with seller (other user's id)",
           "request": {
             "method": "POST",
             "header": [
@@ -4576,7 +7326,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reporterId\": \"{{buyerId}}\",\n  \"reporterName\": \"testuser\",\n  \"targetType\": \"CHAT\",\n  \"targetId\": \"{{buyerId}}:{{sellerId}}\",\n  \"targetName\": \"seller\",\n  \"reason\": \"Testing moderation flow\",\n  \"status\": \"PENDING\"\n}",
+              "raw": "{\n  \"reporterId\": \"{{sellerId}}\",\n  \"reporterName\": \"forged\",\n  \"targetType\": \"CHAT\",\n  \"targetId\": \"{{sellerId}}\",\n  \"targetName\": \"forged\",\n  \"reason\": \"Testing moderation flow\",\n  \"status\": \"RESOLVED\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4591,8 +7341,62 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"reporter comes from the token\", () => pm.expect(pm.response.json().reporterId).to.eql(pm.collectionVariables.get(\"buyerId\")));",
-                  "pm.collectionVariables.set(\"reportId\", pm.response.json().id);"
+                  "const body = pm.response.json();",
+                  "pm.test(\"reporter comes from the token\", () => pm.expect(body.reporterId).to.eql(pm.collectionVariables.get(\"buyerId\")));",
+                  "pm.test(\"server-set status and name\", () => {",
+                  "  pm.expect(body.status).to.eql(\"PENDING\");",
+                  "  pm.expect(body.targetName).to.eql(\"Chat with seller\");",
+                  "});",
+                  "pm.test(\"participants stored sorted (PLAN 3.2)\", () => {",
+                  "  const ids = [pm.collectionVariables.get(\"buyerId\"), pm.collectionVariables.get(\"sellerId\")].sort();",
+                  "  pm.expect(body.participantIds).to.eql(ids);",
+                  "  pm.expect(body.targetId).to.eql(ids.join(\":\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"reportId\", body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same open chat report again → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"CHAT\",\n  \"targetId\": \"{{buyerId}}:{{sellerId}}\",\n  \"reason\": \"again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
                 ]
               }
             }
@@ -4643,6 +7447,309 @@
           ]
         },
         {
+          "name": "Cannot report a conversation that never happened → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"CHAT\",\n  \"targetId\": \"{{adminId}}\",\n  \"reason\": \"made up\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chat report with unknown user → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"CHAT\",\n  \"targetId\": \"000000000000000000000000\",\n  \"reason\": \"ghost\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Report without reason → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": \"{{productId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown target type → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"USER\",\n  \"targetId\": \"{{sellerId}}\",\n  \"reason\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anonymous cannot report → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": \"{{productId}}\",\n  \"reason\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "New user reports listing (name from catalog)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": \"{{productId}}\",\n  \"targetName\": \"forged\",\n  \"reason\": \"Looks mass-produced\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"targetName is the real product name\", () => pm.expect(pm.response.json().targetName).to.not.eql(\"forged\"));",
+                  "pm.collectionVariables.set(\"productReportId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Report unknown product → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"PRODUCT\",\n  \"targetId\": \"000000000000000000000000\",\n  \"reason\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Admin flagged-content queue",
           "request": {
             "method": "GET",
@@ -4667,7 +7774,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"contains the report\", () => pm.expect(pm.response.json().map(r => r.id)).to.include(pm.collectionVariables.get(\"reportId\")));"
+                  "pm.test(\"contains both reports\", () => pm.expect(pm.response.json().map(r => r.id))",
+                  "  .to.include.members([pm.collectionVariables.get(\"reportId\"), pm.collectionVariables.get(\"productReportId\")]));"
                 ]
               }
             }
@@ -4703,7 +7811,70 @@
                   "  const ids = [pm.collectionVariables.get(\"buyerId\"), pm.collectionVariables.get(\"sellerId\")];",
                   "  pm.expect(msgs).to.not.be.empty;",
                   "  msgs.forEach(m => { pm.expect(ids).to.include(m.senderId); pm.expect(ids).to.include(m.receiverId); });",
+                  "});",
+                  "pm.test(\"oldest first\", () => {",
+                  "  for (let i = 1; i < msgs.length; i++) pm.expect(msgs[i].timestamp >= msgs[i - 1].timestamp).to.be.true;",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product report has no chat log → 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/reports/chat-log/{{productReportId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown report chat log → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/reports/chat-log/000000000000000000000000",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));"
                 ]
               }
             }
@@ -4749,6 +7920,216 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "pm.test(\"RESOLVED\", () => pm.expect(pm.response.json().status).to.eql(\"RESOLVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deciding a decided report → 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports/{{reportId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DISMISSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid report status → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports/{{productReportId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DELETED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin dismisses product report",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports/{{productReportId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DISMISSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"DISMISSED\", () => pm.expect(pm.response.json().status).to.eql(\"DISMISSED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decisions are audited",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/admin/orders/audit",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const types = pm.response.json().map(a => a.actionType);",
+                  "pm.test(\"REPORT_RESOLVED, REPORT_DISMISSED and CHAT_LOG_VIEWED logged\", () =>",
+                  "  pm.expect(types).to.include.members([\"REPORT_RESOLVED\", \"REPORT_DISMISSED\", \"CHAT_LOG_VIEWED\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot decide reports → 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports/{{reportId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DISMISSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -4818,10 +8199,10 @@
     },
     {
       "name": "Cleanup",
-      "description": "Removes the test product so repeated runs don't pile up catalog entries.",
+      "description": "Archives the test product so repeated runs don't pile up catalog entries.",
       "item": [
         {
-          "name": "Seller deletes test product",
+          "name": "Seller deletes (archives) test product",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -4846,8 +8227,76 @@
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
-                  "  pm.test(\"product is gone\", () => pm.expect(res.code).to.eql(404));",
+                  "  pm.test(\"soft-deleted: still resolvable for order history, status ARCHIVED (PLAN 2.8)\", () => pm.expect(res.json().status).to.eql(\"ARCHIVED\"));",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Archived product left the catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"not listed\", () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Archived product cannot be ordered → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
                 ]
               }
             }
@@ -4857,6 +8306,18 @@
     }
   ],
   "variable": [
+    {
+      "key": "refreshA",
+      "value": ""
+    },
+    {
+      "key": "refreshB",
+      "value": ""
+    },
+    {
+      "key": "refreshC",
+      "value": ""
+    },
     {
       "key": "orderTamperedId",
       "value": ""
@@ -4943,6 +8404,22 @@
     },
     {
       "key": "reportId",
+      "value": ""
+    },
+    {
+      "key": "productReportId",
+      "value": ""
+    },
+    {
+      "key": "orderBTracking",
+      "value": ""
+    },
+    {
+      "key": "addressId",
+      "value": ""
+    },
+    {
+      "key": "walletBefore",
       "value": ""
     }
   ]

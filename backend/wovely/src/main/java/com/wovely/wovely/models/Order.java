@@ -6,6 +6,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document(collection = "orders")
+@org.springframework.data.mongodb.core.index.CompoundIndex(name = "buyer", def = "{'buyer_id': 1}")
+@org.springframework.data.mongodb.core.index.CompoundIndex(name = "seller", def = "{'seller_id': 1}")
 public class Order {
     @Id
     private String id;
@@ -69,6 +71,21 @@ public class Order {
 
     @Field("is_reviewed")
     private boolean isReviewed = false;
+
+    @Field("refunded_amount")
+    private Double refundedAmount;
+
+    // "Ship with Platform" label (PLAN.md 3.6)
+    private String carrierName;
+    private String carrierMethod;
+    private Integer shippingDistanceKm;
+    private Double estimatedCo2Kg;
+    private Date labelGeneratedAt;
+
+    // Mock wallet escrow (PLAN.md 3.7); null paidCents = not paid through the wallet (legacy/manual orders)
+    private Long paidCents;
+    private Long walletRefundedCents;
+    private Long payoutCents;
 
     public Order() {
         this.createdAt = new Date();
@@ -243,4 +260,30 @@ public class Order {
     public void setReviewed(boolean reviewed) {
         isReviewed = reviewed;
     }
+
+    public Double getRefundedAmount() {
+        return refundedAmount;
+    }
+
+    public void setRefundedAmount(Double refundedAmount) {
+        this.refundedAmount = refundedAmount;
+    }
+
+    public String getCarrierName() { return carrierName; }
+    public void setCarrierName(String carrierName) { this.carrierName = carrierName; }
+    public String getCarrierMethod() { return carrierMethod; }
+    public void setCarrierMethod(String carrierMethod) { this.carrierMethod = carrierMethod; }
+    public Integer getShippingDistanceKm() { return shippingDistanceKm; }
+    public void setShippingDistanceKm(Integer shippingDistanceKm) { this.shippingDistanceKm = shippingDistanceKm; }
+    public Double getEstimatedCo2Kg() { return estimatedCo2Kg; }
+    public void setEstimatedCo2Kg(Double estimatedCo2Kg) { this.estimatedCo2Kg = estimatedCo2Kg; }
+    public Date getLabelGeneratedAt() { return labelGeneratedAt; }
+    public void setLabelGeneratedAt(Date labelGeneratedAt) { this.labelGeneratedAt = labelGeneratedAt; }
+
+    public Long getPaidCents() { return paidCents; }
+    public void setPaidCents(Long paidCents) { this.paidCents = paidCents; }
+    public Long getWalletRefundedCents() { return walletRefundedCents; }
+    public void setWalletRefundedCents(Long walletRefundedCents) { this.walletRefundedCents = walletRefundedCents; }
+    public Long getPayoutCents() { return payoutCents; }
+    public void setPayoutCents(Long payoutCents) { this.payoutCents = payoutCents; }
 }

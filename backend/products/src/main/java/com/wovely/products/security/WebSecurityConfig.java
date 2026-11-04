@@ -1,5 +1,11 @@
 package com.wovely.products.security;
 
+import com.wovely.common.security.AuthTokenFilter;
+import com.wovely.common.security.InternalApiKeyFilter;
+import com.wovely.common.security.JwtPrincipal;
+import com.wovely.common.security.JwtUtils;
+import com.wovely.common.security.OwnershipGuard;
+import com.wovely.common.security.RestAuthHandlers;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
@@ -23,6 +29,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * </ul>
  */
 @Configuration
+@org.springframework.context.annotation.Import(com.wovely.common.security.ClaimsSecurityConfiguration.class)
 @EnableWebSecurity
 @EnableMethodSecurity
 public class WebSecurityConfig {
@@ -36,6 +43,10 @@ public class WebSecurityConfig {
             .exceptionHandling(e -> e.authenticationEntryPoint(authHandlers).accessDeniedHandler(authHandlers))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/error").permitAll()
+                        // liveness/readiness for docker healthchecks; details never exposed (PLAN.md 4.6)
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // API docs (PLAN.md 4.5); disable with SPRINGDOC_API_DOCS_ENABLED=false in production
+                        .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                 .requestMatchers("/internal/**").hasAuthority(JwtPrincipal.SERVICE_ROLE)
                 .requestMatchers(GET, "/api/categories/**").permitAll()
                 .requestMatchers("/api/categories/**").hasRole("ADMIN")

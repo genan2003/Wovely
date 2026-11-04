@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<!-- Aggregator only (PLAN.md 4.3): `mvn -f backend/pom.xml verify` builds common first, then every service.
+	     Each service keeps spring-boot-starter-parent as its parent and depends on wovely-common. -->
+	<groupId>com.wovely</groupId>
+	<artifactId>wovely-backend</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<modules>
+		<module>common</module>
+		<module>wovely</module>
+		<module>products</module>
+		<module>inventory</module>
+		<module>gateway</module>
+	</modules>
+</project>

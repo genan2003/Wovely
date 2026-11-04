@@ -1,9 +1,10 @@
 @startuml checkout-stock-deduction
 !include ../_theme.puml
-title Checkout: server-side pricing and real-time stock deduction
+title Checkout: server-side pricing, stock deduction and wallet payment
 
 ' Derived from: wovely BuyerOrderController, services/OrderService#createOrder,
-' clients/CatalogClient; products InternalProductController, services/StockService;
+' services/AddressService, services/WalletService, clients/CatalogClient, clients/InventoryClient;
+' inventory InternalStockController, stock/StockLedger (atomic), stock/StockEventRelay; products messaging/StockChangedListener;
 ' inventory InternalInventoryController
 autonumber
 actor "Buyer" as B
@@ -11,16 +12,28 @@ participant "Angular SPA\n(cart)" as Web
 box "core service :8081" #FAF6EF
   participant "BuyerOrderController" as Ctl
   participant "OrderService" as Svc
+  participant "AddressService" as Addr
+  participant "WalletService" as Wal
   participant "CatalogClient" as Cat
+  participant "InventoryClient" as InvC
 end box
 participant "products :8082" as Prod
-participant "inventory :8083" as Inv
+participant "inventory :8083\n(stock owner)" as Inv
+queue "RabbitMQ" as MQ
 database "MongoDB" as DB
 
 B -> Web : checkout one seller group
-Web -> Ctl ++ : POST /api/orders (JWT)\n{items:[{productId, quantity}], shippingAddress}
+Web -> Ctl ++ : POST /api/orders (JWT)\n{items:[{productId, quantity}], addressId}
 note right of Web : legacy price / total / status / buyerId\nfields are ignored by the server
 Ctl -> Svc ++ : createOrder(request, buyer from JWT)
+Svc -> Addr : resolveForCheckout(buyerId, addressId, shippingAddress)
+note right of Addr : addressId from the buyer's own book,\nelse legacy free text, else the default entry
+alt addressId not in the buyer's book
+  Addr --> Web : 404
+else no address at all
+  Addr --> Web : 400 "Add a shipping address"
+end
+Addr --> Svc : formatted address
 
 loop each item
   Svc -> Cat : getProduct(productId)
@@ -32,21 +45,20 @@ alt validation fails
   Svc --> Web : 400 {message}
 end
 
-group Stock deduction (X-Internal-Api-Key)
+group Stock reservation at inventory (X-Internal-Api-Key, PLAN.md 4.2)
   loop each item
-    Svc -> Cat : reduceStock(sellerId, productId, qty)
-    Cat -> Prod : POST /internal/products/seller/{s}/product/{p}/reduce-stock
+    Svc -> InvC : reserve(sellerId, productId, qty)
+    InvC -> Inv : POST /internal/inventory/stock/{p}/reserve {sellerId, quantity}
     alt enough stock
-      Prod --> Cat : 200 {stockQuantity}
-      Cat -> Inv : POST /internal/inventory/.../reduce-stock
-      Inv --> Cat : 200 (failure only logged — mirror)
+      Inv -> Inv : findAndModify {productId, sellerId, active, stock >= qty}\n$inc stock −qty, version +1, outboxPending = true
+      Inv --> InvC : 200 {stockQuantity, version}
     else stock too low
-      Prod --> Cat : 409 Conflict
-      Cat --> Svc : ApiException(409)
+      Inv --> InvC : 409 Conflict
+      InvC --> Svc : ApiException(409)
       group Compensation
-        loop items already deducted
-          Svc -> Cat : restock(sellerId, productId, qty)
-          Cat -> Prod : POST /internal/.../restock
+        loop items already reserved
+          Svc -> InvC : release(sellerId, productId, qty)
+          InvC -> Inv : POST …/release (queued for retry if inventory is down)
         end
       end
       Svc --> Ctl : 409
@@ -54,15 +66,13 @@ group Stock deduction (X-Internal-Api-Key)
     end
   end
 end
-
-Svc -> DB : save Order\nbuyerId=JWT uid, status=PENDING, server total
-DB --> Svc : order
-Svc --> Ctl -- : OrderDTO
-Ctl --> Web -- : 201 Created
-Web --> B : order placed, cart group cleared
-
-note over Prod
-  NOTE read-check-write, not atomic:
-  concurrent buyers can oversell — PLAN.md 2.2
+note over Inv
+  StockLedger is the only writer: one atomic update per change,
+  so concurrent buyers cannot oversell (IT: 40 parallel reserves on 5 → 5)
 end note
+group Asynchronously (outbox relay, typically < 1 s)
+  Inv -> MQ : StockChanged {productId, stockQuantity, version}\n(publisher confirms; outboxPending cleared if version unchanged)
+  MQ -> Prod : products.stock-changed (quorum queue, DLQ)
+  Prod -> Prod : apply only if version > stockVersion\n(catalog read model)
+end
 @enduml

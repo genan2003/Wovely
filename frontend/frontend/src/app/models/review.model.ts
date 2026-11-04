@@ -7,6 +7,8 @@ export interface Review {
     comment: string;
     photoUrls?: string[];
     createdAt?: Date;
+    /** Server-computed (PLAN.md 3.3); never sent by the client. */
+    verifiedPurchase?: boolean;
 }
 
 export interface ReviewResponse {

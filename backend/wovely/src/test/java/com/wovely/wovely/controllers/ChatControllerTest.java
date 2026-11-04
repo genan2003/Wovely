@@ -28,6 +28,8 @@ import com.wovely.wovely.support.TestTokens;
 class ChatControllerTest extends SecuredWebMvcTest {
 
     @MockitoBean ChatMessageRepository chatMessageRepository;
+    @MockitoBean com.wovely.wovely.services.ChatQueryService chatQueryService;
+    @MockitoBean com.wovely.wovely.realtime.ChatNotifier chatNotifier;
 
     @Test
     void senderIsTakenFromTokenNotBody() throws Exception {
@@ -40,6 +42,7 @@ class ChatControllerTest extends SecuredWebMvcTest {
         ArgumentCaptor<ChatMessage> saved = ArgumentCaptor.forClass(ChatMessage.class);
         verify(chatMessageRepository).save(saved.capture());
         assertThat(saved.getValue().getSenderId()).isEqualTo(TestTokens.BUYER_ID);
+        verify(chatNotifier).messageSent(saved.getValue()); // PLAN.md 3.4: pushed in real time
     }
 
     @Test
@@ -51,6 +54,7 @@ class ChatControllerTest extends SecuredWebMvcTest {
                 .content("{\"receiverId\":\"" + TestTokens.SELLER_ID + "\",\"content\":\" \"}"))
             .andExpect(status().isBadRequest());
         verify(chatMessageRepository, never()).save(any());
+        verify(chatNotifier, never()).messageSent(any());
     }
 
     @Test

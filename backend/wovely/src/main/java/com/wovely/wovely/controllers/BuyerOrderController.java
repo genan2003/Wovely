@@ -23,6 +23,8 @@ import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.repository.OrderRepository;
 import com.wovely.wovely.security.services.UserDetailsImpl;
 import com.wovely.wovely.services.OrderService;
+import com.wovely.wovely.services.OrderStatusPolicy.Actor;
+import com.wovely.wovely.security.OwnershipGuard;
 
 import jakarta.validation.Valid;
 
@@ -54,7 +56,7 @@ public class BuyerOrderController {
     public OrderDTO cancelOrder(@PathVariable String id, @RequestBody(required = false) Map<String, String> request) {
         orderService.requireBuyerOrder(id);
         String reason = request != null ? request.getOrDefault("reason", "Buyer cancelled") : "Buyer cancelled";
-        return orderService.updateOrderStatus(id, EOrderStatus.CANCELLED, reason, null);
+        return orderService.updateOrderStatus(id, EOrderStatus.CANCELLED, reason, null, actor());
     }
 
     /** Confirm delivery of own order. */
@@ -62,7 +64,19 @@ public class BuyerOrderController {
     @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
     public OrderDTO confirmReceipt(@PathVariable String id) {
         orderService.requireBuyerOrder(id);
-        return orderService.updateOrderStatus(id, EOrderStatus.DELIVERED, "Buyer confirmed receipt", null);
+        return orderService.updateOrderStatus(id, EOrderStatus.DELIVERED, "Buyer confirmed receipt", null, actor());
+    }
+
+    /** Buyer completes a delivered order (closes it). */
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
+    public OrderDTO complete(@PathVariable String id) {
+        orderService.requireBuyerOrder(id);
+        return orderService.updateOrderStatus(id, EOrderStatus.COMPLETED, "Buyer completed order", null, actor());
+    }
+
+    private static Actor actor() {
+        return OwnershipGuard.isAdmin(OwnershipGuard.current()) ? Actor.ADMIN : Actor.BUYER;
     }
 
     /** Mark items of own order as reviewed. */

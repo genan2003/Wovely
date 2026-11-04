@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.wovely.wovely.exception.ApiException;
+import com.wovely.common.error.ApiException;
 import com.wovely.wovely.models.EOrderStatus;
 import com.wovely.wovely.models.ManualOrderRequest;
-import com.wovely.wovely.models.Order;
+import com.wovely.wovely.payload.request.UpdateOrderRequest;
+import com.wovely.wovely.security.OwnershipGuard;
+import com.wovely.wovely.services.OrderStatusPolicy.Actor;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.services.OrderService;
 
@@ -55,13 +57,13 @@ public class SellerOrderController {
     /** Edit address/variations while PENDING or CONFIRMED; 409 once locked. */
     @PutMapping("/orders/{orderId}/edit")
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public Map<String, Object> updateOrder(@PathVariable String orderId, @RequestBody Order updatedOrder) {
+    public Map<String, Object> updateOrder(@PathVariable String orderId, @Valid @RequestBody UpdateOrderRequest updatedOrder) {
         orderService.requireSellerOrder(orderId);
         OrderDTO order = orderService.updateOrderPreProcessing(orderId, updatedOrder);
         return Map.of("message", "Order updated successfully", "order", order);
     }
 
-    /** Move order through its lifecycle; CANCELLED/REFUNDED trigger auto-restock. */
+    /** Move order through its lifecycle (OrderStatusPolicy, 409 if illegal); cancelling before shipment restocks. */
     @PatchMapping("/orders/{orderId}/status")
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public Map<String, Object> updateOrderStatus(@PathVariable String orderId, @RequestBody Map<String, String> request) {
@@ -85,7 +87,8 @@ public class SellerOrderController {
                 throw ApiException.badRequest("estimatedDeliveryDays must be a number");
             }
         }
-        OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, request.get("reason"), null, estimatedDeliveryDays);
+        OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, request.get("reason"), estimatedDeliveryDays,
+                OwnershipGuard.isAdmin(OwnershipGuard.current()) ? Actor.ADMIN : Actor.SELLER);
         return Map.of("message", "Order status updated successfully", "order", order);
     }
 
@@ -93,7 +96,7 @@ public class SellerOrderController {
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public Map<String, Object> generateEcoLabel(@PathVariable String orderId) {
         orderService.requireSellerOrder(orderId);
-        OrderDTO order = orderService.generateEcoShippingLabel(orderId);
+        OrderDTO order = orderService.generateEcoShippingLabel(orderId, false);
         return Map.of(
             "message", "Eco-shipping label generated successfully",
             "order", order,

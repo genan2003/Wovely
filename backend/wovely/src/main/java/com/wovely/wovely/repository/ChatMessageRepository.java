@@ -9,6 +9,9 @@ import org.springframework.data.mongodb.repository.Query;
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
     @Query("{$or: [{ 'senderId': ?0, 'receiverId': ?1 }, { 'senderId': ?1, 'receiverId': ?0 }]}")
     List<ChatMessage> findConversationLogs(String user1, String user2);
+
+    @Query(value = "{$or: [{ 'senderId': ?0, 'receiverId': ?1 }, { 'senderId': ?1, 'receiverId': ?0 }]}", exists = true)
+    boolean conversationExists(String user1, String user2);
     
     List<ChatMessage> findByReceiverIdAndIsReadFalse(String receiverId);
 }

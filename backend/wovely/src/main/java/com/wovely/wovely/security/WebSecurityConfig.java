@@ -1,5 +1,6 @@
 package com.wovely.wovely.security;
 
+import com.wovely.common.security.InternalApiKeyFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,9 @@ public class WebSecurityConfig {
 
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
+
+    @org.springframework.beans.factory.annotation.Value("${wovely.internal.apiKey:}")
+    private String internalApiKey;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -62,7 +66,7 @@ public class WebSecurityConfig {
                         .accessDeniedHandler((req, res, e) -> {
                             res.setStatus(403);
                             res.setContentType("application/json");
-                            res.getWriter().write(com.wovely.wovely.exception.ErrorBody.json(
+                            res.getWriter().write(com.wovely.common.error.ErrorBody.json(
                                     org.springframework.http.HttpStatus.FORBIDDEN, "Access denied", req.getRequestURI()));
                         }))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -70,10 +74,18 @@ public class WebSecurityConfig {
                     auth.requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        // liveness/readiness for docker healthchecks; details never exposed (PLAN.md 4.6)
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // API docs (PLAN.md 4.5); disable with SPRINGDOC_API_DOCS_ENABLED=false in production
+                        .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
+                        // WebSocket handshake: authentication happens in the STOMP CONNECT frame (StompAuthInterceptor)
+                        .requestMatchers("/ws", "/ws/**").permitAll()
+                        .requestMatchers("/internal/**").hasAuthority(InternalApiKeyFilter.SERVICE_ROLE)
                         .anyRequest().authenticated());
 
         http.authenticationProvider(authenticationProvider());
 
+        http.addFilterBefore(new InternalApiKeyFilter(internalApiKey), UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

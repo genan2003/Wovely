@@ -27,6 +27,19 @@
         }
       </ul>
     </li>
+    @if (isLoggedIn()) {
+      <li class="nav-item">
+        <a class="nav-link position-relative px-3" routerLink="/messages" routerLinkActive="active"
+           [attr.aria-label]="realtime.unreadCount() > 0 ? 'Messages, ' + realtime.unreadCount() + ' unread' : 'Messages'">
+          <i class="bi bi-chat-dots fs-5" aria-hidden="true"></i>
+          @if (realtime.unreadCount() > 0) {
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill unread-badge" aria-hidden="true">
+              {{ realtime.unreadCount() > 99 ? '99+' : realtime.unreadCount() }}
+            </span>
+          }
+        </a>
+      </li>
+    }
     <li class="nav-item">
       <a class="nav-link position-relative px-3" routerLink="/cart" routerLinkActive="active">
         <i class="bi bi-cart3 fs-5"></i>

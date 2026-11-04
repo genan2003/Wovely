@@ -30,6 +30,7 @@ import com.wovely.wovely.support.TestTokens;
 class ProfileAndSellerReviewTest extends SecuredWebMvcTest {
 
     @MockitoBean SellerReviewRepository sellerReviewRepository;
+    @MockitoBean com.wovely.wovely.services.PurchaseVerificationService purchaseVerification;
 
     @Test
     void userCanReadAndUpdateOwnProfile() throws Exception {
@@ -98,5 +99,26 @@ class ProfileAndSellerReviewTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/public/users/seller/" + TestTokens.SELLER_ID + "/reviews").header(AUTH, bearer(TestTokens.buyer()))
                 .contentType(MediaType.APPLICATION_JSON).content(REVIEW.replace("\"overallRating\":5", "\"overallRating\":9")))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void sellerReviewIsVerifiedOnlyWhenBuyerReceivedAnOrder() throws Exception {
+        when(sellerReviewRepository.save(any(SellerReview.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(purchaseVerification.hasReceivedFromSeller(TestTokens.BUYER_ID, TestTokens.SELLER_ID)).thenReturn(true);
+        mvc.perform(post("/api/public/users/seller/" + TestTokens.SELLER_ID + "/reviews").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(REVIEW))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.verifiedPurchase").value(true));
+    }
+
+    @Test
+    void clientCannotForgeVerifiedPurchase() throws Exception {
+        when(sellerReviewRepository.save(any(SellerReview.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(purchaseVerification.hasReceivedFromSeller(TestTokens.OTHER_BUYER_ID, TestTokens.SELLER_ID)).thenReturn(false);
+        String forged = REVIEW.replace("{", "{\"verifiedPurchase\":true,");
+        mvc.perform(post("/api/public/users/seller/" + TestTokens.SELLER_ID + "/reviews").header(AUTH, bearer(TestTokens.otherBuyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(forged))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.verifiedPurchase").value(false));
     }
 }

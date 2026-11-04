@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 
 const USER_KEY = 'auth-user';
 const TOKEN_KEY = 'auth-token';
+const REFRESH_KEY = 'auth-refresh';
 
 @Injectable({
   providedIn: 'root'
@@ -28,6 +29,20 @@ export class StorageService {
   public getToken(): string | null {
     if (isPlatformBrowser(this.platformId)) {
       return window.sessionStorage.getItem(TOKEN_KEY);
+    }
+    return null;
+  }
+
+  /** Opaque refresh token (PLAN.md 2.9); rotated by the server on every refresh. */
+  public saveRefreshToken(token: string): void {
+    if (isPlatformBrowser(this.platformId)) {
+      window.sessionStorage.setItem(REFRESH_KEY, token);
+    }
+  }
+
+  public getRefreshToken(): string | null {
+    if (isPlatformBrowser(this.platformId)) {
+      return window.sessionStorage.getItem(REFRESH_KEY);
     }
     return null;
   }

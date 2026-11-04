@@ -46,6 +46,9 @@ public class User {
     private String city;
     private String region;
 
+    /** Shipping address book (max {@code AddressService.MAX_ADDRESSES}); exactly one default when non-empty. */
+    private java.util.List<Address> addresses = new java.util.ArrayList<>();
+
     public User() {
     }
 
@@ -160,4 +163,13 @@ public class User {
     public void setRegion(String region) {
         this.region = region;
     }
+
+    public java.util.List<Address> getAddresses() {
+        if (addresses == null) {
+            addresses = new java.util.ArrayList<>();
+        }
+        return addresses;
+    }
+
+    public void setAddresses(java.util.List<Address> addresses) { this.addresses = addresses; }
 }

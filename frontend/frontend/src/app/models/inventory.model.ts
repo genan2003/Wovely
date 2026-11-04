@@ -12,6 +12,8 @@ export interface InventoryItem {
     lowStockThreshold: number;
     co2EmissionScore?: string;
     shippingMethod?: string;
+    localPickup?: boolean;
+    deliveryEmission?: 'ZERO' | 'LOW' | 'STANDARD';
     isHandmade?: boolean;
     city?: string;
     region?: string;

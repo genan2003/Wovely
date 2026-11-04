@@ -409,3 +409,11 @@
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Ship to (address book, PLAN.md 3) */
+.ship-to { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ship-to legend { float: none; width: auto; margin-bottom: 0.75rem; }
+.ship-to-option { margin-bottom: 0.5rem; }
+
+/* Wallet at checkout (PLAN.md 3.7) */
+.wallet-short { color: #8a3b1d; font-weight: 600; }

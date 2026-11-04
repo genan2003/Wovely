@@ -4,7 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import com.wovely.wovely.exception.ApiException;
+import com.wovely.common.error.ApiException;
 import com.wovely.wovely.security.services.UserDetailsImpl;
 
 /**

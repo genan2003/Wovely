@@ -87,3 +87,6 @@
     background-color: #A68A64 !important;
     color: #FFFFFF !important;
 }
+
+/* Unread chat badge (PLAN.md 3.4) */
+.unread-badge { background: var(--wv-eco-zero-bg); color: var(--wv-eco-zero-ink); font-size: 0.7rem; }

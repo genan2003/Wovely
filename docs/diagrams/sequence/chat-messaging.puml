@@ -1,0 +1,51 @@
+@startuml chat-messaging
+!include ../_theme.puml
+title Chat messaging with real-time push
+
+' Derived from: wovely ChatController, realtime/WebSocketConfig, realtime/StompAuthInterceptor,
+' realtime/ChatNotifier; frontend services/realtime.service.ts, components/message-center
+autonumber
+actor "Seller" as S
+participant "SPA (seller)" as WebS
+actor "Buyer" as B
+participant "SPA (buyer)" as WebB
+box "core service :8081" #FAF6EF
+  participant "StompAuthInterceptor" as Auth
+  participant "Simple broker\n/user/queue/*" as Broker
+  participant "ChatController" as Ctl
+  participant "ChatNotifier" as N
+end box
+database "MongoDB" as DB
+
+== Connect (once per signed-in tab) ==
+WebS -> Auth : WebSocket ws://…/ws\nSTOMP CONNECT  Authorization: Bearer <jwt>
+note right of WebS : token in the CONNECT frame,\nnever in the URL; re-read on every reconnect
+alt missing / invalid / expired token, or banned / suspended account
+  Auth --> WebS : ERROR, connection closed
+else ok
+  Auth -> Auth : session principal = user id
+  Auth --> WebS : CONNECTED
+end
+WebS -> Auth : SUBSCRIBE /user/queue/messages
+note right of Auth : any other destination\n(or SEND over the socket) is rejected
+Auth -> Broker : subscription for seller
+
+== Send ==
+B -> WebB : type message
+WebB -> Ctl ++ : POST /api/chat/send {receiverId, content} (JWT)
+Ctl -> Ctl : sender = caller (body senderId ignored);\nreceiver exists, not self, content not blank
+Ctl -> DB : save ChatMessage
+Ctl -> N : messageSent(saved)
+N -> Broker : convertAndSendToUser(receiverId, /queue/messages)
+N -> Broker : convertAndSendToUser(senderId, /queue/messages)
+Broker --> WebS : MESSAGE (JSON ChatMessage)
+WebS -> WebS : append to open conversation,\nunread badge + 1
+Ctl --> WebB -- : 201 ChatMessage
+
+== Read ==
+S -> WebS : open the conversation
+WebS -> Ctl : GET /api/chat/conversation?user1&user2
+Ctl -> DB : load messages, mark mine as read
+WebS -> Ctl : GET /api/chat/unread/{me}  (refresh badge)
+note over WebS, DB : Offline users miss nothing: messages are stored first,\nthe push is best effort.
+@enduml

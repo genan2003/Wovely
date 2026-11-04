@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.wovely.wovely.models.EAccountStatus;
@@ -30,9 +31,21 @@ public class AdminUserController {
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    com.wovely.wovely.services.RefreshTokenService refreshTokenService;
+
+    @Autowired
+    com.wovely.wovely.services.AuditService auditService;
+
+    @Autowired
+    com.wovely.wovely.services.UserQueryService userQueryService;
+
+    /** {@code ?query=} matches username/email/full name (case-insensitive), {@code ?status=} filters (PLAN.md 3.1). */
     @GetMapping
-    public ResponseEntity<List<UserCrmDTO>> getAllUsers() {
-        List<User> users = userRepository.findAll();
+    public ResponseEntity<List<UserCrmDTO>> getAllUsers(
+            @RequestParam(name = "query", required = false) String query,
+            @RequestParam(name = "status", required = false) EAccountStatus status) {
+        List<User> users = userQueryService.search(query, status);
         List<UserCrmDTO> dtos = users.stream().map(this::convertToDto).collect(Collectors.toList());
         return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
@@ -53,10 +66,14 @@ public class AdminUserController {
 
         if (userData.isPresent()) {
             User _user = userData.get();
+            String before = "strikes=" + _user.getStrikes() + ", status=" + _user.getAccountStatus();
             
             if ("STRIKE".equals(request.getAction())) {
                 _user.setStrikes(_user.getStrikes() + 1);
             } else if ("STATUS".equals(request.getAction())) {
+                if (request.getNewStatus() == null) {
+                    return ResponseEntity.badRequest().body(new MessageResponse("Error: newStatus is required!"));
+                }
                 _user.setAccountStatus(request.getNewStatus());
                 if (request.getNewStatus() == EAccountStatus.SUSPENDED && request.getSuspendDays() != null) {
                     Calendar cal = Calendar.getInstance();
@@ -70,6 +87,12 @@ public class AdminUserController {
             }
             
             userRepository.save(_user);
+            if (_user.getAccountStatus() == EAccountStatus.BANNED || _user.getAccountStatus() == EAccountStatus.SUSPENDED) {
+                // Sign the user out everywhere: no refresh → access dies within the token TTL (PLAN.md 2.9)
+                refreshTokenService.revokeAll(_user.getId());
+            }
+            auditService.record("USER_PENALTY", id, request.getAction() + ": " + before + " -> strikes="
+                    + _user.getStrikes() + ", status=" + _user.getAccountStatus());
             return new ResponseEntity<>(convertToDto(_user), HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

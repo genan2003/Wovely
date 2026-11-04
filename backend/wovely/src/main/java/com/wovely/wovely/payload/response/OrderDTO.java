@@ -26,6 +26,7 @@ public class OrderDTO {
     private String ecoShippingLabel;
     private Integer estimatedDeliveryDays;
     private boolean isReviewed;
+    private Double refundedAmount;
 
     public OrderDTO() {
     }
@@ -225,4 +226,40 @@ public class OrderDTO {
     public void setReviewed(boolean reviewed) {
         isReviewed = reviewed;
     }
+
+    public Double getRefundedAmount() {
+        return refundedAmount;
+    }
+
+    public void setRefundedAmount(Double refundedAmount) {
+        this.refundedAmount = refundedAmount;
+    }
+
+    public OrderDTO withRefundedAmount(Double refundedAmount) {
+        this.refundedAmount = refundedAmount;
+        return this;
+    }
+
+    // "Ship with Platform" label (PLAN.md 3.6)
+    private String carrierName;
+    private String carrierMethod;
+    private Integer shippingDistanceKm;
+    private Double estimatedCo2Kg;
+    private Date labelGeneratedAt;
+
+    public OrderDTO withShipping(String carrierName, String carrierMethod, Integer shippingDistanceKm,
+            Double estimatedCo2Kg, Date labelGeneratedAt) {
+        this.carrierName = carrierName;
+        this.carrierMethod = carrierMethod;
+        this.shippingDistanceKm = shippingDistanceKm;
+        this.estimatedCo2Kg = estimatedCo2Kg;
+        this.labelGeneratedAt = labelGeneratedAt;
+        return this;
+    }
+
+    public String getCarrierName() { return carrierName; }
+    public String getCarrierMethod() { return carrierMethod; }
+    public Integer getShippingDistanceKm() { return shippingDistanceKm; }
+    public Double getEstimatedCo2Kg() { return estimatedCo2Kg; }
+    public Date getLabelGeneratedAt() { return labelGeneratedAt; }
 }

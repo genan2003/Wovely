@@ -23,11 +23,11 @@ export const sampleProducts = [
 ];
 
 /**
- * Stubs every backend call (core :8081, products :8082, inventory :8083) so E2E tests run
+ * Stubs every backend call (relative /api, normally proxied to the gateway) so E2E tests run
  * without the Java services. Unmatched API calls get an empty JSON array.
  */
 export async function mockBackend(page: Page, overrides: Record<string, unknown> = {}): Promise<void> {
-  await page.route(/localhost:808[1-3]\/api\//, (route: Route) => {
+  await page.route(/\/api\//, (route: Route) => {
     const url = new URL(route.request().url());
     for (const [pattern, body] of Object.entries(overrides)) {
       if (url.pathname.match(pattern)) {

@@ -1,0 +1,80 @@
+@startuml report-and-moderation
+!include ../_theme.puml
+title Report content and moderation
+
+' Derived from: wovely ReportController, services/ReportService, repository/ChatMessageRepository,
+' clients/CatalogClient, services/AuditService
+autonumber
+actor "Buyer / Seller" as U
+actor "Admin" as A
+participant "Angular SPA" as Web
+box "core service :8081" #FAF6EF
+  participant "ReportController" as Ctl
+  participant "ReportService" as Svc
+  participant "AuditService" as Audit
+end box
+participant "products :8082" as Prod
+database "MongoDB" as DB
+
+== Report ==
+U -> Web : flag a conversation or a listing
+Web -> Ctl ++ : POST /api/reports {targetType, targetId, reason}
+alt invalid body (type not CHAT/PRODUCT, blank id, reason missing or > 1000)
+  Ctl --> Web : 400
+end
+Ctl -> Svc ++ : create(request, caller)
+alt targetType = CHAT
+  note right of Svc : targetId = other user's id\n(legacy "a:b" must contain the caller)
+  alt "a:b" without the caller
+    Svc --> Web : 403
+  else other user unknown
+    Svc --> Web : 404
+  end
+  Svc -> DB : chat_messages: conversationExists(caller, other)
+  alt no messages between them
+    Svc --> Web : 400
+  end
+  Svc -> Svc : participantIds = sorted [caller, other]\ntargetName = "Chat with <other>"
+else targetType = PRODUCT
+  Svc -> Prod : GET /api/products/{id}
+  alt unknown product
+    Svc --> Web : 400
+  end
+  Svc -> Svc : targetName = product name
+end
+Svc -> DB : open report by same reporter for same target?
+alt already PENDING
+  Svc --> Web : 409
+end
+Svc -> DB : save Report(PENDING, reporter from JWT)
+Svc --> Ctl -- : report
+Ctl --> Web -- : 200
+
+== Moderation ==
+A -> Web : open flagged-content queue
+Web -> Ctl : GET /api/reports/all (ADMIN)
+A -> Web : view reported chat
+Web -> Ctl ++ : GET /api/reports/chat-log/{reportId}
+Ctl -> Svc ++ : chatLog(reportId)
+alt report missing
+  Svc --> Web : 404
+else not a CHAT report
+  Svc --> Web : 400
+end
+Svc -> DB : findConversationLogs(participantIds)
+Svc -> Audit : CHAT_LOG_VIEWED
+Svc --> Ctl -- : messages, oldest first
+Ctl --> Web -- : 200
+A -> Web : Resolve / Dismiss
+Web -> Ctl ++ : PATCH /api/reports/{id}/status {RESOLVED | DISMISSED}
+Ctl -> Svc ++ : decide(id, status)
+alt status not RESOLVED / DISMISSED
+  Svc --> Web : 400
+else report already decided
+  Svc --> Web : 409
+end
+Svc -> DB : save status
+Svc -> Audit : REPORT_RESOLVED / REPORT_DISMISSED
+Svc --> Ctl -- : report
+Ctl --> Web -- : 200
+@enduml

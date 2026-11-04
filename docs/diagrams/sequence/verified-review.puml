@@ -1,0 +1,60 @@
+@startuml verified-review
+!include ../_theme.puml
+title Verified purchase on reviews
+
+' Derived from: products ReviewController, clients/PurchaseVerificationClient;
+' core InternalOrderController, PublicUserController, services/PurchaseVerificationService, OrderRepository
+autonumber
+actor "Buyer" as B
+participant "Angular SPA" as Web
+box "products service :8082" #E8F1E4
+  participant "ReviewController" as RC
+  participant "PurchaseVerificationClient" as PVC
+end box
+box "core service :8081" #FAF6EF
+  participant "PublicUserController" as PUC
+  participant "InternalOrderController" as IOC
+  participant "PurchaseVerificationService" as PVS
+end box
+database "MongoDB" as DB
+
+== Product review ==
+B -> Web : rate & comment on a product
+Web -> RC ++ : POST /api/reviews {productId, rating, comment}\nAuthorization: Bearer <jwt>
+alt no / invalid token
+  RC --> Web : 401
+else rating not 1–5 or no productId
+  RC --> Web : 400
+else already reviewed this product
+  RC --> Web : 409
+end
+note right of RC : userId / username come from the JWT;\nverifiedPurchase in the body is ignored
+RC -> PVC ++ : hasReceived(userId, productId)
+PVC -> IOC ++ : GET /internal/orders/verify-purchase?buyerId&productId\nX-Internal-Api-Key
+IOC -> PVS ++ : hasReceivedProduct(buyerId, productId)
+PVS -> DB : existsByBuyerIdAndStatusInAndItemsProductId\n(buyerId, {DELIVERED, COMPLETED}, productId)
+PVS --> IOC -- : true / false
+IOC --> PVC -- : {verified}
+alt core unreachable / error
+  PVC --> RC : false (fail closed, warning logged)
+else
+  PVC --> RC -- : verified
+end
+RC -> DB : save Review(verifiedPurchase)
+RC --> Web -- : 201 Review
+Web -> B : "Verified purchase" badge only if verifiedPurchase
+
+== Seller review ==
+B -> Web : rate a seller
+Web -> PUC ++ : POST /api/public/users/seller/{id}/reviews
+alt seller unknown
+  PUC --> Web : 404
+else reviewing yourself / rating out of range
+  PUC --> Web : 400
+end
+PUC -> PVS ++ : hasReceivedFromSeller(buyerId, sellerId)
+PVS -> DB : existsByBuyerIdAndSellerIdAndStatusIn\n(buyerId, sellerId, {DELIVERED, COMPLETED})
+PVS --> PUC -- : true / false
+PUC -> DB : save SellerReview(verifiedPurchase)
+PUC --> Web -- : 200 SellerReview
+@enduml

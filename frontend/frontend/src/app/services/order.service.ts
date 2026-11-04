@@ -2,9 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Order } from '../models/order.model';
+import { environment } from '../../environments/environment';
 
-const API_URL = 'http://localhost:8081/api/orders';
-const SELLER_API = 'http://localhost:8081/api/seller';
+const API_URL = environment.apiUrl + '/orders';
+const SELLER_API = environment.apiUrl + '/seller';
 
 @Injectable({
     providedIn: 'root'

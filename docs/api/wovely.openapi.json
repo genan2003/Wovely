@@ -1,0 +1,2728 @@
+{
+    "components": {
+        "schemas": {
+            "Address": {
+                "properties": {
+                    "city": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string"
+                    },
+                    "default": {
+                        "type": "boolean"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "postalCode": {
+                        "type": "string"
+                    },
+                    "recipientName": {
+                        "type": "string"
+                    },
+                    "street": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "AddressRequest": {
+                "properties": {
+                    "city": {
+                        "maxLength": 100,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "country": {
+                        "maxLength": 60,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "label": {
+                        "maxLength": 40,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "makeDefault": {
+                        "type": "boolean"
+                    },
+                    "phone": {
+                        "maxLength": 30,
+                        "minLength": 0,
+                        "pattern": "^[0-9 +()-]*$",
+                        "type": "string"
+                    },
+                    "postalCode": {
+                        "maxLength": 20,
+                        "minLength": 0,
+                        "pattern": "^[A-Za-z0-9 -]*$",
+                        "type": "string"
+                    },
+                    "recipientName": {
+                        "maxLength": 100,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "street": {
+                        "maxLength": 200,
+                        "minLength": 0,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "city",
+                    "country",
+                    "recipientName",
+                    "street"
+                ],
+                "type": "object"
+            },
+            "AuditLog": {
+                "properties": {
+                    "actionType": {
+                        "type": "string"
+                    },
+                    "adminId": {
+                        "type": "string"
+                    },
+                    "adminUsername": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "targetId": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "format": "date-time",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ChatMessage": {
+                "properties": {
+                    "content": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "productId": {
+                        "type": "string"
+                    },
+                    "productThumbnail": {
+                        "type": "string"
+                    },
+                    "read": {
+                        "type": "boolean"
+                    },
+                    "receiverId": {
+                        "type": "string"
+                    },
+                    "senderId": {
+                        "type": "string"
+                    },
+                    "timestamp": {
+                        "format": "date-time",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "CreateOrderRequest": {
+                "properties": {
+                    "addressId": {
+                        "maxLength": 64,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/Item"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                    },
+                    "shippingAddress": {
+                        "maxLength": 500,
+                        "minLength": 0,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "items"
+                ],
+                "type": "object"
+            },
+            "CreateReportRequest": {
+                "properties": {
+                    "reason": {
+                        "maxLength": 1000,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "targetId": {
+                        "maxLength": 200,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "targetType": {
+                        "enum": [
+                            "CHAT",
+                            "PRODUCT"
+                        ],
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "reason",
+                    "targetId",
+                    "targetType"
+                ],
+                "type": "object"
+            },
+            "Item": {
+                "properties": {
+                    "color": {
+                        "type": "string"
+                    },
+                    "productId": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "size": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "productId",
+                    "quantity"
+                ],
+                "type": "object"
+            },
+            "LoginRequest": {
+                "properties": {
+                    "password": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "username": {
+                        "minLength": 1,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "password",
+                    "username"
+                ],
+                "type": "object"
+            },
+            "ManualOrderItemRequest": {
+                "properties": {
+                    "imageUrl": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "productId": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "productName": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "format": "int32",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "price",
+                    "productId",
+                    "productName",
+                    "quantity"
+                ],
+                "type": "object"
+            },
+            "ManualOrderRequest": {
+                "properties": {
+                    "buyerEmail": {
+                        "type": "string"
+                    },
+                    "buyerName": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "buyerPhone": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/ManualOrderItemRequest"
+                        },
+                        "minItems": 1,
+                        "type": "array"
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "paymentMethod": {
+                        "type": "string"
+                    },
+                    "sellerId": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "sellerName": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "shippingAddress": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "buyerName",
+                    "items",
+                    "sellerId",
+                    "sellerName",
+                    "shippingAddress"
+                ],
+                "type": "object"
+            },
+            "OrderDTO": {
+                "properties": {
+                    "adminNotes": {
+                        "type": "string"
+                    },
+                    "buyerId": {
+                        "type": "string"
+                    },
+                    "buyerName": {
+                        "type": "string"
+                    },
+                    "cancellationReason": {
+                        "type": "string"
+                    },
+                    "carrierMethod": {
+                        "type": "string"
+                    },
+                    "carrierName": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "disputeReason": {
+                        "type": "string"
+                    },
+                    "ecoShippingLabel": {
+                        "type": "string"
+                    },
+                    "estimatedCo2Kg": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "estimatedDeliveryDays": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "isDisputed": {
+                        "type": "boolean"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItemDTO"
+                        },
+                        "type": "array"
+                    },
+                    "labelGeneratedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "orderNumber": {
+                        "type": "string"
+                    },
+                    "refundReason": {
+                        "type": "string"
+                    },
+                    "refundedAmount": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "reviewed": {
+                        "type": "boolean"
+                    },
+                    "sellerId": {
+                        "type": "string"
+                    },
+                    "sellerName": {
+                        "type": "string"
+                    },
+                    "shippingAddress": {
+                        "type": "string"
+                    },
+                    "shippingDistanceKm": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "status": {
+                        "enum": [
+                            "PENDING",
+                            "CONFIRMED",
+                            "PROCESSING",
+                            "SHIPPED",
+                            "DELIVERED",
+                            "COMPLETED",
+                            "CANCELLED",
+                            "REFUNDED",
+                            "DISPUTED"
+                        ],
+                        "type": "string"
+                    },
+                    "totalAmount": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "trackingNumber": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderInterventionRequest": {
+                "properties": {
+                    "action": {
+                        "type": "string"
+                    },
+                    "adminNotes": {
+                        "type": "string"
+                    },
+                    "newStatus": {
+                        "enum": [
+                            "PENDING",
+                            "CONFIRMED",
+                            "PROCESSING",
+                            "SHIPPED",
+                            "DELIVERED",
+                            "COMPLETED",
+                            "CANCELLED",
+                            "REFUNDED",
+                            "DISPUTED"
+                        ],
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "trackingNumber": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderItem": {
+                "properties": {
+                    "color": {
+                        "type": "string"
+                    },
+                    "imageUrl": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "productId": {
+                        "type": "string"
+                    },
+                    "productName": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "returned": {
+                        "type": "boolean"
+                    },
+                    "reviewed": {
+                        "type": "boolean"
+                    },
+                    "size": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderItemDTO": {
+                "properties": {
+                    "imageUrl": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "productId": {
+                        "type": "string"
+                    },
+                    "productName": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "returned": {
+                        "type": "boolean"
+                    },
+                    "reviewed": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "PenaltyRequest": {
+                "properties": {
+                    "action": {
+                        "type": "string"
+                    },
+                    "newStatus": {
+                        "enum": [
+                            "ACTIVE",
+                            "SUSPENDED",
+                            "BANNED"
+                        ],
+                        "type": "string"
+                    },
+                    "suspendDays": {
+                        "format": "int32",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Report": {
+                "properties": {
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "participantIds": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "reporterId": {
+                        "type": "string"
+                    },
+                    "reporterName": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "targetId": {
+                        "type": "string"
+                    },
+                    "targetName": {
+                        "type": "string"
+                    },
+                    "targetType": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ReturnRequest": {
+                "properties": {
+                    "buyerId": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        },
+                        "type": "array"
+                    },
+                    "orderId": {
+                        "type": "string"
+                    },
+                    "orderNumber": {
+                        "type": "string"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "sellerId": {
+                        "type": "string"
+                    },
+                    "sellerName": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "totalAmount": {
+                        "format": "double",
+                        "type": "number"
+                    }
+                },
+                "type": "object"
+            },
+            "SellerReview": {
+                "properties": {
+                    "buyerId": {
+                        "type": "string"
+                    },
+                    "buyerName": {
+                        "type": "string"
+                    },
+                    "comment": {
+                        "type": "string"
+                    },
+                    "communicationRating": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "overallRating": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "sellerId": {
+                        "type": "string"
+                    },
+                    "shippingRating": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "verifiedPurchase": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "SignupRequest": {
+                "properties": {
+                    "email": {
+                        "format": "email",
+                        "maxLength": 50,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "password": {
+                        "maxLength": 40,
+                        "minLength": 6,
+                        "type": "string"
+                    },
+                    "roles": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": true
+                    },
+                    "username": {
+                        "maxLength": 20,
+                        "minLength": 3,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "password",
+                    "username"
+                ],
+                "type": "object"
+            },
+            "TopUpRequest": {
+                "properties": {
+                    "amount": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "amount"
+                ],
+                "type": "object"
+            },
+            "UpdateOrderRequest": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/Item"
+                        },
+                        "type": "array"
+                    },
+                    "shippingAddress": {
+                        "maxLength": 500,
+                        "minLength": 0,
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "UserCrmDTO": {
+                "properties": {
+                    "accountStatus": {
+                        "enum": [
+                            "ACTIVE",
+                            "SUSPENDED",
+                            "BANNED"
+                        ],
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "fullName": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "strikes": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "suspendedUntil": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "WalletTransaction": {
+                "properties": {
+                    "amountCents": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "balanceAfterCents": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "orderId": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "enum": [
+                            "TOP_UP",
+                            "PAYMENT",
+                            "PAYOUT",
+                            "REFUND",
+                            "PAYOUT_REVERSAL"
+                        ],
+                        "type": "string"
+                    },
+                    "userId": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerJwt": {
+                "bearerFormat": "JWT",
+                "description": "Access token from POST /api/auth/signin (15 min)",
+                "scheme": "bearer",
+                "type": "http"
+            },
+            "internalApiKey": {
+                "description": "Service-to-service calls on /internal/** only",
+                "in": "header",
+                "name": "X-Internal-Api-Key",
+                "type": "apiKey"
+            }
+        }
+    },
+    "info": {
+        "description": "Handmade-goods marketplace. Errors use {status, error, message, path, timestamp}; /internal/** endpoints are service-to-service only and are not reachable through the gateway.",
+        "title": "Wovely \u2013 wovely API",
+        "version": "v1"
+    },
+    "openapi": "3.1.0",
+    "paths": {
+        "/api/admin/orders": {
+            "get": {
+                "operationId": "getAllOrders",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/audit": {
+            "get": {
+                "operationId": "getAuditLogs",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/AuditLog"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/buyer/{buyerId}": {
+            "get": {
+                "operationId": "getOrdersByBuyerId_1",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "buyerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/disputed": {
+            "get": {
+                "operationId": "getDisputedOrders",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/number/{orderNumber}": {
+            "get": {
+                "operationId": "getOrderByOrderNumber",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "orderNumber",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/search": {
+            "get": {
+                "operationId": "searchOrders",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/seller/{sellerId}": {
+            "get": {
+                "operationId": "getOrdersBySellerId_1",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/status/{status}": {
+            "get": {
+                "operationId": "getOrdersByStatus",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "status",
+                        "required": true,
+                        "schema": {
+                            "enum": [
+                                "PENDING",
+                                "CONFIRMED",
+                                "PROCESSING",
+                                "SHIPPED",
+                                "DELIVERED",
+                                "COMPLETED",
+                                "CANCELLED",
+                                "REFUNDED",
+                                "DISPUTED"
+                            ],
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/{id}": {
+            "get": {
+                "operationId": "getOrderById_1",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/{id}/intervene": {
+            "post": {
+                "operationId": "applyIntervention",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderInterventionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/orders/{id}/regenerate-label": {
+            "post": {
+                "operationId": "regenerateShippingLabel",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "order-admin-controller"
+                ]
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "operationId": "getAllUsers",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "required": false,
+                        "schema": {
+                            "enum": [
+                                "ACTIVE",
+                                "SUSPENDED",
+                                "BANNED"
+                            ],
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserCrmDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-user-controller"
+                ]
+            }
+        },
+        "/api/admin/users/{id}": {
+            "get": {
+                "operationId": "getUserById",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserCrmDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-user-controller"
+                ]
+            }
+        },
+        "/api/admin/users/{id}/penalty": {
+            "post": {
+                "operationId": "applyPenalty",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PenaltyRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-user-controller"
+                ]
+            }
+        },
+        "/api/auth/refresh": {
+            "post": {
+                "operationId": "refresh",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "auth-controller"
+                ]
+            }
+        },
+        "/api/auth/signin": {
+            "post": {
+                "operationId": "authenticateUser",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "auth-controller"
+                ]
+            }
+        },
+        "/api/auth/signout": {
+            "post": {
+                "operationId": "signout",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "auth-controller"
+                ]
+            }
+        },
+        "/api/auth/signup": {
+            "post": {
+                "operationId": "registerUser",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignupRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "auth-controller"
+                ]
+            }
+        },
+        "/api/chat/conversation": {
+            "get": {
+                "operationId": "getConversation",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "user1",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "user2",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChatMessage"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "chat-controller"
+                ]
+            }
+        },
+        "/api/chat/conversations/{userId}": {
+            "get": {
+                "operationId": "getConversations",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "userId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChatMessage"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "chat-controller"
+                ]
+            }
+        },
+        "/api/chat/send": {
+            "post": {
+                "operationId": "sendMessage",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChatMessage"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChatMessage"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "chat-controller"
+                ]
+            }
+        },
+        "/api/chat/unread/{userId}": {
+            "get": {
+                "operationId": "getUnreadMessages",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "userId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChatMessage"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "chat-controller"
+                ]
+            }
+        },
+        "/api/orders": {
+            "post": {
+                "operationId": "createOrder",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateOrderRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/orders/buyer/{buyerId}": {
+            "get": {
+                "operationId": "getOrdersByBuyerId",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "buyerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/OrderDTO"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/orders/{id}": {
+            "get": {
+                "operationId": "getOrderById",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/orders/{id}/cancel": {
+            "post": {
+                "operationId": "cancelOrder",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/orders/{id}/complete": {
+            "post": {
+                "operationId": "complete",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/orders/{id}/confirm-receipt": {
+            "post": {
+                "operationId": "confirmReceipt",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDTO"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/orders/{id}/mark-reviewed": {
+            "post": {
+                "operationId": "markReviewed",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "buyer-order-controller"
+                ]
+            }
+        },
+        "/api/public/users/seller/{id}": {
+            "get": {
+                "operationId": "getSellerProfile",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "public-user-controller"
+                ]
+            }
+        },
+        "/api/public/users/seller/{id}/reviews": {
+            "get": {
+                "operationId": "getSellerReviews",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/SellerReview"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "public-user-controller"
+                ]
+            },
+            "post": {
+                "operationId": "postSellerReview",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SellerReview"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "public-user-controller"
+                ]
+            }
+        },
+        "/api/reports": {
+            "post": {
+                "operationId": "createReport",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateReportRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Report"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "report-controller"
+                ]
+            }
+        },
+        "/api/reports/all": {
+            "get": {
+                "operationId": "getAllReports",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Report"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "report-controller"
+                ]
+            }
+        },
+        "/api/reports/chat-log/{reportId}": {
+            "get": {
+                "operationId": "getReportedChatLog",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "reportId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChatMessage"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "report-controller"
+                ]
+            }
+        },
+        "/api/reports/{id}/status": {
+            "patch": {
+                "operationId": "updateReportStatus",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Report"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "report-controller"
+                ]
+            }
+        },
+        "/api/returns": {
+            "post": {
+                "operationId": "createReturnRequest",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReturnRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReturnRequest"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "return-request-controller"
+                ]
+            }
+        },
+        "/api/returns/all": {
+            "get": {
+                "operationId": "getAllReturns",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReturnRequest"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "return-request-controller"
+                ]
+            }
+        },
+        "/api/returns/buyer/{buyerId}": {
+            "get": {
+                "operationId": "getBuyerReturns",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "buyerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReturnRequest"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "return-request-controller"
+                ]
+            }
+        },
+        "/api/returns/seller/{sellerId}": {
+            "get": {
+                "operationId": "getSellerReturns",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReturnRequest"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "return-request-controller"
+                ]
+            }
+        },
+        "/api/returns/{id}/status": {
+            "patch": {
+                "operationId": "updateReturnStatus",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReturnRequest"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "return-request-controller"
+                ]
+            }
+        },
+        "/api/seller/orders/manual": {
+            "post": {
+                "operationId": "createManualOrder",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualOrderRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "seller-order-controller"
+                ]
+            }
+        },
+        "/api/seller/orders/seller/{sellerId}": {
+            "get": {
+                "operationId": "getOrdersBySellerId",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "seller-order-controller"
+                ]
+            }
+        },
+        "/api/seller/orders/{orderId}/eco-label": {
+            "post": {
+                "operationId": "generateEcoLabel",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "orderId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "seller-order-controller"
+                ]
+            }
+        },
+        "/api/seller/orders/{orderId}/edit": {
+            "put": {
+                "operationId": "updateOrder",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "orderId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateOrderRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "seller-order-controller"
+                ]
+            }
+        },
+        "/api/seller/orders/{orderId}/status": {
+            "patch": {
+                "operationId": "updateOrderStatus",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "orderId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "seller-order-controller"
+                ]
+            }
+        },
+        "/api/user/addresses": {
+            "get": {
+                "operationId": "list",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Address"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "address-controller"
+                ]
+            },
+            "post": {
+                "operationId": "add",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AddressRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Address"
+                                }
+                            }
+                        },
+                        "description": "Created"
+                    }
+                },
+                "tags": [
+                    "address-controller"
+                ]
+            }
+        },
+        "/api/user/addresses/{addressId}": {
+            "delete": {
+                "operationId": "delete",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "addressId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                },
+                "tags": [
+                    "address-controller"
+                ]
+            },
+            "put": {
+                "operationId": "update",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "addressId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AddressRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Address"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "address-controller"
+                ]
+            }
+        },
+        "/api/user/addresses/{addressId}/default": {
+            "post": {
+                "operationId": "makeDefault",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "addressId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Address"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "address-controller"
+                ]
+            }
+        },
+        "/api/user/profile/{id}": {
+            "get": {
+                "operationId": "getUserProfile",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "user-controller"
+                ]
+            },
+            "put": {
+                "operationId": "updateProfile",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "user-controller"
+                ]
+            }
+        },
+        "/api/wallet": {
+            "get": {
+                "operationId": "balance",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "wallet-controller"
+                ]
+            }
+        },
+        "/api/wallet/top-up": {
+            "post": {
+                "operationId": "topUp",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TopUpRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {},
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "wallet-controller"
+                ]
+            }
+        },
+        "/api/wallet/transactions": {
+            "get": {
+                "operationId": "transactions",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "required": false,
+                        "schema": {
+                            "default": 20,
+                            "format": "int32",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/WalletTransaction"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "wallet-controller"
+                ]
+            }
+        },
+        "/internal/audit": {
+            "post": {
+                "operationId": "record",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    }
+                },
+                "tags": [
+                    "internal-audit-controller"
+                ]
+            }
+        },
+        "/internal/orders/verify-purchase": {
+            "get": {
+                "operationId": "verifyPurchase",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "buyerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "additionalProperties": {
+                                        "type": "boolean"
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "internal-order-controller"
+                ]
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerJwt": []
+        }
+    ],
+    "servers": [
+        {
+            "description": "Gateway (browser entry point)",
+            "url": "http://localhost:8090"
+        }
+    ]
+}

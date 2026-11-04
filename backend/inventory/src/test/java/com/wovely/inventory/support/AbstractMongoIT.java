@@ -19,9 +19,15 @@ import org.testcontainers.mongodb.MongoDBContainer;
 public abstract class AbstractMongoIT {
 
     @ServiceConnection
-    protected static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
+    protected static final MongoDBContainer MONGO = new MongoDBContainer("mongo:9.0.4");
+
+    /** Stock events (PLAN.md 4.2); same version as docker-compose. */
+    @ServiceConnection
+    protected static final org.testcontainers.rabbitmq.RabbitMQContainer RABBIT =
+            new org.testcontainers.rabbitmq.RabbitMQContainer("rabbitmq:4.4.0-management-alpine");
 
     static {
         MONGO.start();
+        RABBIT.start();
     }
 }

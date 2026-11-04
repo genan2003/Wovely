@@ -24,6 +24,14 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     List<Order> findByStatus(EOrderStatus status);
     
     List<Order> findByIsDisputedTrue();
+
+    /** Verified purchase of a product: some received order of this buyer contains it (PLAN.md 3.3). */
+    boolean existsByBuyerIdAndStatusInAndItemsProductId(String buyerId, java.util.Collection<EOrderStatus> statuses,
+            String productId);
+
+    /** Verified purchase from a seller: this buyer has received at least one order from them. */
+    boolean existsByBuyerIdAndSellerIdAndStatusIn(String buyerId, String sellerId,
+            java.util.Collection<EOrderStatus> statuses);
     
     List<Order> findByBuyerNameContainingIgnoreCaseOrSellerNameContainingIgnoreCaseOrOrderNumberContaining(
         String buyerName, String sellerName, String orderNumber);

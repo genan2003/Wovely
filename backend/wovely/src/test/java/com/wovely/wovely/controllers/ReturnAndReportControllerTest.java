@@ -33,12 +33,20 @@ import com.wovely.wovely.support.TestTokens;
 
 /** PLAN.md 1.4 — returns and reports are bound to the caller and the order's participants. */
 @WebMvcTest({ ReturnRequestController.class, ReportController.class })
+@org.springframework.context.annotation.Import({ com.wovely.wovely.services.ReturnService.class,
+        com.wovely.wovely.services.OrderService.class, com.wovely.wovely.services.AuditService.class,
+        com.wovely.wovely.services.ReportService.class, com.wovely.wovely.services.AddressService.class })
 class ReturnAndReportControllerTest extends SecuredWebMvcTest {
 
     @MockitoBean OrderRepository orderRepository;
     @MockitoBean ReturnRequestRepository returnRequestRepository;
     @MockitoBean ReportRepository reportRepository;
     @MockitoBean ChatMessageRepository chatMessageRepository;
+    @MockitoBean com.wovely.wovely.repository.AuditLogRepository auditLogRepository;
+    @MockitoBean com.wovely.wovely.clients.CatalogClient catalogClient;
+    @MockitoBean com.wovely.wovely.clients.InventoryClient inventoryClient;
+    @MockitoBean com.wovely.wovely.services.WalletService walletService;
+    @MockitoBean com.wovely.wovely.services.EcoCarrierService ecoCarrierService;
 
     static final String RETURN = """
         {"orderId":"o-1","buyerId":"buyer-2","sellerId":"seller-2","totalAmount":9999,"status":"REFUNDED",
@@ -50,6 +58,8 @@ class ReturnAndReportControllerTest extends SecuredWebMvcTest {
             Optional.of(Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.DELIVERED)));
         when(returnRequestRepository.save(any(ReturnRequest.class))).thenAnswer(inv -> inv.getArgument(0));
         when(reportRepository.save(any(Report.class))).thenAnswer(inv -> inv.getArgument(0));
+        org.mockito.Mockito.lenient().when(chatMessageRepository.conversationExists(TestTokens.BUYER_ID, TestTokens.SELLER_ID))
+            .thenReturn(true);
     }
 
     @Test
@@ -79,6 +89,7 @@ class ReturnAndReportControllerTest extends SecuredWebMvcTest {
         ReturnRequest r = new ReturnRequest();
         r.setId("r-1");
         r.setSellerId(TestTokens.SELLER_ID);
+        r.setStatus("PICKED_UP");
         when(returnRequestRepository.findById("r-1")).thenReturn(Optional.of(r));
 
         mvc.perform(patch("/api/returns/r-1/status").header(AUTH, bearer(TestTokens.otherSeller()))

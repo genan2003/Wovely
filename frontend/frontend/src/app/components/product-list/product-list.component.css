@@ -177,3 +177,8 @@
 .italic {
     font-style: italic;
 }
+
+/* Delivery filter (PLAN.md 3.5) */
+.delivery-filter { border: 0; padding: 0; margin: 0; min-width: 0; }
+.delivery-filter legend { float: none; width: auto; }
+.delivery-hint { display: block; font-size: 0.75rem; color: var(--bs-secondary-color, #5c6b60); }

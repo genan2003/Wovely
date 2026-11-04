@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+/** Read side of the seller inventory views. All stock writes go through {@link com.wovely.inventory.stock.StockLedger}. */
 public class InventoryService {
 
     @Autowired
@@ -37,65 +38,9 @@ public class InventoryService {
         return inventoryRepository.findBySellerId(sellerId);
     }
 
-    /**
-     * Add a product to seller's inventory.
-     */
-    public InventoryItem addToInventory(InventoryItem item) {
-        item.setCreatedAt(new Date());
-        item.setUpdatedAt(new Date());
-        return inventoryItemRepository.save(item);
-    }
 
-    /**
-     * Update stock quantity for an inventory item.
-     */
-    public Optional<InventoryItem> updateStock(String sellerId, String productId, int quantity) {
-        Optional<InventoryItem> optionalItem = inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId);
-        
-        if (optionalItem.isPresent()) {
-            InventoryItem item = optionalItem.get();
-            item.setStockQuantity(quantity);
-            item.setUpdatedAt(new Date());
-            
-            if (quantity > 0 && item.getStockQuantity() == 0) {
-                item.setLastRestockedAt(new Date());
-            }
-            
-            return Optional.of(inventoryItemRepository.save(item));
-        }
-        
-        return Optional.empty();
-    }
 
-    /**
-     * Reduce stock for an item (when an order is made).
-     */
-    public Optional<InventoryItem> reduceStock(String sellerId, String productId, int quantity) {
-        Optional<InventoryItem> optionalItem = inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId);
-        
-        if (optionalItem.isPresent()) {
-            InventoryItem item = optionalItem.get();
-            item.reduceStock(quantity);
-            return Optional.of(inventoryItemRepository.save(item));
-        }
-        
-        return Optional.empty();
-    }
 
-    /**
-     * Restock an item.
-     */
-    public Optional<InventoryItem> restock(String sellerId, String productId, int quantity) {
-        Optional<InventoryItem> optionalItem = inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId);
-        
-        if (optionalItem.isPresent()) {
-            InventoryItem item = optionalItem.get();
-            item.addStock(quantity);
-            return Optional.of(inventoryItemRepository.save(item));
-        }
-        
-        return Optional.empty();
-    }
 
     /**
      * Get all inventory items for a seller.
@@ -132,52 +77,7 @@ public class InventoryService {
         return inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId);
     }
 
-    /**
-     * Remove a product from inventory (soft delete).
-     */
-    public Optional<InventoryItem> removeFromInventory(String sellerId, String productId) {
-        Optional<InventoryItem> optionalItem = inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId);
-        
-        if (optionalItem.isPresent()) {
-            InventoryItem item = optionalItem.get();
-            item.setIsActive(false);
-            item.setUpdatedAt(new Date());
-            return Optional.of(inventoryItemRepository.save(item));
-        }
-        
-        return Optional.empty();
-    }
 
-    /**
-     * Sync product details from the products service.
-     */
-    public Optional<InventoryItem> syncProductDetails(String sellerId, String productId, InventoryItem details) {
-        InventoryItem item = inventoryItemRepository.findBySellerIdAndProductId(sellerId, productId)
-            .orElseGet(() -> {
-                InventoryItem newItem = new InventoryItem();
-                newItem.setSellerId(sellerId);
-                newItem.setProductId(productId);
-                return newItem;
-            });
-        
-        item.setProductName(details.getProductName());
-        item.setPrice(details.getPrice());
-        item.setImageUrl(details.getImageUrl());
-        item.setCategory(details.getCategory());
-        item.setLowStockThreshold(details.getLowStockThreshold());
-        item.setCo2EmissionScore(details.getCo2EmissionScore());
-        item.setShippingMethod(details.getShippingMethod());
-        item.setIsHandmade(details.getIsHandmade());
-        
-        if (details.getStockQuantity() != null) {
-            item.setStockQuantity(details.getStockQuantity());
-        } else if (item.getStockQuantity() == null) {
-            item.setStockQuantity(0); // Default if not provided and new
-        }
-        
-        item.setUpdatedAt(new Date());
-        return Optional.of(inventoryItemRepository.save(item));
-    }
 
     /**
      * Update inventory statistics.

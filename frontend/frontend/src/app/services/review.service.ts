@@ -2,8 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Review, ReviewResponse } from '../models/review.model';
+import { environment } from '../../environments/environment';
 
-const API_URL = 'http://localhost:8082/api/reviews';
+const API_URL = environment.apiUrl + '/reviews';
 
 @Injectable({
     providedIn: 'root'

@@ -1,0 +1,53 @@
+@startuml order-status
+!include ../_theme.puml
+title Order lifecycle (OrderStatusPolicy)
+
+' Derived from: wovely services/OrderStatusPolicy, OrderService#transition / #applyIntervention
+hide empty description
+
+[*] --> PENDING : checkout\n(stock deducted)
+PENDING --> CONFIRMED : seller
+PENDING --> PROCESSING : seller
+CONFIRMED --> PROCESSING : seller
+PROCESSING --> SHIPPED : seller\n[tracking number set]
+SHIPPED --> DELIVERED : buyer confirms receipt\nor seller
+DELIVERED --> COMPLETED : buyer / seller
+
+PENDING --> CANCELLED : buyer / seller\n<<restock>>
+CONFIRMED --> CANCELLED : buyer / seller\n<<restock>>
+PROCESSING --> CANCELLED : seller\n<<restock>>
+
+DELIVERED --> REFUNDED : all items returned\n(system, via ReturnService)
+SHIPPED --> DISPUTED : admin MARK_DISPUTED
+DELIVERED --> DISPUTED : admin MARK_DISPUTED
+DISPUTED --> SHIPPED : admin RESOLVE_DISPUTE
+DISPUTED --> DELIVERED : admin RESOLVE_DISPUTE
+DISPUTED --> REFUNDED : admin FORCE_REFUND
+
+state "Manual order" as MANUAL
+[*] --> MANUAL : seller, off-platform sale
+MANUAL --> COMPLETED : immediately
+
+CANCELLED --> [*]
+REFUNDED --> [*]
+
+note right of PROCESSING
+  Items/address editable only in
+  PENDING and CONFIRMED (else 409).
+  Edits reconcile stock per product.
+  "Ship with Wovely" label (CONFIRMED /
+  PROCESSING, once; admin may regenerate)
+  sets carrier, CO₂ estimate and tracking.
+end note
+
+note bottom of REFUNDED
+  CANCELLED and REFUNDED are terminal for everyone (409).
+  Admins may force any other transition (UPDATE_STATUS,
+  FORCE_REFUND, CANCEL_ORDER) — every intervention is audited.
+  Restock happens only if the goods never shipped
+  (from PENDING / CONFIRMED / PROCESSING).
+  Wallet escrow: checkout debits the buyer; COMPLETED pays the
+  seller; CANCELLED / REFUNDED / returns refund the buyer
+  (reversing the payout if the seller was already paid).
+end note
+@enduml

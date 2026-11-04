@@ -20,12 +20,13 @@
           type="text" 
           class="search-input" 
           placeholder="Search by name, ID, username or email..."
+          aria-label="Search users"
           [(ngModel)]="searchQuery"
         />
       </div>
       
       <div class="filter-controls">
-        <select class="filter-select" [(ngModel)]="statusFilter">
+        <select class="filter-select" aria-label="Filter by account status" [(ngModel)]="statusFilter">
           <option value="ALL">All Statuses</option>
           <option value="ACTIVE">Active</option>
           <option value="SUSPENDED">Suspended</option>
@@ -39,8 +40,12 @@
         }
       </div>
       
-      <div class="results-count">
-        Showing {{ filteredUsers().length }} of {{ users().length }} users
+      <div class="results-count" role="status" aria-live="polite">
+        @if (loading()) {
+          Searching…
+        } @else {
+          {{ users().length }} {{ users().length === 1 ? 'user' : 'users' }} found
+        }
       </div>
     </div>
 
@@ -58,7 +63,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (user of filteredUsers(); track user.id) {
+          @for (user of users(); track user.id) {
             <tr>
               <td class="fw-bold">{{ user['fullName'] || '—' }}</td>
               <td class="fw-medium">{{ user.username }}</td>
@@ -72,11 +77,11 @@
                 </span>
               </td>
               <td>
-                <span class="status-badge" [ngClass]="user.accountStatus.toLowerCase()">
+                <span [class]="'status-badge ' + user.accountStatus.toLowerCase()">
                   {{ user.accountStatus }}
                 </span>
                 @if (user.accountStatus === 'SUSPENDED' && user.suspendedUntil) {
-                    <div class="suspend-date">Until {{ user.suspendedUntil | date:'shortDate' }}</div>
+                    <div class="suspend-date">Until {{ user.suspendedUntil | date: 'shortDate' }}</div>
                 }
               </td>
               <td>
@@ -86,10 +91,14 @@
           } @empty {
             <tr>
               <td colspan="7" class="text-center empty-row">
-                @if (users().length === 0) {
-                  <span>No users found in the database.</span>
-                } @else {
+                @if (loadError()) {
+                  <span>Couldn't load users. Please try again.</span>
+                } @else if (loading()) {
+                  <span>Searching…</span>
+                } @else if (searchQuery() || statusFilter() !== 'ALL') {
                   <span>No users match your search criteria.</span>
+                } @else {
+                  <span>No users found in the database.</span>
                 }
               </td>
             </tr>

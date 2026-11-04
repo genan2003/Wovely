@@ -1,0 +1,50 @@
+@startuml cancel-auto-restock
+!include ../_theme.puml
+title Cancel with auto-restock and refund
+
+' Derived from: wovely BuyerOrderController, services/OrderService#transition, services/OrderStatusPolicy,
+' clients/InventoryClient (release + retry queue), services/WalletService; inventory stock/StockLedger,
+' stock/StockEventRelay; products messaging/StockChangedListener
+autonumber
+actor "Buyer" as B
+participant "SPA" as Web
+box "core service :8081" #FAF6EF
+  participant "BuyerOrderController" as Ctl
+  participant "OrderService" as Svc
+  participant "WalletService" as Wal
+  participant "InventoryClient" as InvC
+end box
+participant "inventory :8083" as Inv
+queue "RabbitMQ" as MQ
+participant "products :8082" as Prod
+database "MongoDB" as DB
+
+B -> Web : cancel order
+Web -> Ctl ++ : POST /api/orders/{id}/cancel {reason}
+Ctl -> Svc ++ : transition(order, CANCELLED, BUYER)
+alt not the order's buyer
+  Svc --> Web : 403
+else status not PENDING / CONFIRMED (OrderStatusPolicy)
+  Svc --> Web : 409
+end
+Svc -> Svc : restocksOn(from, CANCELLED) — goods never shipped
+loop each item
+  Svc -> InvC : release(sellerId, productId, qty)
+  InvC -> Inv : POST /internal/inventory/stock/{p}/release
+  alt inventory unreachable
+    InvC -> DB : save stock_release_retries {sellerId, productId, qty}
+    note right of InvC : @Scheduled replay every 30 s until delivered;\n4xx answers are parked in stock_release_failures
+  else ok
+    Inv -> Inv : $inc stock +qty, version +1, outboxPending
+  end
+end
+Svc -> Wal : refundRemaining(order) — wallet REFUND (PLAN.md 3.7)
+Svc -> DB : save order (CANCELLED, reason)
+Svc --> Ctl -- : order
+Ctl --> Web -- : 200
+
+== Asynchronously ==
+Inv -> MQ : StockChanged(version n)
+MQ -> Prod : deliver
+Prod -> DB : products.stockQuantity = …\nonly if n > stockVersion
+@enduml

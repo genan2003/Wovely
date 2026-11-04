@@ -1,6 +1,10 @@
+/home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/CatalogQueryServiceIT.java
 /home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/ProductsApplicationIT.java
+/home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/StockReadModelIT.java
+/home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/clients/PurchaseVerificationClientTest.java
 /home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/controllers/ProductSecurityTest.java
 /home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/controllers/ReviewControllerTest.java
+/home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/models/EDeliveryEmissionTest.java
 /home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/support/AbstractMongoIT.java
 /home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/support/SecuredWebMvcTest.java
 /home/genan/Facultate/SoftwareEngineering/Project/Wovely/backend/products/src/test/java/com/wovely/products/support/TestTokens.java

@@ -26,12 +26,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.wovely.wovely.clients.CatalogClient;
 import com.wovely.wovely.clients.CatalogClient.ProductSnapshot;
-import com.wovely.wovely.exception.ApiException;
+import com.wovely.common.error.ApiException;
 import com.wovely.wovely.models.EOrderStatus;
 import com.wovely.wovely.models.Order;
 import com.wovely.wovely.repository.AuditLogRepository;
 import com.wovely.wovely.repository.OrderRepository;
 import com.wovely.wovely.services.EcoCarrierService;
+import com.wovely.wovely.services.AuditService;
 import com.wovely.wovely.services.OrderService;
 import com.wovely.wovely.support.Orders;
 import com.wovely.wovely.support.SecuredWebMvcTest;
@@ -39,12 +40,14 @@ import com.wovely.wovely.support.TestTokens;
 
 /** PLAN.md 1.4 (ownership) and 1.5 (server-side pricing) for buyer order endpoints. */
 @WebMvcTest(BuyerOrderController.class)
-@Import(OrderService.class)
+@Import({ OrderService.class, AuditService.class, com.wovely.wovely.services.AddressService.class })
 class BuyerOrderControllerTest extends SecuredWebMvcTest {
 
     @MockitoBean OrderRepository orderRepository;
     @MockitoBean AuditLogRepository auditLogRepository;
     @MockitoBean CatalogClient catalogClient;
+    @MockitoBean com.wovely.wovely.clients.InventoryClient inventoryClient;
+    @MockitoBean com.wovely.wovely.services.WalletService walletService;
     @MockitoBean EcoCarrierService ecoCarrierService;
 
     static final ProductSnapshot BASKET = new ProductSnapshot("p-1", "Basket", 10.0, TestTokens.SELLER_ID, "img", "APPROVED", 5);
@@ -80,8 +83,8 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
             .andExpect(jsonPath("$.sellerId").value(TestTokens.SELLER_ID))
             .andExpect(jsonPath("$.sellerName").value("seller"))
             .andExpect(jsonPath("$.items[0].price").value(10.0));
-        verify(catalogClient).reduceStock(TestTokens.SELLER_ID, "p-1", 2);
-        verify(catalogClient).reduceStock(TestTokens.SELLER_ID, "p-2", 1);
+        verify(inventoryClient).reserve(TestTokens.SELLER_ID, "p-1", 2);
+        verify(inventoryClient).reserve(TestTokens.SELLER_ID, "p-2", 1);
     }
 
     @Test
@@ -93,12 +96,12 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     @Test
     void insufficientStockIsConflictAndCompensatesEarlierLines() throws Exception {
         doThrow(ApiException.conflict("Insufficient stock for product p-2"))
-            .when(catalogClient).reduceStock(TestTokens.SELLER_ID, "p-2", 1);
+            .when(inventoryClient).reserve(TestTokens.SELLER_ID, "p-2", 1);
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
                 .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.message").value("Insufficient stock for product p-2"));
-        verify(catalogClient).restock(TestTokens.SELLER_ID, "p-1", 2);
+        verify(inventoryClient).release(TestTokens.SELLER_ID, "p-1", 2);
         verify(orderRepository, never()).save(any());
     }
 
@@ -109,7 +112,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
                 .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
             .andExpect(status().isBadRequest());
-        verify(catalogClient, never()).reduceStock(anyString(), anyString(), anyInt());
+        verify(inventoryClient, never()).reserve(anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -175,7 +178,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/orders/o-1/cancel").header(AUTH, bearer(TestTokens.otherBuyer()))
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isForbidden());
-        verify(catalogClient, never()).restock(anyString(), anyString(), anyInt());
+        verify(inventoryClient, never()).release(anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -185,7 +188,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"changed my mind\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("CANCELLED"));
-        verify(catalogClient).restock(TestTokens.SELLER_ID, "p-1", 2);
+        verify(inventoryClient).release(TestTokens.SELLER_ID, "p-1", 2);
     }
 
     @Test
@@ -216,6 +219,83 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
         ArgumentCaptor<Order> saved = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(saved.capture());
         assertThat(saved.getValue().getCancellationReason()).isEqualTo("too slow");
-        verify(catalogClient, never()).reduceStock(anyString(), eq("p-1"), anyInt());
+        verify(inventoryClient, never()).reserve(anyString(), eq("p-1"), anyInt());
+    }
+
+    // ---------------------------------------------------------------- checkout address (PLAN 3, address book)
+
+    static final String ITEMS_ONLY = """
+        {"items":[{"productId":"p-1","quantity":1}]}""";
+
+    private com.wovely.wovely.models.Address saveAddress(String userKey, String id, boolean isDefault) {
+        var a = new com.wovely.wovely.models.Address();
+        a.setId(id);
+        a.setRecipientName("Ana Pop");
+        a.setStreet("Str. Florilor 3");
+        a.setPostalCode("550000");
+        a.setCity("Sibiu");
+        a.setCountry("Romania");
+        a.setDefault(isDefault);
+        users.get(userKey).getAddresses().add(a);
+        return a;
+    }
+
+    @Test
+    void checkoutWithAddressIdUsesTheFormattedBookEntry() throws Exception {
+        saveAddress("testuser", "home", false);
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"addressId\":\"home\",\"shippingAddress\":\"ignored\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.shippingAddress").value("Ana Pop, Str. Florilor 3, 550000 Sibiu, Romania"));
+    }
+
+    @Test
+    void checkoutWithoutAddressUsesTheDefault() throws Exception {
+        saveAddress("testuser", "work", false);
+        saveAddress("testuser", "home", true);
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(ITEMS_ONLY))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.shippingAddress").value(org.hamcrest.Matchers.startsWith("Ana Pop")));
+    }
+
+    @Test
+    void someoneElsesAddressIs404AndNoStockIsTouched() throws Exception {
+        saveAddress("buyer2", "theirs", true);
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"addressId\":\"theirs\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+            .andExpect(status().isNotFound());
+        verify(inventoryClient, never()).reserve(any(), any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void noAddressAtAllIsBadRequestBeforeStock() throws Exception {
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(ITEMS_ONLY))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("shipping address")));
+        verify(inventoryClient, never()).reserve(any(), any(), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    // ---------------------------------------------------------------- 3.7 wallet at checkout
+
+    @Test
+    void checkoutChargesTheWallet() throws Exception {
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
+            .andExpect(status().isCreated());
+        verify(walletService).chargeOrder(any(Order.class));
+    }
+
+    @Test
+    void insufficientBalanceIs409RestocksAndLeavesNoOrder() throws Exception {
+        doThrow(ApiException.conflict("Insufficient wallet balance")).when(walletService).chargeOrder(any(Order.class));
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Insufficient wallet balance"));
+        verify(inventoryClient).release(TestTokens.SELLER_ID, "p-1", 2);
+        verify(inventoryClient).release(TestTokens.SELLER_ID, "p-2", 1);
+        verify(orderRepository).delete(any(Order.class));
     }
 }

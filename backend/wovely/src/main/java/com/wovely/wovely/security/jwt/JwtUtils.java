@@ -26,8 +26,11 @@ public class JwtUtils {
     private long jwtExpirationMs;
 
     public String generateJwtToken(Authentication authentication) {
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
+        return generateJwtToken((UserDetailsImpl) authentication.getPrincipal());
+    }
 
+    /** Short-lived access token (default 15 min, {@code JWT_EXPIRATION_MS}); renewed via /api/auth/refresh. */
+    public String generateJwtToken(UserDetailsImpl userPrincipal) {
         java.util.List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(java.util.stream.Collectors.toList());
@@ -40,6 +43,10 @@ public class JwtUtils {
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(key(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public long getJwtExpirationMs() {
+        return jwtExpirationMs;
     }
     
     private Key key;

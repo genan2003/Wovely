@@ -1,10 +1,19 @@
 package com.wovely.products.models;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "products")
+@CompoundIndex(name = "status_category", def = "{'status': 1, 'category': 1}")
+@CompoundIndex(name = "seller_status", def = "{'sellerId': 1, 'status': 1}")
 public class Product {
+
+  /** Moderation/lifecycle states. ARCHIVED = soft-deleted by the seller (PLAN.md 2.8). */
+  public static final java.util.Set<String> STATUSES = java.util.Set.of("PENDING", "APPROVED", "REJECTED", "NEEDS_CHANGES", "ARCHIVED");
+  public static final String ARCHIVED = "ARCHIVED";
+
   @Id
   private String id;
 
@@ -23,12 +32,32 @@ public class Product {
   private String co2EmissionScore; // Low, Medium, High
   private String shippingMethod; // e.g., Carbon Neutral Courier
   private Boolean isHandmade;
-  private String status = "PENDING"; // PENDING, APPROVED, REJECTED, NEEDS_CHANGES
+  /** Buyers may collect the item from the maker (counts as zero-emission delivery). */
+  private Boolean localPickup;
+  /** Server-derived from shipping method, CO₂ score and local pickup — see {@link #refreshDeliveryEmission()}. */
+  @Indexed
+  @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+  private EDeliveryEmission deliveryEmission;
+  @Indexed
+  private String status = "PENDING"; // see STATUSES
   
   // Inventory tracking fields
-  private Integer stockQuantity = 0;
-  private Integer lowStockThreshold = 5;
+  // No field defaults: a missing value in a request body must stay null, otherwise partial updates
+  // silently reset stock to 0 (bug found by the Postman run, see ProductSecurityTest).
+  private Integer stockQuantity;
+  private Integer lowStockThreshold;
+  /** Read model (PLAN.md 4.2): last inventory version applied to stockQuantity/lowStockThreshold. */
+  @com.fasterxml.jackson.annotation.JsonIgnore
+  private Long stockVersion;
 
+  public static final int DEFAULT_LOW_STOCK_THRESHOLD = 5;
+
+  /**
+   * Jackson must bind request bodies through this constructor. Jackson 3 would otherwise pick the
+   * all-args constructor below (parameter names are compiled in) and its null → 0/5 defaults turned
+   * every partial update into "stock = 0".
+   */
+  @com.fasterxml.jackson.annotation.JsonCreator
   public Product() {
   }
 
@@ -189,6 +218,37 @@ public class Product {
     this.status = status;
   }
 
+  public Long getStockVersion() {
+    return stockVersion;
+  }
+
+  public void setStockVersion(Long stockVersion) {
+    this.stockVersion = stockVersion;
+  }
+
+  public Boolean getLocalPickup() {
+    return localPickup;
+  }
+
+  public void setLocalPickup(Boolean localPickup) {
+    this.localPickup = localPickup;
+  }
+
+  public EDeliveryEmission getDeliveryEmission() {
+    return deliveryEmission;
+  }
+
+  /** Read-only in JSON: the level is always recomputed (PLAN.md 3.5). */
+  public void setDeliveryEmission(EDeliveryEmission deliveryEmission) {
+    this.deliveryEmission = deliveryEmission;
+  }
+
+  /** Recompute {@link #deliveryEmission}; call after any change to shipping, CO₂ score or pickup. */
+  public Product refreshDeliveryEmission() {
+    this.deliveryEmission = EDeliveryEmission.classify(shippingMethod, co2EmissionScore, localPickup);
+    return this;
+  }
+
   public Integer getStockQuantity() {
     return stockQuantity;
   }
@@ -206,10 +266,10 @@ public class Product {
   }
 
   public boolean isLowStock() {
-    return stockQuantity != null && stockQuantity <= lowStockThreshold;
+    return stockQuantity != null && stockQuantity <= (lowStockThreshold != null ? lowStockThreshold : DEFAULT_LOW_STOCK_THRESHOLD);
   }
 
   public boolean isOutOfStock() {
-    return stockQuantity != null && stockQuantity == 0;
+    return stockQuantity == null || stockQuantity == 0;
   }
 }

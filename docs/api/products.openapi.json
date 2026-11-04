@@ -1,0 +1,1061 @@
+{
+    "components": {
+        "schemas": {
+            "Category": {
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "level": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "parentId": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Product": {
+                "properties": {
+                    "category": {
+                        "type": "string"
+                    },
+                    "categoryPath": {
+                        "type": "string"
+                    },
+                    "city": {
+                        "type": "string"
+                    },
+                    "co2EmissionScore": {
+                        "type": "string"
+                    },
+                    "deliveryEmission": {
+                        "enum": [
+                            "ZERO",
+                            "LOW",
+                            "STANDARD"
+                        ],
+                        "readOnly": true,
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "handmade": {
+                        "type": "boolean"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "imageUrl": {
+                        "type": "string"
+                    },
+                    "latitude": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "localPickup": {
+                        "type": "boolean"
+                    },
+                    "longitude": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "lowStock": {
+                        "type": "boolean"
+                    },
+                    "lowStockThreshold": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "materials": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "outOfStock": {
+                        "type": "boolean"
+                    },
+                    "price": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "region": {
+                        "type": "string"
+                    },
+                    "sellerId": {
+                        "type": "string"
+                    },
+                    "shippingMethod": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "stockQuantity": {
+                        "format": "int32",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Review": {
+                "properties": {
+                    "comment": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "photoUrls": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "productId": {
+                        "type": "string"
+                    },
+                    "rating": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "verifiedPurchase": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerJwt": {
+                "bearerFormat": "JWT",
+                "description": "Access token from POST /api/auth/signin (15 min)",
+                "scheme": "bearer",
+                "type": "http"
+            },
+            "internalApiKey": {
+                "description": "Service-to-service calls on /internal/** only",
+                "in": "header",
+                "name": "X-Internal-Api-Key",
+                "type": "apiKey"
+            }
+        }
+    },
+    "info": {
+        "description": "Handmade-goods marketplace. Errors use {status, error, message, path, timestamp}; /internal/** endpoints are service-to-service only and are not reachable through the gateway.",
+        "title": "Wovely \u2013 products API",
+        "version": "v1"
+    },
+    "openapi": "3.1.0",
+    "paths": {
+        "/api/categories": {
+            "get": {
+                "operationId": "getAllCategories",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Category"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "category-controller"
+                ]
+            },
+            "post": {
+                "operationId": "createCategory",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Category"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Category"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "category-controller"
+                ]
+            }
+        },
+        "/api/categories/children/{parentId}": {
+            "get": {
+                "operationId": "getSubCategories",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "parentId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Category"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "category-controller"
+                ]
+            }
+        },
+        "/api/categories/roots": {
+            "get": {
+                "operationId": "getRootCategories",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Category"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "category-controller"
+                ]
+            }
+        },
+        "/api/products": {
+            "get": {
+                "operationId": "getAllProducts",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "category",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "categoryPath",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "isEco",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "deliveryEmission",
+                        "required": false,
+                        "schema": {
+                            "enum": [
+                                "ZERO",
+                                "LOW",
+                                "STANDARD"
+                            ],
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "localPickup",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "isHandmade",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "city",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "region",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "minPrice",
+                        "required": false,
+                        "schema": {
+                            "format": "double",
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "maxPrice",
+                        "required": false,
+                        "schema": {
+                            "format": "double",
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "required": false,
+                        "schema": {
+                            "format": "int32",
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "size",
+                        "required": false,
+                        "schema": {
+                            "format": "int32",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Product"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            },
+            "post": {
+                "operationId": "createProduct",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Product"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Product"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/admin/pending": {
+            "get": {
+                "operationId": "getPendingProducts",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Product"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-product-controller"
+                ]
+            }
+        },
+        "/api/products/admin/seller/{sellerId}": {
+            "get": {
+                "operationId": "getProductsBySeller",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/Product"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-product-controller"
+                ]
+            }
+        },
+        "/api/products/admin/{id}": {
+            "put": {
+                "operationId": "editProductContent",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Product"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Product"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-product-controller"
+                ]
+            }
+        },
+        "/api/products/admin/{id}/status": {
+            "put": {
+                "operationId": "updateProductStatus",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Product"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "admin-product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}": {
+            "get": {
+                "operationId": "getProductsBySellerId",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/category/{category}": {
+            "get": {
+                "operationId": "getProductsBySellerAndCategory",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "category",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/dashboard": {
+            "get": {
+                "operationId": "getSellerDashboard",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/low-stock": {
+            "get": {
+                "operationId": "getLowStockItems",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/out-of-stock": {
+            "get": {
+                "operationId": "getOutOfStockItems",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/product/{productId}": {
+            "delete": {
+                "operationId": "deleteProduct",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            },
+            "get": {
+                "operationId": "getSellerProduct",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            },
+            "put": {
+                "operationId": "updateProduct",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Product"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/product/{productId}/restock": {
+            "post": {
+                "operationId": "restockProduct",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "format": "int32",
+                                    "type": "integer"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/seller/{sellerId}/product/{productId}/stock": {
+            "put": {
+                "operationId": "updateStock",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sellerId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "additionalProperties": {
+                                    "format": "int32",
+                                    "type": "integer"
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/products/{id}": {
+            "get": {
+                "operationId": "getProductById",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Product"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "product-controller"
+                ]
+            }
+        },
+        "/api/reviews": {
+            "post": {
+                "operationId": "createReview",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Review"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Review"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "review-controller"
+                ]
+            }
+        },
+        "/api/reviews/product/{productId}": {
+            "get": {
+                "operationId": "getProductReviews",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "productId",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "review-controller"
+                ]
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerJwt": []
+        }
+    ],
+    "servers": [
+        {
+            "description": "Gateway (browser entry point)",
+            "url": "http://localhost:8090"
+        }
+    ]
+}

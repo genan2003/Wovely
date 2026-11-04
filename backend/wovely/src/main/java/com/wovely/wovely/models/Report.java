@@ -16,6 +16,8 @@ public class Report {
     private String reason;
     private String status; // PENDING, RESOLVED, DISMISSED
     private LocalDateTime createdAt;
+    /** CHAT reports: both conversation participants, sorted. Admins may read only this conversation. */
+    private java.util.List<String> participantIds;
 
     public Report() {
         this.createdAt = LocalDateTime.now();
@@ -29,6 +31,9 @@ public class Report {
         this.targetId = targetId;
         this.reason = reason;
     }
+
+    public java.util.List<String> getParticipantIds() { return participantIds; }
+    public void setParticipantIds(java.util.List<String> participantIds) { this.participantIds = participantIds; }
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

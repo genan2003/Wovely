@@ -7,11 +7,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.wovely.products.models.Product;
 import com.wovely.products.repository.ProductRepository;
-import com.wovely.products.clients.InventorySyncClient;
-import com.wovely.products.exception.ApiException;
-import com.wovely.products.security.JwtPrincipal;
-import com.wovely.products.security.OwnershipGuard;
+import com.wovely.common.error.ApiException;
+import com.wovely.common.security.JwtPrincipal;
+import com.wovely.common.security.OwnershipGuard;
 import com.wovely.products.services.StockService;
+import com.wovely.products.services.CatalogQueryService;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -25,79 +25,37 @@ public class ProductController {
   ProductRepository productRepository;
 
   @Autowired
-  InventorySyncClient inventorySync;
-
-  @Autowired
   StockService stockService;
 
+  @Autowired
+  CatalogQueryService catalogQuery;
+
+  /**
+   * Public catalog: APPROVED products only, filtered in MongoDB (PLAN.md 2.10).
+   * Returns a JSON array (unchanged contract). With {@code page} (zero-based) and optional {@code size}
+   * (max 100) the result is paginated and {@code X-Total-Count} carries the number of matches.
+   */
   @GetMapping
   public ResponseEntity<List<Product>> getAllProducts(
       @RequestParam(required = false) String category,
       @RequestParam(required = false) String categoryPath,
       @RequestParam(required = false) Boolean isEco,
+      @RequestParam(required = false) com.wovely.products.models.EDeliveryEmission deliveryEmission,
+      @RequestParam(required = false) Boolean localPickup,
       @RequestParam(required = false) Boolean isHandmade,
       @RequestParam(required = false) String city,
       @RequestParam(required = false) String region,
       @RequestParam(required = false) Double minPrice,
-      @RequestParam(required = false) Double maxPrice) {
-    try {
-      List<Product> products = productRepository.findByStatus("APPROVED");
-
-      if (category != null && !category.isEmpty()) {
-        products = products.stream()
-            .filter(p -> category.equals(p.getCategory()))
-            .collect(Collectors.toList());
-      }
-
-      if (categoryPath != null && !categoryPath.isEmpty()) {
-        products = products.stream()
-            .filter(p -> p.getCategoryPath() != null && p.getCategoryPath().startsWith(categoryPath))
-            .collect(Collectors.toList());
-      }
-
-      if (isEco != null && isEco) {
-        products = products.stream()
-            .filter(p -> "Low".equalsIgnoreCase(p.getCo2EmissionScore()))
-            .collect(Collectors.toList());
-      }
-
-      if (isHandmade != null && isHandmade) {
-        products = products.stream()
-            .filter(p -> p.getHandmade() != null && p.getHandmade())
-            .collect(Collectors.toList());
-      }
-
-      if (city != null && !city.isEmpty()) {
-        String searchCity = city.trim().toLowerCase();
-        products = products.stream()
-            .filter(p -> p.getCity() != null && p.getCity().toLowerCase().contains(searchCity))
-            .collect(Collectors.toList());
-      }
-
-      if (region != null && !region.isEmpty()) {
-        String searchRegion = region.trim().toLowerCase();
-        products = products.stream()
-            .filter(p -> p.getRegion() != null && p.getRegion().toLowerCase().contains(searchRegion))
-            .collect(Collectors.toList());
-      }
-
-      if (minPrice != null) {
-        products = products.stream()
-            .filter(p -> p.getPrice() != null && p.getPrice() >= minPrice)
-            .collect(Collectors.toList());
-      }
-
-      if (maxPrice != null) {
-        products = products.stream()
-            .filter(p -> p.getPrice() != null && p.getPrice() <= maxPrice)
-            .collect(Collectors.toList());
-      }
-
-      return new ResponseEntity<>(products, HttpStatus.OK);
-    } catch (Exception e) {
-      System.err.println("Search error: " + e.getMessage());
-      return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+      @RequestParam(required = false) Double maxPrice,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer size) {
+    var result = catalogQuery.search(
+        new CatalogQueryService.Filter(category, categoryPath, isEco, deliveryEmission, localPickup, isHandmade, city,
+            region, minPrice, maxPrice),
+        page, size);
+    return ResponseEntity.ok()
+        .header("X-Total-Count", String.valueOf(result.total()))
+        .body(result.items());
   }
 
   @GetMapping("/{id}")
@@ -142,7 +100,17 @@ public class ProductController {
         product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5);
     _product.setId(null);
     _product.setStatus("PENDING");
+    _product.setLocalPickup(Boolean.TRUE.equals(product.getLocalPickup()));
+    _product.refreshDeliveryEmission();
+    int initialStock = _product.getStockQuantity() != null ? _product.getStockQuantity() : 0;
     Product savedProduct = productRepository.save(_product);
+    try {
+      // Inventory owns stock (PLAN.md 4.2): a listing without a stock record can't be sold, so undo on failure
+      savedProduct = stockService.register(savedProduct, initialStock);
+    } catch (RuntimeException e) {
+      productRepository.delete(savedProduct);
+      throw e;
+    }
     return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
   }
 
@@ -153,7 +121,7 @@ public class ProductController {
   @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getProductsBySellerId(@PathVariable String sellerId) {
     try {
-      List<Product> products = productRepository.findBySellerId(sellerId);
+      List<Product> products = productRepository.findBySellerIdAndStatusNot(sellerId, Product.ARCHIVED);
       
       // Transform to visual-friendly format
       List<Map<String, Object>> visualProducts = products.stream()
@@ -180,11 +148,11 @@ public class ProductController {
   @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getSellerDashboard(@PathVariable String sellerId) {
     try {
-      List<Product> products = productRepository.findBySellerId(sellerId);
+      List<Product> products = productRepository.findBySellerIdAndStatusNot(sellerId, Product.ARCHIVED);
       
       Map<String, Object> dashboard = new HashMap<>();
       dashboard.put("totalProducts", products.size());
-      dashboard.put("inStock", (int) products.stream().filter(p -> p.getStockQuantity() > 0).count());
+      dashboard.put("inStock", (int) products.stream().filter(p -> p.getStockQuantity() != null && p.getStockQuantity() > 0).count());
       dashboard.put("lowStock", (int) products.stream().filter(Product::isLowStock).count());
       dashboard.put("outOfStock", (int) products.stream().filter(Product::isOutOfStock).count());
       
@@ -219,19 +187,8 @@ public class ProductController {
   public ResponseEntity<?> updateStock(@PathVariable String sellerId,
                                         @PathVariable String productId,
                                         @RequestBody Map<String, Integer> stockRequest) {
-    try {
-      Product product = productRepository.findBySellerIdAndId(sellerId, productId)
-          .orElseThrow(() -> new RuntimeException("Product not found"));
-      
-      product.setStockQuantity(stockRequest.get("quantity"));
-      productRepository.save(product);
-      inventorySync.sync(product);
-      
-      return ResponseEntity.ok(toVisualProductMap(product));
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", e.getMessage()));
-    }
+    Integer quantity = stockRequest == null ? null : stockRequest.get("quantity");
+    return ResponseEntity.ok(toVisualProductMap(stockService.setLevel(sellerId, productId, quantity)));
   }
 
   /**
@@ -254,41 +211,43 @@ public class ProductController {
   public ResponseEntity<?> updateProduct(@PathVariable String sellerId,
                                         @PathVariable String productId,
                                         @RequestBody Product product) {
-    try {
-      java.util.Optional<Product> productData = productRepository.findBySellerIdAndId(sellerId, productId);
-      
-      if (productData.isPresent()) {
-        Product _product = productData.get();
-        _product.setName(product.getName());
-        _product.setDescription(product.getDescription());
-        _product.setPrice(product.getPrice());
-        _product.setImageUrl(product.getImageUrl());
-        _product.setCategory(product.getCategory());
-        _product.setCategoryPath(product.getCategoryPath());
-        _product.setMaterials(product.getMaterials());
-        _product.setCity(product.getCity());
-        _product.setRegion(product.getRegion());
-        _product.setLatitude(product.getLatitude());
-        _product.setLongitude(product.getLongitude());
-        _product.setCo2EmissionScore(product.getCo2EmissionScore());
-        _product.setShippingMethod(product.getShippingMethod());
-        _product.setHandmade(product.getHandmade());
-        _product.setLowStockThreshold(product.getLowStockThreshold());
-        
-        if (product.getStockQuantity() != null) {
-          _product.setStockQuantity(product.getStockQuantity());
-        }
-        
-        Product saved = productRepository.save(_product);
-        inventorySync.sync(saved);
-        return new ResponseEntity<>(toVisualProductMap(saved), HttpStatus.OK);
-      } else {
-        return new ResponseEntity<>("Product not found with id: " + productId, HttpStatus.NOT_FOUND);
+    java.util.Optional<Product> productData = productRepository.findBySellerIdAndId(sellerId, productId);
+    
+    if (productData.isPresent()) {
+      Product _product = productData.get();
+      _product.setName(product.getName());
+      _product.setDescription(product.getDescription());
+      _product.setPrice(product.getPrice());
+      _product.setImageUrl(product.getImageUrl());
+      _product.setCategory(product.getCategory());
+      _product.setCategoryPath(product.getCategoryPath());
+      _product.setMaterials(product.getMaterials());
+      _product.setCity(product.getCity());
+      _product.setRegion(product.getRegion());
+      _product.setLatitude(product.getLatitude());
+      _product.setLongitude(product.getLongitude());
+      _product.setCo2EmissionScore(product.getCo2EmissionScore());
+      _product.setShippingMethod(product.getShippingMethod());
+      _product.setHandmade(product.getHandmade());
+      if (product.getLocalPickup() != null) {
+        _product.setLocalPickup(product.getLocalPickup());
       }
-    } catch (Exception e) {
-      System.err.println("Update error: " + e.getMessage());
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", e.getMessage()));
+      _product.refreshDeliveryEmission();
+      if (product.getLowStockThreshold() != null) {
+        _product.setLowStockThreshold(product.getLowStockThreshold());
+      }
+      
+      Product saved = productRepository.save(_product);
+      stockService.afterListingSaved(saved);
+      if (product.getStockQuantity() != null) {
+        // stock edits go to inventory, the owner (PLAN.md 4.2)
+        saved = stockService.setLevel(sellerId, productId, product.getStockQuantity());
+      } else {
+        saved = productRepository.findById(productId).orElse(saved);
+      }
+      return new ResponseEntity<>(toVisualProductMap(saved), HttpStatus.OK);
+    } else {
+      return new ResponseEntity<>("Product not found with id: " + productId, HttpStatus.NOT_FOUND);
     }
   }
 
@@ -299,16 +258,15 @@ public class ProductController {
   @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> deleteProduct(@PathVariable String sellerId,
                                         @PathVariable String productId) {
-    try {
-      Product product = productRepository.findBySellerIdAndId(sellerId, productId)
-          .orElseThrow(() -> new RuntimeException("Product not found or unauthorized"));
-      
-      productRepository.delete(product);
-      return ResponseEntity.ok(Map.of("message", "Product deleted successfully"));
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", e.getMessage()));
-    }
+    Product product = productRepository.findBySellerIdAndId(sellerId, productId)
+        .orElseThrow(() -> com.wovely.common.error.ApiException.notFound("Product not found"));
+    
+    // Soft delete (PLAN.md 2.8): order history keeps resolving the product, it leaves the catalog,
+    // seller views and the inventory mirror, and checkout rejects it (status != APPROVED).
+    product.setStatus(Product.ARCHIVED);
+    productRepository.save(product);
+    stockService.afterListingSaved(product); // deactivates the stock record
+    return ResponseEntity.ok(Map.of("message", "Product deleted successfully"));
   }
 
   /**
@@ -318,7 +276,7 @@ public class ProductController {
   @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getLowStockItems(@PathVariable String sellerId) {
     try {
-      List<Product> products = productRepository.findBySellerId(sellerId).stream()
+      List<Product> products = productRepository.findBySellerIdAndStatusNot(sellerId, Product.ARCHIVED).stream()
           .filter(Product::isLowStock)
           .collect(Collectors.toList());
       
@@ -340,7 +298,7 @@ public class ProductController {
   @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getOutOfStockItems(@PathVariable String sellerId) {
     try {
-      List<Product> products = productRepository.findBySellerId(sellerId).stream()
+      List<Product> products = productRepository.findBySellerIdAndStatusNot(sellerId, Product.ARCHIVED).stream()
           .filter(Product::isOutOfStock)
           .collect(Collectors.toList());
       
@@ -380,7 +338,7 @@ public class ProductController {
   public ResponseEntity<?> getProductsBySellerAndCategory(@PathVariable String sellerId, 
                                                            @PathVariable String category) {
     try {
-      List<Product> products = productRepository.findBySellerIdAndCategory(sellerId, category);
+      List<Product> products = productRepository.findBySellerIdAndCategoryAndStatusNot(sellerId, category, Product.ARCHIVED);
       
       List<Map<String, Object>> visualItems = products.stream()
           .map(this::toVisualProductMap)
@@ -412,6 +370,8 @@ public class ProductController {
     visual.put("isOutOfStock", product.isOutOfStock());
     visual.put("co2EmissionScore", product.getCo2EmissionScore());
     visual.put("shippingMethod", product.getShippingMethod());
+    visual.put("localPickup", Boolean.TRUE.equals(product.getLocalPickup()));
+    visual.put("deliveryEmission", product.getDeliveryEmission());
     visual.put("isHandmade", product.getHandmade());
     visual.put("status", product.getStatus());
     visual.put("categoryPath", product.getCategoryPath());

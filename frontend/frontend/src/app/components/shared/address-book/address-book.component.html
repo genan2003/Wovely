@@ -1,0 +1,105 @@
+<section class="address-book" aria-labelledby="addressBookTitle">
+  <div class="book-head">
+    <h3 id="addressBookTitle" class="book-title">Shipping addresses</h3>
+    @if (editing() === null && addresses().length < 10) {
+      <button type="button" class="btn btn-save btn-sm" (click)="startAdd()">Add an address</button>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="book-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="book-muted">Loading your addresses…</p>
+  } @else if (addresses().length === 0 && editing() === null) {
+    <p class="book-muted">You haven't saved an address yet. Add one so sellers know where to send your order.</p>
+  }
+
+  <ul class="book-list">
+    @for (a of addresses(); track a.id) {
+      <li class="book-entry" [class.is-default]="a.default">
+        <div class="entry-text">
+          <p class="entry-name">
+            {{ a.label || a.recipientName }}
+            @if (a.default) { <span class="default-chip">Default</span> }
+          </p>
+          <p class="entry-lines">
+            @if (a.label) { {{ a.recipientName }}<br> }
+            {{ a.street }}<br>
+            {{ a.postalCode }} {{ a.city }}, {{ a.country }}
+            @if (a.phone) { <br>{{ a.phone }} }
+          </p>
+        </div>
+        <div class="entry-actions">
+          @if (confirmingDelete() === a.id) {
+            <span class="confirm-text">Delete this address?</span>
+            <button type="button" class="btn btn-link btn-sm text-danger" (click)="remove(a)">Delete</button>
+            <button type="button" class="btn btn-link btn-sm" (click)="confirmingDelete.set(null)">Keep</button>
+          } @else {
+            <button type="button" class="btn btn-link btn-sm" (click)="startEdit(a)">Edit</button>
+            @if (!a.default) {
+              <button type="button" class="btn btn-link btn-sm" (click)="makeDefault(a)">Make default</button>
+            }
+            <button type="button" class="btn btn-link btn-sm text-danger" (click)="confirmingDelete.set(a.id)">Delete</button>
+          }
+        </div>
+      </li>
+    }
+  </ul>
+
+  @if (editing() !== null) {
+    <form class="book-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <h4 class="form-title">{{ editing() ? 'Edit address' : 'New address' }}</h4>
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <label class="form-label" for="ab-label">Label <span class="book-muted">(optional)</span></label>
+          <input id="ab-label" class="form-control" formControlName="label" placeholder="Home, Studio…">
+        </div>
+        <div class="col-sm-8">
+          <label class="form-label" for="ab-name">Recipient</label>
+          <input id="ab-name" class="form-control" formControlName="recipientName" autocomplete="name"
+                 [attr.aria-invalid]="invalid('recipientName')" aria-describedby="ab-name-err">
+          @if (invalid('recipientName')) { <small id="ab-name-err" class="field-error">Enter who receives the parcel.</small> }
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="ab-street">Street and number</label>
+          <input id="ab-street" class="form-control" formControlName="street" autocomplete="street-address"
+                 [attr.aria-invalid]="invalid('street')" aria-describedby="ab-street-err">
+          @if (invalid('street')) { <small id="ab-street-err" class="field-error">Enter the street and number.</small> }
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label" for="ab-zip">Postal code</label>
+          <input id="ab-zip" class="form-control" formControlName="postalCode" autocomplete="postal-code"
+                 [attr.aria-invalid]="invalid('postalCode')" aria-describedby="ab-zip-err">
+          @if (invalid('postalCode')) { <small id="ab-zip-err" class="field-error">Use letters, digits, spaces or dashes.</small> }
+        </div>
+        <div class="col-sm-8">
+          <label class="form-label" for="ab-city">City</label>
+          <input id="ab-city" class="form-control" formControlName="city" autocomplete="address-level2"
+                 [attr.aria-invalid]="invalid('city')" aria-describedby="ab-city-err">
+          @if (invalid('city')) { <small id="ab-city-err" class="field-error">Enter the city.</small> }
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label" for="ab-country">Country</label>
+          <input id="ab-country" class="form-control" formControlName="country" autocomplete="country-name"
+                 [attr.aria-invalid]="invalid('country')">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label" for="ab-phone">Phone <span class="book-muted">(for the courier)</span></label>
+          <input id="ab-phone" class="form-control" formControlName="phone" autocomplete="tel" inputmode="tel"
+                 [attr.aria-invalid]="invalid('phone')" aria-describedby="ab-phone-err">
+          @if (invalid('phone')) { <small id="ab-phone-err" class="field-error">Use digits, spaces and + ( ) - only.</small> }
+        </div>
+        <div class="col-12 form-check ms-1">
+          <input id="ab-default" type="checkbox" class="form-check-input" formControlName="makeDefault">
+          <label class="form-check-label" for="ab-default">Use this address by default at checkout</label>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+        <button type="submit" class="btn btn-save" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save address' }}</button>
+      </div>
+    </form>
+  }
+</section>

@@ -23,6 +23,13 @@ public class CreateOrderRequest {
     @Size(max = 500)
     private String shippingAddress;
 
+    /** Entry of the caller's address book; wins over {@code shippingAddress}. Neither → default address. */
+    @Size(max = 64)
+    private String addressId;
+
+    public String getAddressId() { return addressId; }
+    public void setAddressId(String addressId) { this.addressId = addressId; }
+
     public List<Item> getItems() { return items; }
     public void setItems(List<Item> items) { this.items = items; }
     public String getShippingAddress() { return shippingAddress; }

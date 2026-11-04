@@ -5,6 +5,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
 @Document(collection = "chat_messages")
+@org.springframework.data.mongodb.core.index.CompoundIndex(name = "sender_ts", def = "{'senderId': 1, 'timestamp': -1}")
+@org.springframework.data.mongodb.core.index.CompoundIndex(name = "receiver_ts", def = "{'receiverId': 1, 'timestamp': -1}")
 public class ChatMessage {
     @Id
     private String id;

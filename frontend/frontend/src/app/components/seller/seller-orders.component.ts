@@ -177,18 +177,29 @@ export class SellerOrdersComponent implements OnInit {
         this.selectedLabel.set('');
     }
 
+    /** Same rule as the server: one label per order, before it ships (PLAN.md 3.6). */
+    canBuyLabel(order: { status: string; ecoShippingLabel?: string }): boolean {
+        return (order.status === 'CONFIRMED' || order.status === 'PROCESSING') && !order.ecoShippingLabel;
+    }
+
+    viewLabel(order: { ecoShippingLabel?: string }): void {
+        this.selectedLabel.set(order.ecoShippingLabel ?? '');
+        this.showLabelDialog.set(true);
+    }
+
     printLabel(): void {
-        // Simple mock print logic
         const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write('<html><head><title>Eco Shipping Label</title>');
-            printWindow.document.write('<style>body { font-family: monospace; white-space: pre; padding: 40px; border: 2px dashed #000; display: inline-block; }</style>');
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(this.selectedLabel().replace(/\n/g, '<br>'));
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
-        }
+        if (!printWindow) return;
+        // The label contains the buyer's shipping address: set it as text, never as HTML.
+        const doc = printWindow.document;
+        doc.title = 'Wovely shipping label';
+        const style = doc.createElement('style');
+        style.textContent = 'body { font-family: monospace; white-space: pre; padding: 40px; } pre { border: 2px dashed #000; padding: 16px; display: inline-block; }';
+        doc.head.appendChild(style);
+        const pre = doc.createElement('pre');
+        pre.textContent = this.selectedLabel();
+        doc.body.appendChild(pre);
+        printWindow.print();
     }
 
     getStatusClass(status: string): string {

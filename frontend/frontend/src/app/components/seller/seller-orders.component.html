@@ -45,6 +45,10 @@
                             <div *ngIf="order.trackingNumber" class="small text-muted">
                                 Tracking: {{ order.trackingNumber }}
                             </div>
+                            <div *ngIf="order.carrierName" class="small shipping-summary">
+                                <span>{{ order.carrierName }}, ~{{ order.estimatedCo2Kg }} kg CO₂</span>
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" (click)="viewLabel(order)">View label</button>
+                            </div>
                             <div *ngIf="order.estimatedDeliveryDays" class="small text-success">
                                 <i class="bi bi-clock-history"></i> Delivery in {{ order.estimatedDeliveryDays }} days
                             </div>
@@ -65,8 +69,8 @@
                                 <button class="btn btn-sm btn-outline-success" (click)="updateStatus(order, 'PROCESSING')" *ngIf="order.status === 'CONFIRMED' || order.status === 'PENDING'">
                                     Start Processing
                                 </button>
-                                <button class="btn btn-sm btn-success" (click)="generateEcoLabel(order)" *ngIf="order.status === 'PROCESSING' && !order.ecoShippingLabel" [disabled]="generatingLabel()">
-                                    Generate Eco-Label
+                                <button class="btn btn-sm btn-success" (click)="generateEcoLabel(order)" *ngIf="canBuyLabel(order)" [disabled]="generatingLabel()">
+                                    Ship with Wovely
                                 </button>
                                 <button class="btn btn-sm btn-outline-primary" (click)="updateStatus(order, 'SHIPPED')" *ngIf="order.status === 'PROCESSING' && order.trackingNumber">
                                     Mark Shipped
@@ -174,6 +178,25 @@
                     <button type="button" class="btn btn-outline-secondary" (click)="closeEditDialog()">Cancel</button>
                     <button type="button" class="btn btn-primary px-4" (click)="saveOrderChanges()" [disabled]="editLoading()">Save Changes</button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shipping label (PLAN.md 3.6) -->
+<div class="modal-backdrop" *ngIf="showLabelDialog()">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="labelDialogTitle">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title" id="labelDialogTitle">Prepaid shipping label</h5>
+                <button type="button" class="btn-close" aria-label="Close" (click)="closeLabelDialog()"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="shipping-label">{{ selectedLabel() }}</pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeLabelDialog()">Close</button>
+                <button type="button" class="btn btn-success" (click)="printLabel()">Print label</button>
             </div>
         </div>
     </div>

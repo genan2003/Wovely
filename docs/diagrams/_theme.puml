@@ -16,6 +16,13 @@ skinparam sequence {
   GroupBorderColor #9C8B78
   BoxBorderColor #B8AC9C
 }
+skinparam state {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+  ArrowColor #4A4A4A
+  StartColor #6B5B4B
+  EndColor #6B5B4B
+}
 skinparam database {
   BorderColor #6B5B4B
   BackgroundColor #FAF6EF

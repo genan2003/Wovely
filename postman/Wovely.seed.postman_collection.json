@@ -45,6 +45,10 @@
               "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
               "  pm.expect(body.roles).to.be.an(\"array\").that.is.not.empty;",
               "});",
+              "pm.test(\"returns a refresh token and short TTL (PLAN 2.9)\", () => {",
+              "  pm.expect(body.refreshToken).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(body.expiresInMs).to.be.at.most(3600000);",
+              "});",
               "pm.collectionVariables.set(\"sellerToken\", body.accessToken);",
               "pm.collectionVariables.set(\"sellerId\", body.id);"
             ]
@@ -91,6 +95,10 @@
               "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
               "  pm.expect(body.roles).to.be.an(\"array\").that.is.not.empty;",
               "});",
+              "pm.test(\"returns a refresh token and short TTL (PLAN 2.9)\", () => {",
+              "  pm.expect(body.refreshToken).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(body.expiresInMs).to.be.at.most(3600000);",
+              "});",
               "pm.collectionVariables.set(\"adminToken\", body.accessToken);",
               "pm.collectionVariables.set(\"adminId\", body.id);"
             ]
@@ -136,6 +144,10 @@
               "  pm.expect(body.tokenType).to.eql(\"Bearer\");",
               "  pm.expect(body.id).to.be.a(\"string\").and.not.empty;",
               "  pm.expect(body.roles).to.be.an(\"array\").that.is.not.empty;",
+              "});",
+              "pm.test(\"returns a refresh token and short TTL (PLAN 2.9)\", () => {",
+              "  pm.expect(body.refreshToken).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(body.expiresInMs).to.be.at.most(3600000);",
               "});",
               "pm.collectionVariables.set(\"buyerToken\", body.accessToken);",
               "pm.collectionVariables.set(\"buyerId\", body.id);"
@@ -546,6 +558,18 @@
   ],
   "variable": [
     {
+      "key": "refreshA",
+      "value": ""
+    },
+    {
+      "key": "refreshB",
+      "value": ""
+    },
+    {
+      "key": "refreshC",
+      "value": ""
+    },
+    {
       "key": "orderTamperedId",
       "value": ""
     },
@@ -631,6 +655,22 @@
     },
     {
       "key": "reportId",
+      "value": ""
+    },
+    {
+      "key": "productReportId",
+      "value": ""
+    },
+    {
+      "key": "orderBTracking",
+      "value": ""
+    },
+    {
+      "key": "addressId",
+      "value": ""
+    },
+    {
+      "key": "walletBefore",
       "value": ""
     },
     {

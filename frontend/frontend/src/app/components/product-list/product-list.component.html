@@ -13,14 +13,28 @@
                 <div class="filter-group mb-4">
                     <label class="form-label small text-muted text-uppercase fw-bold">Product Attributes</label>
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="attr1" [(ngModel)]="filters.isEco" (change)="applyFilters()">
-                        <label class="form-check-label" for="attr1">Eco-Friendly (Low CO2)</label>
-                    </div>
-                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="attr2" [(ngModel)]="filters.isHandmade" (change)="applyFilters()">
                         <label class="form-check-label" for="attr2">Handcrafted</label>
                     </div>
                 </div>
+
+                <fieldset class="filter-group delivery-filter mb-4">
+                    <legend class="form-label small text-muted text-uppercase fw-bold">Delivery</legend>
+                    @for (opt of deliveryOptions; track opt.value) {
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="deliveryEmission" [id]="'delivery-' + (opt.value || 'any')"
+                                [value]="opt.value" [(ngModel)]="filters.deliveryEmission" (change)="applyFilters()">
+                            <label class="form-check-label" [for]="'delivery-' + (opt.value || 'any')">
+                                {{ opt.label }}
+                                @if (opt.hint) { <span class="delivery-hint">{{ opt.hint }}</span> }
+                            </label>
+                        </div>
+                    }
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="localPickup" [(ngModel)]="filters.localPickup" (change)="applyFilters()">
+                        <label class="form-check-label" for="localPickup">Local pickup available</label>
+                    </div>
+                </fieldset>
 
                 <div class="filter-group mb-4">
                     <label class="form-label small text-muted text-uppercase fw-bold">Artisan Location</label>
@@ -52,7 +66,7 @@
             @if (!loading() && products().length === 0) {
                 <div class="text-center py-5">
                     <h3 class="text-muted">No products found with these filters.</h3>
-                    <button class="btn btn-link text-success" (click)="filters = {categoryPath:'', isEco:false, isHandmade:false, minPrice:null, maxPrice:null, city:''}; applyFilters()">Clear all filters</button>
+                    <button class="btn btn-link text-success" (click)="clearFilters()">Clear all filters</button>
                 </div>
             }
 
@@ -65,11 +79,7 @@
                                 <img [src]="product.imageUrl" class="card-img-top product-image" [alt]="product.name">
 
                                 <div class="position-absolute top-0 end-0 p-2 d-flex flex-column gap-2">
-                                    @if (product.co2EmissionScore === 'Low') {
-                                        <span class="badge rounded-pill eco-badge shadow-sm" title="Eco">
-                                            <i class="bi bi-leaf me-1"></i> Eco
-                                        </span>
-                                    }
+                                    <app-emission-badge [level]="emissionOf(product)" [compact]="true" />
                                     @if (product.handmade || product.isHandmade) {
                                         <span class="badge rounded-pill handmade-badge shadow-sm" title="Handcrafted">
                                             Handcrafted

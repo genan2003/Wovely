@@ -1,8 +1,9 @@
-import { Component, inject, signal, PLATFORM_ID } from '@angular/core';
+import { Component, effect, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { StorageService } from './services/storage.service';
+import { RealtimeService } from './services/realtime.service';
 
 import { CartService } from './services/cart.service';
 import { CategoryService } from './services/category.service';
@@ -26,9 +27,13 @@ export class App {
   public categories = signal<any[]>([]);
   private platformId = inject(PLATFORM_ID);
 
+  public realtime = inject(RealtimeService);
+
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
       this.loadCategories();
+      // One real-time chat connection while signed in (PLAN.md 3.4)
+      effect(() => (this.isLoggedIn() ? this.realtime.start() : this.realtime.stop()));
     }
   }
 

@@ -19,7 +19,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
 public abstract class AbstractMongoIT {
 
     @ServiceConnection
-    protected static final MongoDBContainer MONGO = new MongoDBContainer("mongo:7.0");
+    protected static final MongoDBContainer MONGO = new MongoDBContainer("mongo:9.0.4");
 
     static {
         MONGO.start();

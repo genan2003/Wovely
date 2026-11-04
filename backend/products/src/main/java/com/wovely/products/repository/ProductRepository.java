@@ -12,4 +12,9 @@ public interface ProductRepository extends MongoRepository<Product, String> {
   List<Product> findByStatusAndCategory(String status, String category);
   List<Product> findBySellerIdAndCategory(String sellerId, String category);
   Optional<Product> findBySellerIdAndId(String sellerId, String id);
+
+  /** Seller views hide soft-deleted (ARCHIVED) listings. */
+  List<Product> findBySellerIdAndStatusNot(String sellerId, String status);
+
+  List<Product> findBySellerIdAndCategoryAndStatusNot(String sellerId, String category, String status);
 }

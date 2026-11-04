@@ -23,6 +23,9 @@ import com.wovely.wovely.models.Role;
 import com.wovely.wovely.models.User;
 import com.wovely.wovely.repository.RoleRepository;
 import com.wovely.wovely.support.SecuredWebMvcTest;
+import com.wovely.wovely.support.TestTokens;
+import com.wovely.wovely.models.EAccountStatus;
+import com.wovely.wovely.services.RefreshTokenService;
 
 /** PLAN.md 1.1 — public signup must never grant ROLE_ADMIN. */
 @WebMvcTest(AuthController.class)
@@ -30,6 +33,9 @@ class AuthControllerTest extends SecuredWebMvcTest {
 
     @MockitoBean
     RoleRepository roleRepository;
+
+    @MockitoBean
+    RefreshTokenService refreshTokenService;
 
     @BeforeEach
     void roles() {
@@ -83,5 +89,44 @@ class AuthControllerTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"ab\",\"email\":\"nope\",\"password\":\"1\"}"))
             .andExpect(status().isBadRequest());
+    }
+
+    // ---------------------------------------------------------------- refresh tokens (PLAN.md 2.9)
+
+    @Test
+    void refreshReturnsNewAccessAndRotatedRefreshToken() throws Exception {
+        when(refreshTokenService.rotate("old-refresh"))
+            .thenReturn(Optional.of(new RefreshTokenService.Rotation(TestTokens.BUYER_ID, "new-refresh")));
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"old-refresh\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.refreshToken").value("new-refresh"))
+            .andExpect(jsonPath("$.username").value("testuser"))
+            .andExpect(jsonPath("$.expiresInMs").value(3600000));
+    }
+
+    @Test
+    void refreshWithUnknownTokenIsUnauthorized() throws Exception {
+        when(refreshTokenService.rotate(any())).thenReturn(Optional.empty());
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"nope\"}"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void bannedUserCannotRefreshAndIsSignedOutEverywhere() throws Exception {
+        users.get("testuser").setAccountStatus(EAccountStatus.BANNED);
+        when(refreshTokenService.rotate("old-refresh"))
+            .thenReturn(Optional.of(new RefreshTokenService.Rotation(TestTokens.BUYER_ID, "new-refresh")));
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"old-refresh\"}"))
+            .andExpect(status().isUnauthorized());
+        verify(refreshTokenService).revokeAll(TestTokens.BUYER_ID);
+        users.get("testuser").setAccountStatus(EAccountStatus.ACTIVE);
+    }
+
+    @Test
+    void signoutRevokesRefreshToken() throws Exception {
+        mvc.perform(post("/api/auth/signout").contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"r\"}"))
+            .andExpect(status().isOk());
+        verify(refreshTokenService).revoke("r");
     }
 }

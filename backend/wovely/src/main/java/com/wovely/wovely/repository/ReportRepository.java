@@ -6,4 +6,7 @@ import java.util.List;
 
 public interface ReportRepository extends MongoRepository<Report, String> {
     List<Report> findByStatus(String status);
+
+    boolean existsByReporterIdAndTargetTypeAndTargetIdAndStatus(String reporterId, String targetType, String targetId,
+            String status);
 }

@@ -24,6 +24,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/inventory")
 public class InventoryController {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    com.wovely.inventory.stock.StockLedger stockLedger;
+
     @Autowired
     private InventoryService inventoryService;
 
@@ -133,95 +136,36 @@ public class InventoryController {
         }
     }
 
-    /**
-     * Update stock quantity for a product.
-     */
+    /** Set the absolute stock level (single writer: StockLedger, PLAN.md 4.2). */
     @PutMapping("/seller/{sellerId}/product/{productId}/stock")
     @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
-    public ResponseEntity<?> updateStock(@PathVariable String sellerId,
-                                          @PathVariable String productId,
+    public ResponseEntity<?> updateStock(@PathVariable String sellerId, @PathVariable String productId,
                                           @RequestBody Map<String, Integer> stockRequest) {
-        try {
-            Integer quantity = stockRequest.get("quantity");
-            if (quantity == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Quantity is required"));
-            }
-
-            return inventoryService.updateStock(sellerId, productId, quantity)
-                .map(item -> {
-                    inventoryService.updateInventoryStats(sellerId);
-                    return ResponseEntity.ok(toVisualInventoryItem(item));
-                })
-                .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+        Integer quantity = stockRequest == null ? null : stockRequest.get("quantity");
+        if (quantity == null) {
+            throw com.wovely.common.error.ApiException.badRequest("Quantity is required");
         }
+        InventoryItem item = stockLedger.setLevel(productId, sellerId, quantity);
+        inventoryService.updateInventoryStats(sellerId);
+        return ResponseEntity.ok(toVisualInventoryItem(item));
     }
 
-    /**
-     * Restock a product (add to existing stock).
-     */
+    /** Add units to the stock level. */
     @PostMapping("/seller/{sellerId}/product/{productId}/restock")
     @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
-    public ResponseEntity<?> restockProduct(@PathVariable String sellerId,
-                                             @PathVariable String productId,
+    public ResponseEntity<?> restockProduct(@PathVariable String sellerId, @PathVariable String productId,
                                              @RequestBody Map<String, Integer> restockRequest) {
-        try {
-            Integer quantity = restockRequest.get("quantity");
-            if (quantity == null || quantity <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Valid quantity is required"));
-            }
-
-            return inventoryService.restock(sellerId, productId, quantity)
-                .map(item -> {
-                    inventoryService.updateInventoryStats(sellerId);
-                    return ResponseEntity.ok(toVisualInventoryItem(item));
-                })
-                .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+        Integer quantity = restockRequest == null ? null : restockRequest.get("quantity");
+        if (quantity == null || quantity <= 0) {
+            throw com.wovely.common.error.ApiException.badRequest("Valid quantity is required");
         }
+        InventoryItem item = stockLedger.restock(productId, sellerId, quantity);
+        inventoryService.updateInventoryStats(sellerId);
+        return ResponseEntity.ok(toVisualInventoryItem(item));
     }
 
-    /**
-     * Add a new product to inventory.
-     */
-    @PostMapping("/seller/{sellerId}/product")
-    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
-    public ResponseEntity<?> addProductToInventory(@PathVariable String sellerId,
-                                                    @RequestBody InventoryItem item) {
-        try {
-            item.setSellerId(sellerId);
-            InventoryItem savedItem = inventoryService.addToInventory(item);
-            inventoryService.updateInventoryStats(sellerId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(toVisualInventoryItem(savedItem));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * Remove a product from inventory (soft delete).
-     */
-    @DeleteMapping("/seller/{sellerId}/product/{productId}")
-    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
-    public ResponseEntity<?> removeProduct(@PathVariable String sellerId,
-                                            @PathVariable String productId) {
-        try {
-            return inventoryService.removeFromInventory(sellerId, productId)
-                .map(item -> {
-                    inventoryService.updateInventoryStats(sellerId);
-                    return ResponseEntity.ok(Map.of("message", "Product removed from inventory", "productId", productId));
-                })
-                .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
+    // Listings are created and archived in the products service, which registers/deactivates their
+    // stock here over /internal/inventory/stock (PLAN.md 4.2) — no create/delete endpoints on this API.
 
     /**
      * Get inventory summary/dashboard data.

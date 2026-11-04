@@ -19,15 +19,13 @@ import com.wovely.wovely.payload.response.OrderItemDTO;
 import com.wovely.wovely.repository.OrderRepository;
 import com.wovely.wovely.repository.UserRepository;
 import com.wovely.wovely.clients.CatalogClient;
-import com.wovely.wovely.exception.ApiException;
+import com.wovely.common.error.ApiException;
 import com.wovely.wovely.payload.request.CreateOrderRequest;
+import com.wovely.wovely.payload.request.UpdateOrderRequest;
+import com.wovely.wovely.services.OrderStatusPolicy.Actor;
 import com.wovely.wovely.security.OwnershipGuard;
 import com.wovely.wovely.security.services.UserDetailsImpl;
 
-import com.wovely.wovely.models.AuditLog;
-import com.wovely.wovely.repository.AuditLogRepository;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 
 @Service
 public class OrderService {
@@ -36,16 +34,32 @@ public class OrderService {
     OrderRepository orderRepository;
 
     @Autowired
-    AuditLogRepository auditLogRepository;
+    AuditService auditService;
 
     @Autowired
     CatalogClient catalogClient;
+
+    /** Inventory owns stock (PLAN.md 4.2): reserve at checkout/edit, release on cancel/refund/compensation. */
+    @Autowired
+    com.wovely.wovely.clients.InventoryClient inventoryClient;
 
     @Autowired
     UserRepository userRepository;
 
     @Autowired
     OwnershipGuard ownership;
+
+    @Autowired
+    EcoCarrierService ecoCarrierService;
+
+    @Autowired
+    AddressService addressService;
+
+    @Autowired
+    WalletService walletService;
+
+    /** Labels can be bought once the seller accepted the order and until it ships. */
+    static final java.util.Set<EOrderStatus> LABELLABLE = java.util.EnumSet.of(EOrderStatus.CONFIRMED, EOrderStatus.PROCESSING);
 
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
@@ -113,137 +127,121 @@ public class OrderService {
         return orders.stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
+    /**
+     * Admin intervention (Story 1). All changes are applied to one loaded instance, saved once and
+     * audited once (PLAN.md 2.3). Status changes follow {@link OrderStatusPolicy} with the ADMIN actor.
+     */
     public OrderDTO applyIntervention(String id, OrderInterventionRequest request) {
-        OrderDTO result = handleIntervention(id, request);
-        if (result != null) {
-            logAuditAction("ORDER_INTERVENTION", id, "Action: " + request.getAction() + ", Reason: " + request.getReason());
-        }
-        return result;
-    }
-
-    private void logAuditAction(String type, String targetId, String details) {
-        try {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            String username = "system";
-            String adminId = "system";
-            
-            if (principal instanceof UserDetailsImpl me) {
-                username = me.getUsername();
-                adminId = me.getId();
-            } else if (principal instanceof UserDetails) {
-                username = ((UserDetails)principal).getUsername();
+        Order order = requireOrder(id);
+        EOrderStatus before = order.getStatus();
+        String action = request.getAction() == null ? "" : request.getAction();
+        String reason = request.getReason();
+        switch (action) {
+            case "UPDATE_STATUS" -> {
+                if (request.getNewStatus() == null) {
+                    throw ApiException.badRequest("newStatus is required");
+                }
+                transition(order, request.getNewStatus(), Actor.ADMIN, reason);
             }
-            
-            AuditLog log = new AuditLog(adminId, username, type, targetId, details);
-            auditLogRepository.save(log);
-        } catch (Exception e) {
-            org.slf4j.LoggerFactory.getLogger(OrderService.class).error("Audit logging failed: {}", e.getMessage());
+            case "FORCE_REFUND" -> transition(order, EOrderStatus.REFUNDED, Actor.ADMIN, reason);
+            case "CANCEL_ORDER" -> transition(order, EOrderStatus.CANCELLED, Actor.ADMIN, reason);
+            case "UPDATE_TRACKING" -> {
+                if (request.getTrackingNumber() == null || request.getTrackingNumber().isBlank()) {
+                    throw ApiException.badRequest("trackingNumber is required");
+                }
+                order.setTrackingNumber(request.getTrackingNumber().trim());
+            }
+            case "MARK_DISPUTED" -> {
+                transition(order, EOrderStatus.DISPUTED, Actor.ADMIN, reason);
+                order.setIsDisputed(true);
+                order.setDisputeReason(reason);
+            }
+            case "RESOLVE_DISPUTE" -> {
+                if (!Boolean.TRUE.equals(order.getIsDisputed()) && order.getStatus() != EOrderStatus.DISPUTED) {
+                    throw ApiException.conflict("Order is not disputed");
+                }
+                if (request.getNewStatus() == null) {
+                    throw ApiException.badRequest("newStatus is required to resolve a dispute");
+                }
+                transition(order, request.getNewStatus(), Actor.ADMIN, reason);
+                order.setIsDisputed(false);
+                order.setDisputeReason(null);
+            }
+            default -> throw ApiException.badRequest("Unknown action: " + action);
         }
+        if (request.getAdminNotes() != null && !request.getAdminNotes().isBlank()) {
+            order.setAdminNotes(request.getAdminNotes());
+        }
+        order.setUpdatedAt(new Date());
+        Order saved = orderRepository.save(order);
+        auditService.record("ORDER_INTERVENTION", id, "Action: " + action + ", Status: " + before + " -> "
+                + saved.getStatus() + (reason != null ? ", Reason: " + reason : ""));
+        return convertToDto(saved);
     }
 
     public OrderDTO regenerateShippingLabel(String id) {
-        return generateEcoShippingLabel(id);
+        return generateEcoShippingLabel(id, true);
     }
 
     /**
-     * Admin/System intervention for an order.
+     * Status change by a buyer or seller (or an admin using those endpoints). Re-sending the current
+     * status is a no-op (optionally updating the ETA); illegal transitions are 409 (PLAN.md 2.4).
      */
-    public OrderDTO handleIntervention(String orderId, OrderInterventionRequest request) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        
-        if (orderOpt.isPresent()) {
-            Order order = orderOpt.get();
-            String action = request.getAction();
-            
-            if ("UPDATE_STATUS".equals(action)) {
-                if (request.getNewStatus() != null) {
-                    return updateOrderStatus(orderId, request.getNewStatus(), request.getReason(), request.getAdminNotes());
-                }
-            } else if ("FORCE_REFUND".equals(action)) {
-                return updateOrderStatus(orderId, EOrderStatus.REFUNDED, request.getReason(), request.getAdminNotes());
-            } else if ("CANCEL_ORDER".equals(action)) {
-                return updateOrderStatus(orderId, EOrderStatus.CANCELLED, request.getReason(), request.getAdminNotes());
-            } else if ("UPDATE_TRACKING".equals(action)) {
-                order.setTrackingNumber(request.getTrackingNumber());
-                if (request.getAdminNotes() != null) order.setAdminNotes(request.getAdminNotes());
-                order.setUpdatedAt(new Date());
-                orderRepository.save(order);
-                return convertToDto(order);
-            } else if ("MARK_DISPUTED".equals(action)) {
-                order.setIsDisputed(true);
-                order.setDisputeReason(request.getReason());
-                return updateOrderStatus(orderId, EOrderStatus.DISPUTED, request.getReason(), request.getAdminNotes());
-            } else if ("RESOLVE_DISPUTE".equals(action)) {
-                order.setIsDisputed(false);
-                order.setDisputeReason(null);
-                if (request.getNewStatus() != null) {
-                    return updateOrderStatus(orderId, request.getNewStatus(), request.getReason(), request.getAdminNotes());
-                }
-            }
-            
+    public OrderDTO updateOrderStatus(String orderId, EOrderStatus newStatus, String reason,
+            Integer estimatedDeliveryDays, Actor actor) {
+        Order order = requireOrder(orderId);
+        EOrderStatus before = order.getStatus();
+        if (newStatus == before && estimatedDeliveryDays == null) {
             return convertToDto(order);
         }
-        
-        return null;
-    }
-
-    /**
-     * Centralized method to update order status and handle side effects like auto-restocking.
-     */
-    public OrderDTO updateOrderStatus(String orderId, EOrderStatus newStatus, String reason, String adminNotes) {
-        return updateOrderStatus(orderId, newStatus, reason, adminNotes, null);
-    }
-
-    public OrderDTO updateOrderStatus(String orderId, EOrderStatus newStatus, String reason, String adminNotes, Integer estimatedDeliveryDays) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        
-        if (orderOpt.isPresent()) {
-            Order order = orderOpt.get();
-            EOrderStatus oldStatus = order.getStatus();
-            
-            if (oldStatus == newStatus && estimatedDeliveryDays == null) {
-                return convertToDto(order);
-            }
-
-            order.setStatus(newStatus);
-            
-            logAuditAction("ORDER_STATUS_UPDATE", orderId, "New Status: " + newStatus + (reason != null ? ", Reason: " + reason : ""));
-            
-            if (EOrderStatus.CANCELLED.equals(newStatus)) {
-                order.setCancellationReason(reason);
-            } else if (EOrderStatus.REFUNDED.equals(newStatus)) {
-                order.setRefundReason(reason);
-            }
-
-            if (estimatedDeliveryDays != null) {
-                order.setEstimatedDeliveryDays(estimatedDeliveryDays);
-            }
-            
-            // Auto-Restock on Cancellation or Refund
-            if ((newStatus == EOrderStatus.CANCELLED || newStatus == EOrderStatus.REFUNDED) && 
-                (oldStatus != EOrderStatus.CANCELLED && oldStatus != EOrderStatus.REFUNDED)) {
-                restoreStockForOrder(order);
-            }
-            
-            if (adminNotes != null && !adminNotes.isEmpty()) {
-                order.setAdminNotes(adminNotes);
-            }
-            
-            order.setUpdatedAt(new Date());
-            orderRepository.save(order);
-            
-            return convertToDto(order);
+        if (newStatus != before) {
+            transition(order, newStatus, actor, reason);
         }
-        
-        return null;
+        if (estimatedDeliveryDays != null) {
+            if (estimatedDeliveryDays < 0 || estimatedDeliveryDays > 365) {
+                throw ApiException.badRequest("estimatedDeliveryDays must be between 0 and 365");
+            }
+            order.setEstimatedDeliveryDays(estimatedDeliveryDays);
+        }
+        order.setUpdatedAt(new Date());
+        Order saved = orderRepository.save(order);
+        auditService.record("ORDER_STATUS_UPDATE", orderId, actor + ": " + before + " -> " + saved.getStatus()
+                + (reason != null ? ", Reason: " + reason : ""));
+        return convertToDto(saved);
+    }
+
+    /** Applies a status change to {@code order} in memory (no save): policy check, reasons, auto-restock. */
+    void transition(Order order, EOrderStatus to, Actor actor, String reason) {
+        EOrderStatus from = order.getStatus();
+        if (!OrderStatusPolicy.isAllowed(from, to, actor)) {
+            throw ApiException.conflict("Cannot change order status from " + from + " to " + to);
+        }
+        if (to == EOrderStatus.SHIPPED && actor == Actor.SELLER
+                && (order.getTrackingNumber() == null || order.getTrackingNumber().isBlank())) {
+            throw ApiException.conflict("Generate a shipping label (or get a tracking number) before shipping");
+        }
+        order.setStatus(to);
+        if (to == EOrderStatus.CANCELLED) {
+            order.setCancellationReason(reason);
+        } else if (to == EOrderStatus.REFUNDED) {
+            order.setRefundReason(reason);
+        }
+        if (OrderStatusPolicy.restocksOn(from, to)) {
+            restoreStockForOrder(order);
+        }
+        if (to == EOrderStatus.CANCELLED || to == EOrderStatus.REFUNDED) {
+            walletService.refundRemaining(order);
+        } else if (to == EOrderStatus.COMPLETED) {
+            walletService.releaseToSeller(order);
+        }
     }
 
     private void reduceStockInServices(String sellerId, String productId, int quantity) {
-        catalogClient.reduceStock(sellerId, productId, quantity);
+        inventoryClient.reserve(sellerId, productId, quantity);
     }
 
     private void restockInServices(String sellerId, String productId, int quantity) {
-        catalogClient.restock(sellerId, productId, quantity);
+        inventoryClient.release(sellerId, productId, quantity);
     }
 
     /**
@@ -323,6 +321,9 @@ public class OrderService {
      * All items must belong to one seller (the cart creates one order per seller).
      */
     public OrderDTO createOrder(CreateOrderRequest request, UserDetailsImpl buyer) {
+        // Resolve the destination first: no address → 400 before any stock is touched.
+        String shippingAddress = addressService.resolveForCheckout(buyer.getId(), request.getAddressId(),
+                request.getShippingAddress());
         List<OrderItem> items = new ArrayList<>();
         String sellerId = null;
         double total = 0;
@@ -356,7 +357,7 @@ public class OrderService {
         order.setItems(items.toArray(OrderItem[]::new));
         order.setTotalAmount(Math.round(total * 100.0) / 100.0);
         order.setStatus(EOrderStatus.PENDING);
-        order.setShippingAddress(request.getShippingAddress());
+        order.setShippingAddress(shippingAddress);
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
         order.setOrderNumber("ORD-" + System.currentTimeMillis() + "-"
@@ -369,6 +370,14 @@ public class OrderService {
                 reduceStockInServices(sellerId, item.getProductId(), item.getQuantity());
                 reduced.add(item);
             }
+            // Need the id for the ledger line: save first, then charge; undo both if the buyer can't pay.
+            order = orderRepository.save(order);
+            try {
+                walletService.chargeOrder(order);
+            } catch (RuntimeException payment) {
+                orderRepository.delete(order);
+                throw payment;
+            }
         } catch (RuntimeException e) {
             for (OrderItem item : reduced) {
                 restockInServices(sellerId, item.getProductId(), item.getQuantity());
@@ -379,57 +388,130 @@ public class OrderService {
     }
 
     /**
-     * Update order items (variations) or shipping address during pre-processing.
-     * Locked once status is PROCESSING or beyond.
+     * Seller edit before processing (PLAN.md 2.5): replaces the item list and/or address,
+     * reconciling stock per product (increase → deduct, decrease/removal → restock) and recomputing
+     * the total from stored/server prices. Deductions run first and are compensated on failure.
      */
-    public OrderDTO updateOrderPreProcessing(String orderId, Order updatedOrderData) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        
-        if (orderOpt.isPresent()) {
-            Order order = orderOpt.get();
-            EOrderStatus currentStatus = order.getStatus();
-            
-            // Lock if status is beyond CONFIRMED (i.e., PROCESSING, SHIPPED, etc.)
-            if (currentStatus != EOrderStatus.PENDING && currentStatus != EOrderStatus.CONFIRMED) {
-                throw ApiException.conflict("Order is locked and cannot be edited in its current status: " + currentStatus);
-            }
-            
-            // Update items if provided
-            if (updatedOrderData.getItems() != null) {
-                // This is complex - would need to handle stock differences.
-                // For MVP, we'll just allow updating shipping address.
-                order.setItems(updatedOrderData.getItems());
-            }
-            
-            if (updatedOrderData.getShippingAddress() != null) {
-                order.setShippingAddress(updatedOrderData.getShippingAddress());
-            }
-            
-            order.setUpdatedAt(new Date());
-            orderRepository.save(order);
-            return convertToDto(order);
+    public OrderDTO updateOrderPreProcessing(String orderId, UpdateOrderRequest request) {
+        Order order = requireOrder(orderId);
+        if (!OrderStatusPolicy.isEditable(order.getStatus())) {
+            throw ApiException.conflict("Order is locked and cannot be edited in its current status: " + order.getStatus());
         }
-        
-        return null;
+        List<String> changes = new ArrayList<>();
+        if (request.getItems() != null) {
+            List<CreateOrderRequest.Item> previous = java.util.Arrays.stream(order.getItems())
+                    .map(i -> new CreateOrderRequest.Item(i.getProductId(), i.getQuantity())).toList();
+            changes.add(reconcileItems(order, request.getItems()));
+            try {
+                walletService.settleEdit(order);
+            } catch (RuntimeException e) {
+                reconcileItems(order, previous); // put the stock back as it was
+                throw e;
+            }
+        }
+        if (request.getShippingAddress() != null && !request.getShippingAddress().equals(order.getShippingAddress())) {
+            order.setShippingAddress(request.getShippingAddress());
+            changes.add("shippingAddress updated");
+        }
+        order.setUpdatedAt(new Date());
+        Order saved = orderRepository.save(order);
+        if (!changes.isEmpty()) {
+            auditService.record("ORDER_EDIT", orderId, String.join("; ", changes));
+        }
+        return convertToDto(saved);
+    }
+
+    private String reconcileItems(Order order, List<CreateOrderRequest.Item> wanted) {
+        if (wanted.isEmpty()) {
+            throw ApiException.badRequest("An order needs at least one item; cancel it instead");
+        }
+        String sellerId = order.getSellerId();
+        java.util.Map<String, OrderItem> current = new java.util.LinkedHashMap<>();
+        for (OrderItem item : order.getItems()) {
+            current.put(item.getProductId(), item);
+        }
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        List<OrderItem> next = new ArrayList<>();
+        java.util.Map<String, Integer> deductions = new java.util.LinkedHashMap<>();
+        java.util.Map<String, Integer> restocks = new java.util.LinkedHashMap<>();
+
+        for (CreateOrderRequest.Item line : wanted) {
+            if (!seen.add(line.getProductId())) {
+                throw ApiException.badRequest("Duplicate product in order: " + line.getProductId());
+            }
+            OrderItem item = current.get(line.getProductId());
+            int oldQty = item != null ? item.getQuantity() : 0;
+            if (item == null) {
+                CatalogClient.ProductSnapshot p = catalogClient.getProduct(line.getProductId());
+                if (!"APPROVED".equals(p.status()) || !sellerId.equals(p.sellerId())) {
+                    throw ApiException.badRequest("Product cannot be added to this order: " + p.name());
+                }
+                item = new OrderItem(p.id(), p.name(), 0, p.price(), p.imageUrl());
+            }
+            int delta = line.getQuantity() - oldQty;
+            if (delta > 0) deductions.put(item.getProductId(), delta);
+            if (delta < 0) restocks.put(item.getProductId(), -delta);
+            item.setQuantity(line.getQuantity());
+            if (line.getColor() != null) item.setColor(line.getColor());
+            if (line.getSize() != null) item.setSize(line.getSize());
+            next.add(item);
+        }
+        for (OrderItem old : current.values()) {
+            if (!seen.contains(old.getProductId())) {
+                restocks.put(old.getProductId(), old.getQuantity());
+            }
+        }
+
+        // 1) deductions can fail (409) → compensate the ones already applied
+        java.util.Map<String, Integer> applied = new java.util.LinkedHashMap<>();
+        try {
+            for (var d : deductions.entrySet()) {
+                inventoryClient.reserve(sellerId, d.getKey(), d.getValue());
+                applied.put(d.getKey(), d.getValue());
+            }
+        } catch (RuntimeException e) {
+            applied.forEach((pid, qty) -> inventoryClient.release(sellerId, pid, qty));
+            throw e;
+        }
+        // 2) restocks never throw (logged by CatalogClient)
+        restocks.forEach((pid, qty) -> inventoryClient.release(sellerId, pid, qty));
+
+        order.setItems(next.toArray(OrderItem[]::new));
+        double total = next.stream().mapToDouble(i -> i.getPrice() * i.getQuantity()).sum();
+        order.setTotalAmount(Math.round(total * 100.0) / 100.0);
+        return "items updated (deducted " + deductions + ", restocked " + restocks + ")";
     }
 
     /**
-     * Generate an automated eco-shipping label.
+     * "Ship with Platform" (PLAN.md 3.6): buy a prepaid label from the lowest-CO₂ carrier that covers the
+     * route; sets the tracking number so the seller can ship. Seller: once per order (409 when a label
+     * exists). Admin: {@code regenerate} replaces it (e.g. lost label).
      */
-    public OrderDTO generateEcoShippingLabel(String orderId) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        if (orderOpt.isPresent()) {
-            Order order = orderOpt.get();
-            
-            // In a real app, this would call an external API
-            String label = "ECO-" + order.getOrderNumber() + "-LABEL";
-            order.setEcoShippingLabel(label);
-            order.setUpdatedAt(new Date());
-            orderRepository.save(order);
-            
-            return convertToDto(order);
+    public OrderDTO generateEcoShippingLabel(String orderId, boolean regenerate) {
+        Order order = requireOrder(orderId);
+        if (!LABELLABLE.contains(order.getStatus())) {
+            throw ApiException.conflict("Shipping labels are only available for CONFIRMED or PROCESSING orders (order is "
+                    + order.getStatus() + ")");
         }
-        return null;
+        if (order.getEcoShippingLabel() != null && !regenerate) {
+            throw ApiException.conflict("This order already has a shipping label");
+        }
+        String previous = order.getTrackingNumber();
+        EcoCarrierService.ShippingLabel label = ecoCarrierService.generateLabel(order.getOrderNumber(),
+                order.getShippingAddress());
+        order.setEcoShippingLabel(label.text());
+        order.setTrackingNumber(label.trackingNumber());
+        order.setCarrierName(label.carrier().name());
+        order.setCarrierMethod(label.carrier().method());
+        order.setShippingDistanceKm(label.distanceKm());
+        order.setEstimatedCo2Kg(label.estimatedCo2Kg());
+        order.setLabelGeneratedAt(new Date());
+        order.setUpdatedAt(new Date());
+        Order saved = orderRepository.save(order);
+        auditService.record(regenerate ? "SHIPPING_LABEL_REGENERATED" : "SHIPPING_LABEL_GENERATED", orderId,
+                label.carrier().name() + ", tracking " + label.trackingNumber()
+                        + (previous != null ? " (was " + previous + ")" : "") + ", ~" + label.estimatedCo2Kg() + " kg CO2");
+        return convertToDto(saved);
     }
 
     private OrderDTO convertToDto(Order order) {
@@ -470,6 +552,8 @@ public class OrderService {
             order.getEcoShippingLabel(),
             order.getEstimatedDeliveryDays(),
             order.isReviewed()
-        );
+        ).withRefundedAmount(order.getRefundedAmount())
+         .withShipping(order.getCarrierName(), order.getCarrierMethod(), order.getShippingDistanceKm(),
+                order.getEstimatedCo2Kg(), order.getLabelGeneratedAt());
     }
 }

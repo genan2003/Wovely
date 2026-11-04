@@ -401,3 +401,6 @@
 .fab-btn:hover {
     transform: scale(1.1) rotate(90deg);
 }
+
+/* Delivery emission preview (PLAN.md 3.5) */
+.delivery-preview { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0 0; font-size: 0.875rem; }

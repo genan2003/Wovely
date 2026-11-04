@@ -5,10 +5,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.wovely.inventory.security.CorsConfig;
-import com.wovely.inventory.security.JwtUtils;
-import com.wovely.inventory.security.OwnershipGuard;
-import com.wovely.inventory.security.RestAuthHandlers;
 import com.wovely.inventory.security.WebSecurityConfig;
 
 /**
@@ -16,7 +12,7 @@ import com.wovely.inventory.security.WebSecurityConfig;
  * (JWT + internal API key + ownership). Internal key in tests: {@value #INTERNAL_KEY}.
  */
 @ActiveProfiles("test")
-@Import({ WebSecurityConfig.class, JwtUtils.class, RestAuthHandlers.class, OwnershipGuard.class, CorsConfig.class })
+@Import(WebSecurityConfig.class) // pulls in ClaimsSecurityConfiguration; CORS, errors, correlation id come from wovely-common
 public abstract class SecuredWebMvcTest {
 
     protected static final String AUTH = "Authorization";

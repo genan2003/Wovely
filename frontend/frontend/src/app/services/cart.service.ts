@@ -1,6 +1,10 @@
 import { Injectable, signal, effect, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Product } from '../models/product.model';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ProductService } from './product.service';
 
 export interface CartItem extends Product {
     quantity: number;
@@ -24,6 +28,7 @@ export interface CartGroup {
 export class CartService {
     private platformId = inject(PLATFORM_ID);
     public items = signal<CartItem[]>([]);
+    private productService = inject(ProductService);
 
     constructor() {
         if (isPlatformBrowser(this.platformId)) {
@@ -142,5 +147,33 @@ export class CartService {
 
     getItemCount(): number {
         return this.items().reduce((total, item) => total + item.quantity, 0);
+    }
+
+    /**
+     * Removes cart items that can no longer be bought (archived, not approved or deleted — PLAN.md 2.8)
+     * and emits the removed items. Network/server errors keep the item (the server re-validates anyway).
+     */
+    pruneUnavailable(): Observable<CartItem[]> {
+        const items = this.items();
+        if (items.length === 0) {
+            return of([]);
+        }
+        return forkJoin(
+            items.map((item) =>
+                this.productService.getProductById(item.id!).pipe(
+                    map((p) => ({ item, ok: p?.status === 'APPROVED' })),
+                    catchError((err: HttpErrorResponse) => of({ item, ok: err.status !== 404 }))
+                )
+            )
+        ).pipe(
+            map((results) => {
+                const removed = results.filter((r) => !r.ok).map((r) => r.item);
+                if (removed.length > 0) {
+                    const ids = new Set(removed.map((r) => r.id));
+                    this.items.update((list) => list.filter((x) => !ids.has(x.id)));
+                }
+                return removed;
+            })
+        );
     }
 }

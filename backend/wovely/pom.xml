@@ -33,6 +33,12 @@
 		<jacoco.haltOnFailure>false</jacoco.haltOnFailure>
 	</properties>
 	<dependencies>
+		<!-- Shared security, errors, correlation id, internal client, actuator (PLAN.md 4.3) -->
+		<dependency>
+			<groupId>com.wovely</groupId>
+			<artifactId>wovely-common</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb</artifactId>
@@ -48,6 +54,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!-- Real-time chat notifications over STOMP (PLAN.md 3.4) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
 
 		<dependency>

@@ -1,7 +1,9 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../services/chat.service';
+import { RealtimeService } from '../../services/realtime.service';
+import { Subscription } from 'rxjs';
 import { StorageService } from '../../services/storage.service';
 import { PublicUserService } from '../../services/public-user.service';
 import { AdminService } from '../../services/admin.service';
@@ -15,7 +17,7 @@ import { forkJoin, map, of, catchError } from 'rxjs';
     templateUrl: './message-center.component.html',
     styleUrl: './message-center.component.css'
 })
-export class MessageCenterComponent implements OnInit {
+export class MessageCenterComponent implements OnInit, OnDestroy {
     private chatService = inject(ChatService);
     private storageService = inject(StorageService);
     private publicUserService = inject(PublicUserService);
@@ -28,17 +30,30 @@ export class MessageCenterComponent implements OnInit {
     public newMessage = '';
     public loading = signal<boolean>(true);
     
-    private pollingInterval: any;
+    private realtime = inject(RealtimeService);
+    private realtimeSub?: Subscription;
 
     ngOnInit(): void {
         this.loadConversations();
-        this.startPolling();
+        // Real-time updates replace the old 5 s polling (PLAN.md 3.4)
+        this.realtimeSub = this.realtime.messages$.subscribe((m) => {
+            const open = this.selectedConversation();
+            const other = m.senderId === this.currentUser.id ? m.receiverId : m.senderId;
+            if (open && open.otherId === other) {
+                if (!this.messages().some((x: ChatMessage) => x.id && x.id === m.id)) {
+                    this.messages.update((list) => [...list, m]);
+                    this.scrollToBottom();
+                }
+                if (m.receiverId === this.currentUser.id) {
+                    this.loadMessages(other); // fetching marks it read on the server
+                }
+            }
+            this.loadConversations();
+        });
     }
 
     ngOnDestroy(): void {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-        }
+        this.realtimeSub?.unsubscribe();
     }
 
     loadConversations(): void {
@@ -85,15 +100,8 @@ export class MessageCenterComponent implements OnInit {
         this.chatService.getConversation(this.currentUser.id, otherId).subscribe(msgs => {
             this.messages.set(msgs);
             this.scrollToBottom();
+            this.realtime.refreshUnread();
         });
-    }
-
-    startPolling(): void {
-        this.pollingInterval = setInterval(() => {
-            if (this.selectedConversation()) {
-                this.loadMessages(this.selectedConversation().otherId);
-            }
-        }, 5000);
     }
 
     send(): void {
@@ -130,14 +138,7 @@ export class MessageCenterComponent implements OnInit {
         const reason = prompt('Please describe why you are reporting this conversation:');
         if (!reason) return;
 
-        this.adminService.createReport({
-            reporterId: this.currentUser.id,
-            reporterName: this.currentUser.fullName || this.currentUser.username,
-            targetType: 'CHAT',
-            targetId: this.currentUser.id + ':' + conv.otherId, // Store composite ID
-            targetName: 'Chat with ' + conv.otherName,
-            reason: reason
-        }).subscribe({
+        this.adminService.createReport({ targetType: 'CHAT', targetId: conv.otherId, reason }).subscribe({
             next: () => alert('Conversation has been flagged for admin review.'),
             error: (err: any) => alert('Failed to submit report: ' + (err.error?.message || err.message))
         });

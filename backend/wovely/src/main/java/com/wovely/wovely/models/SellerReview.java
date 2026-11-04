@@ -16,6 +16,8 @@ public class SellerReview {
     private int shippingRating;
     private String comment;
     private LocalDateTime createdAt;
+    /** Set by the server: the buyer has received an order from this seller (PLAN.md 3.3). */
+    private boolean verifiedPurchase;
 
     public SellerReview() {
         this.createdAt = LocalDateTime.now();
@@ -32,6 +34,9 @@ public class SellerReview {
         this.comment = comment;
         this.createdAt = LocalDateTime.now();
     }
+
+    public boolean isVerifiedPurchase() { return verifiedPurchase; }
+    public void setVerifiedPurchase(boolean verifiedPurchase) { this.verifiedPurchase = verifiedPurchase; }
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

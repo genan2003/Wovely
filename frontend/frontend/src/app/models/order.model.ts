@@ -29,6 +29,13 @@ export interface Order {
   disputeReason?: string;
   estimatedDeliveryDays?: number;
   isReviewed?: boolean;
+  // "Ship with Platform" label (PLAN.md 3.6)
+  ecoShippingLabel?: string;
+  carrierName?: string;
+  carrierMethod?: string;
+  shippingDistanceKm?: number;
+  estimatedCo2Kg?: number;
+  labelGeneratedAt?: string;
 }
 
 export enum OrderStatus {

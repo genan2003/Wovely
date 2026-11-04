@@ -16,6 +16,8 @@ public class Review {
   private String comment;
   private List<String> photoUrls;
   private LocalDateTime createdAt;
+  /** Server-computed: the author has received an order containing this product (PLAN.md 3.3). */
+  private boolean verifiedPurchase;
 
   public Review() {
     this.createdAt = LocalDateTime.now();
@@ -85,6 +87,14 @@ public class Review {
 
   public void setPhotoUrls(List<String> photoUrls) {
     this.photoUrls = photoUrls;
+  }
+
+  public boolean isVerifiedPurchase() {
+    return verifiedPurchase;
+  }
+
+  public void setVerifiedPurchase(boolean verifiedPurchase) {
+    this.verifiedPurchase = verifiedPurchase;
   }
 
   public LocalDateTime getCreatedAt() {

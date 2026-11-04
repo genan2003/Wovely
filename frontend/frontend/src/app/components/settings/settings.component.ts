@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StorageService } from '../../services/storage.service';
 import { UserService } from '../../services/user.service';
+import { AddressBookComponent } from '../shared/address-book/address-book.component';
+import { WalletPanelComponent } from '../shared/wallet-panel/wallet-panel.component';
 
 @Component({
     selector: 'app-settings',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, AddressBookComponent, WalletPanelComponent],
     templateUrl: './settings.component.html',
     styleUrl: './settings.component.css'
 })
@@ -24,15 +26,7 @@ export class SettingsComponent implements OnInit {
         fullName: '',
         makerStory: '',
         workshopImageUrl: '',
-        street: '',
-        city: '',
-        zip: '',
-        invoiceStreet: '',
-        invoiceCity: '',
-        invoiceZip: '',
-        iban: '',
-        cardNumber: '',
-        expiryDate: ''
+        city: ''
     };
 
     ngOnInit(): void {
@@ -64,27 +58,12 @@ export class SettingsComponent implements OnInit {
         this.userService.updateProfile(userData.id, {
             fullName: this.profile.fullName,
             makerStory: this.profile.makerStory,
-            workshopImageUrl: this.profile.workshopImageUrl
+            workshopImageUrl: this.profile.workshopImageUrl,
+            city: this.profile.city
         }).subscribe({
             next: () => alert('Profile information saved successfully!'),
             error: (err) => alert('Failed to save profile: ' + err.message)
         });
     }
 
-    saveAddresses(): void {
-        const userData = this.user();
-        if (!userData) return;
-
-        this.userService.updateProfile(userData.id, {
-            city: this.profile.city
-        }).subscribe({
-            next: () => alert('Address information updated successfully!'),
-            error: (err) => alert('Failed to update addresses: ' + err.message)
-        });
-    }
-
-    savePayment(): void {
-        console.log('Saving payment info:', this.profile);
-        alert('Payment details updated successfully!');
-    }
 }

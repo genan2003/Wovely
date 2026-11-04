@@ -33,6 +33,9 @@ public class DataSeeder implements ApplicationRunner {
     private final PasswordEncoder encoder;
     private final Environment environment;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    com.wovely.wovely.services.WalletService walletService;
+
     public DataSeeder(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder encoder,
             Environment environment) {
         this.roleRepository = roleRepository;
@@ -51,18 +54,23 @@ public class DataSeeder implements ApplicationRunner {
         if (environment.acceptsProfiles(Profiles.of("dev"))) {
             seedUser("admin", "admin@wovely.com", "admin123", ERole.ROLE_ADMIN);
             seedUser("seller", "seller@wovely.com", "seller123", ERole.ROLE_SELLER);
-            seedUser("testuser", "user@wovely.com", "user123", ERole.ROLE_USER);
+            User buyer = seedUser("testuser", "user@wovely.com", "user123", ERole.ROLE_USER);
+            if (buyer != null && walletService != null) {
+                walletService.topUp(buyer.getId(), new java.math.BigDecimal("500")); // demo credit (PLAN.md 3.7)
+            }
         }
     }
 
-    private void seedUser(String username, String email, String password, ERole roleName) {
+    /** @return the new user, or {@code null} if it already existed */
+    private User seedUser(String username, String email, String password, ERole roleName) {
         if (userRepository.existsByUsername(username)) {
-            return;
+            return null;
         }
         User user = new User(username, email, encoder.encode(password));
         user.setRoles(Set.of(roleRepository.findByName(roleName).orElseThrow()));
         user.setAccountStatus(EAccountStatus.ACTIVE);
         userRepository.save(user);
         logger.info("Dev profile: seeded demo user '{}' ({})", username, roleName);
+        return user;
     }
 }

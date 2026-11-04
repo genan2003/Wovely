@@ -1,18 +1,22 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Product } from '../models/product.model';
 import { Order, OrderInterventionRequest } from '../models/order.model';
+import { AccountStatusFilter, UserCrm } from '../models/user-crm.model';
+import { CreateReportRequest, Report } from '../models/report.model';
+import { ChatMessage } from '../models/chat.model';
+import { environment } from '../../environments/environment';
 
-const API_URL = 'http://localhost:8082/api/products/admin';
+const API_URL = environment.apiUrl + '/products/admin';
 
-const AUTH_API_URL = 'http://localhost:8081/api/admin/users';
+const AUTH_API_URL = environment.apiUrl + '/admin/users';
 
-const ORDER_API_URL = 'http://localhost:8081/api/admin/orders';
+const ORDER_API_URL = environment.apiUrl + '/admin/orders';
 
-const REPORTS_API_URL = 'http://localhost:8081/api/reports';
+const REPORTS_API_URL = environment.apiUrl + '/reports';
 
-const AUDIT_API_URL = 'http://localhost:8081/api/admin/audit-logs'; // Assuming this endpoint will be created
+const AUDIT_API_URL = environment.apiUrl + '/admin/audit-logs'; // Assuming this endpoint will be created
 
 @Injectable({
   providedIn: 'root'
@@ -23,20 +27,20 @@ export class AdminService {
 
   // Reports API
 
-  createReport(report: any): Observable<any> {
-    return this.http.post<any>(REPORTS_API_URL, report);
+  createReport(report: CreateReportRequest): Observable<Report> {
+    return this.http.post<Report>(REPORTS_API_URL, report);
   }
 
-  getAllReports(): Observable<any[]> {
-    return this.http.get<any[]>(REPORTS_API_URL + '/all');
+  getAllReports(): Observable<Report[]> {
+    return this.http.get<Report[]>(REPORTS_API_URL + '/all');
   }
 
-  updateReportStatus(id: string, status: string): Observable<any> {
-    return this.http.patch<any>(REPORTS_API_URL + `/${id}/status`, { status });
+  updateReportStatus(id: string, status: 'RESOLVED' | 'DISMISSED'): Observable<Report> {
+    return this.http.patch<Report>(REPORTS_API_URL + `/${id}/status`, { status });
   }
 
-  getReportedChatLog(reportId: string): Observable<any[]> {
-    return this.http.get<any[]>(REPORTS_API_URL + `/chat-log/${reportId}`);
+  getReportedChatLog(reportId: string): Observable<ChatMessage[]> {
+    return this.http.get<ChatMessage[]>(REPORTS_API_URL + `/chat-log/${reportId}`);
   }
 
   // Audit Log API
@@ -59,8 +63,16 @@ export class AdminService {
 
   // User CRM API
 
-  getAllUsers(): Observable<any[]> {
-    return this.http.get<any[]>(AUTH_API_URL);
+  getAllUsers(): Observable<UserCrm[]> {
+    return this.http.get<UserCrm[]>(AUTH_API_URL);
+  }
+
+  /** Server-side CRM search (PLAN.md 3.1): case-insensitive on username, email and full name. */
+  searchUsers(query: string, status: AccountStatusFilter): Observable<UserCrm[]> {
+    let params = new HttpParams();
+    if (query.trim()) params = params.set('query', query.trim());
+    if (status !== 'ALL') params = params.set('status', status);
+    return this.http.get<UserCrm[]>(AUTH_API_URL, { params });
   }
 
   getUserById(id: string): Observable<any> {
