@@ -352,6 +352,44 @@
           ]
         },
         {
+          "name": "Sign up as admin is rejected → 400 (PLAN 1.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signup",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"wannabe_admin\",\n  \"email\": \"wannabe@wovely.test\",\n  \"password\": \"secret123\",\n  \"roles\": [\n    \"admin\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"explains admin cannot be self-assigned\", () => pm.expect(pm.response.json().message).to.match(/cannot be self-assigned/i));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Sign in with wrong password → 401",
           "request": {
             "method": "POST",
@@ -526,6 +564,80 @@
           ]
         },
         {
+          "name": "Buyer cannot read seller's private profile → 403 (PLAN 1.4)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/user/profile/{{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer cannot edit seller's profile → 403 (PLAN 1.4)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/user/profile/{{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"makerStory\": \"hacked\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Public seller profile",
           "request": {
             "method": "GET",
@@ -633,6 +745,87 @@
           ]
         },
         {
+          "name": "Anonymous cannot create product → 401 (PLAN 1.2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spam\",\n  \"price\": 1,\n  \"sellerId\": \"{{sellerId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer cannot create product → 403 (PLAN 1.2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spam\",\n  \"price\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Seller creates product",
           "request": {
             "method": "POST",
@@ -674,10 +867,33 @@
                   "const body = pm.response.json();",
                   "pm.test(\"belongs to the seller\", () => pm.expect(body.sellerId).to.eql(pm.collectionVariables.get(\"sellerId\")));",
                   "pm.test(\"stock is 5\", () => pm.expect(body.stockQuantity).to.eql(5));",
-                  "// NOTE(PLAN 1.2): today new products are auto-APPROVED; after the fix they start PENDING.",
-                  "pm.test(\"has a moderation status\", () => pm.expect(body.status).to.be.oneOf([\"PENDING\", \"APPROVED\"]));",
+                  "pm.test(\"new listings await moderation (PENDING)\", () => pm.expect(body.status).to.eql(\"PENDING\"));",
                   "pm.collectionVariables.set(\"productId\", body.id);",
                   "pm.collectionVariables.set(\"productPrice\", body.price);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pending product is not in the public catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"not listed before approval\", () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(pm.collectionVariables.get(\"productId\")));"
                 ]
               }
             }
@@ -1128,7 +1344,7 @@
           ]
         },
         {
-          "name": "Seller inventory without token → rejected",
+          "name": "Seller inventory without token → 401",
           "request": {
             "method": "GET",
             "header": [],
@@ -1144,8 +1360,220 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is one of [401, 403]\", () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));",
-                  "// TODO(PLAN 1.9): products/inventory return 403 without an entry point; tighten to 401."
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer cannot restock seller's product → 403 (PLAN 1.4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/{{productId}}/restock",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Old public reduce-stock is closed → 401 (PLAN 1.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/{{productId}}/reduce-stock",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Internal stock endpoint without key → 401 (PLAN 1.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/internal/products/seller/{{sellerId}}/product/{{productId}}/reduce-stock",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Internal stock endpoint with user JWT → 403 (PLAN 1.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/internal/products/seller/{{sellerId}}/product/{{productId}}/reduce-stock",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "  pm.test(\"product stock is 10\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(10);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer cannot create categories → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/categories",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Spam\",\n  \"level\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -1155,10 +1583,145 @@
     },
     {
       "name": "Inventory",
-      "description": "Inventory microservice. NOTE(PLAN 2.1): role checks always fail today, so only rejection paths are asserted.",
+      "description": "Inventory microservice: seller-owned views; sync/stock only via /internal with the service key.",
       "item": [
         {
-          "name": "Inventory without token → rejected",
+          "name": "Seller reads own inventory (PLAN 2.1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"has items and counters\", () => pm.expect(pm.response.json()).to.include.keys(\"items\", \"totalItems\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buyer cannot read seller inventory → 403 (PLAN 1.4)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Old public sync endpoint is closed → 401 (PLAN 1.3)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stockQuantity\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Internal inventory endpoint without key → 401 (PLAN 1.3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlInventory}}/internal/inventory/seller/{{sellerId}}/product/{{productId}}/reduce-stock",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory without token → 401",
           "request": {
             "method": "GET",
             "header": [],
@@ -1174,15 +1737,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is one of [401, 403]\", () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));",
-                  "// TODO(PLAN 1.9): products/inventory return 403 without an entry point; tighten to 401."
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Inventory dashboard without token → rejected",
+          "name": "Inventory dashboard without token → 401",
           "request": {
             "method": "GET",
             "header": [],
@@ -1198,8 +1760,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is one of [401, 403]\", () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));",
-                  "// TODO(PLAN 1.9): products/inventory return 403 without an entry point; tighten to 401."
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
                 ]
               }
             }
@@ -1235,7 +1796,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"buyerId\": \"{{buyerId}}\",\n  \"buyerName\": \"testuser\",\n  \"sellerId\": \"{{sellerId}}\",\n  \"sellerName\": \"seller\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"QA Woven Basket\",\n      \"quantity\": 2,\n      \"price\": {{productPrice}},\n      \"imageUrl\": \"\"\n    }\n  ],\n  \"totalAmount\": 0,\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1403,7 +1964,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"buyerId\": \"{{buyerId}}\",\n  \"buyerName\": \"testuser\",\n  \"sellerId\": \"{{sellerId}}\",\n  \"sellerName\": \"seller\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"QA Woven Basket\",\n      \"quantity\": 1,\n      \"price\": {{productPrice}},\n      \"imageUrl\": \"\"\n    }\n  ],\n  \"totalAmount\": 0,\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1434,7 +1995,7 @@
           ]
         },
         {
-          "name": "Order over available stock → 400",
+          "name": "Order over available stock → 409",
           "request": {
             "method": "POST",
             "header": [
@@ -1457,7 +2018,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"buyerId\": \"{{buyerId}}\",\n  \"buyerName\": \"testuser\",\n  \"sellerId\": \"{{sellerId}}\",\n  \"sellerName\": \"seller\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"QA Woven Basket\",\n      \"quantity\": 9999,\n      \"price\": {{productPrice}},\n      \"imageUrl\": \"\"\n    }\n  ],\n  \"totalAmount\": 0,\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 9999\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1471,9 +2032,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// TODO(PLAN 1.9): should become 409 Conflict",
-                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"explains insufficient stock\", () => pm.expect(pm.response.json().error).to.match(/insufficient stock/i));",
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"explains insufficient stock\", () => pm.expect(pm.response.json().message).to.match(/insufficient stock/i));",
                   "",
                   "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
                   "  pm.test(\"product stock is 9\", () => {",
@@ -1503,7 +2063,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"buyerId\": \"{{buyerId}}\",\n  \"buyerName\": \"testuser\",\n  \"sellerId\": \"{{sellerId}}\",\n  \"sellerName\": \"seller\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"QA Woven Basket\",\n      \"quantity\": 1,\n      \"price\": {{productPrice}},\n      \"imageUrl\": \"\"\n    }\n  ],\n  \"totalAmount\": 0,\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1518,6 +2078,230 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tampered price/total/status/buyer are ignored (PLAN 1.5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerId\": \"{{newUserId}}\",\n  \"sellerId\": \"someone\",\n  \"status\": \"DELIVERED\",\n  \"totalAmount\": 0.01,\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1,\n      \"price\": 0.01\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"server price and total\", () => {",
+                  "  pm.expect(body.items[0].price).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
+                  "  pm.expect(body.totalAmount).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
+                  "});",
+                  "pm.test(\"buyer from token, PENDING, real seller\", () => {",
+                  "  pm.expect(body.buyerId).to.eql(pm.collectionVariables.get(\"buyerId\"));",
+                  "  pm.expect(body.status).to.eql(\"PENDING\");",
+                  "  pm.expect(body.sellerId).to.eql(pm.collectionVariables.get(\"sellerId\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"orderTamperedId\", body.id);",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "  pm.test(\"product stock is 8\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(8);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel tampered order → stock back to 9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders/{{orderTamperedId}}/cancel",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"test cleanup\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "  pm.test(\"product stock is 9\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(9);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other user cannot read order B → 403 (PLAN 1.4)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other user cannot cancel order B → 403 (PLAN 1.4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders/{{orderBId}}/cancel",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"griefing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));",
+                  "",
+                  "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlProducts}}/api/products/{{productId}}\"), method: \"GET\" }, (err, res) => {",
+                  "  pm.test(\"product stock is 9\", () => {",
+                  "    pm.expect(err).to.be.null;",
+                  "    pm.expect(res.json().stockQuantity).to.eql(9);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other user cannot list buyer's orders → 403 (PLAN 1.4)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/orders/buyer/{{buyerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -1760,7 +2544,7 @@
           ]
         },
         {
-          "name": "Edit locked once PROCESSING → 400",
+          "name": "Edit locked once PROCESSING → 409",
           "request": {
             "method": "PUT",
             "header": [
@@ -1797,8 +2581,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"explains order is locked\", () => pm.expect(pm.response.json().error).to.match(/locked/i));"
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"explains order is locked\", () => pm.expect(pm.response.json().message).to.match(/locked/i));"
                 ]
               }
             }
@@ -2019,6 +2803,50 @@
                   "    pm.expect(res.json().stockQuantity).to.eql(8);",
                   "  });",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot create manual order for another seller → 403 (PLAN 1.4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/manual",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sellerId\": \"{{buyerId}}\",\n  \"sellerName\": \"x\",\n  \"buyerName\": \"y\",\n  \"shippingAddress\": \"z\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"productName\": \"QA Woven Basket\",\n      \"quantity\": 1,\n      \"price\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -2695,7 +3523,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"senderId\": \"{{buyerId}}\",\n  \"receiverId\": \"{{sellerId}}\",\n  \"productId\": \"{{productId}}\",\n  \"content\": \"Hi! Could you make this basket in blue?\"\n}",
+              "raw": "{\n  \"senderId\": \"{{sellerId}}\",\n  \"receiverId\": \"{{sellerId}}\",\n  \"productId\": \"{{productId}}\",\n  \"content\": \"Hi! Could you make this basket in blue?\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2711,6 +3539,7 @@
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
+                  "pm.test(\"sender comes from the token, not the body (PLAN 1.6)\", () => pm.expect(body.senderId).to.eql(pm.collectionVariables.get(\"buyerId\")));",
                   "pm.test(\"stored unread with timestamp\", () => {",
                   "  pm.expect(body.id).to.be.a(\"string\");",
                   "  pm.expect(body.read).to.eql(false);",
@@ -2868,6 +3697,66 @@
           ]
         },
         {
+          "name": "Other user cannot read buyer↔seller conversation → 403 (PLAN 1.6)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/chat/conversation?user1={{buyerId}}&user2={{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other user cannot read seller's unread list → 403 (PLAN 1.6)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/chat/unread/{{sellerId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Chat without token → 401",
           "request": {
             "method": "GET",
@@ -2897,6 +3786,43 @@
       "description": "Product reviews (products service) and seller reviews (core).",
       "item": [
         {
+          "name": "Anonymous cannot review → 401 (PLAN 1.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/reviews",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 1,\n  \"comment\": \"fake\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buyer reviews product",
           "request": {
             "method": "POST",
@@ -2920,7 +3846,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"userId\": \"{{buyerId}}\",\n  \"username\": \"testuser\",\n  \"rating\": 5,\n  \"comment\": \"Beautiful craftsmanship.\",\n  \"photoUrls\": []\n}",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"userId\": \"{{sellerId}}\",\n  \"username\": \"Impostor\",\n  \"rating\": 5,\n  \"comment\": \"Beautiful craftsmanship.\",\n  \"photoUrls\": []\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2935,7 +3861,55 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
-                  "pm.test(\"rating stored\", () => pm.expect(pm.response.json().rating).to.eql(5));"
+                  "pm.test(\"rating stored\", () => pm.expect(pm.response.json().rating).to.eql(5));",
+                  "pm.test(\"author comes from the token (PLAN 1.7)\", () => {",
+                  "  pm.expect(pm.response.json().userId).to.eql(pm.collectionVariables.get(\"buyerId\"));",
+                  "  pm.expect(pm.response.json().username).to.eql(\"testuser\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Second review of same product → 409 (PLAN 1.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/reviews",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 1,\n  \"comment\": \"again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));"
                 ]
               }
             }
@@ -3018,6 +3992,43 @@
           ]
         },
         {
+          "name": "Anonymous cannot review seller → 401 (PLAN 1.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/public/users/seller/{{sellerId}}/reviews",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"overallRating\": 1,\n  \"communicationRating\": 1,\n  \"shippingRating\": 1,\n  \"comment\": \"fake\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buyer reviews seller",
           "request": {
             "method": "POST",
@@ -3056,7 +4067,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"bound to seller\", () => pm.expect(pm.response.json().sellerId).to.eql(pm.collectionVariables.get(\"sellerId\")));"
+                  "pm.test(\"bound to seller\", () => pm.expect(pm.response.json().sellerId).to.eql(pm.collectionVariables.get(\"sellerId\")));",
+                  "pm.test(\"buyer comes from the token\", () => pm.expect(pm.response.json().buyerId).to.eql(pm.collectionVariables.get(\"buyerId\")));"
                 ]
               }
             }
@@ -3124,6 +4136,50 @@
           ]
         },
         {
+          "name": "Other user cannot open a return on order B → 403 (PLAN 1.4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/returns",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderBId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buyer requests return for order B",
           "request": {
             "method": "POST",
@@ -3164,6 +4220,11 @@
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test(\"return stored for order B\", () => pm.expect(body.orderId).to.eql(pm.collectionVariables.get(\"orderBId\")));",
+                  "pm.test(\"status and amounts come from the server\", () => {",
+                  "  pm.expect(body.status).to.eql(\"PICKED_UP\");",
+                  "  pm.expect(body.buyerId).to.eql(pm.collectionVariables.get(\"buyerId\"));",
+                  "  pm.expect(body.totalAmount).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
+                  "});",
                   "pm.collectionVariables.set(\"returnId\", body.id);"
                 ]
               }
@@ -3367,6 +4428,50 @@
           ]
         },
         {
+          "name": "Invalid return status → 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/returns/{{returnId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"TELEPORTED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buyer cannot update return status → 403",
           "request": {
             "method": "PATCH",
@@ -3486,7 +4591,52 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"reporter comes from the token\", () => pm.expect(pm.response.json().reporterId).to.eql(pm.collectionVariables.get(\"buyerId\")));",
                   "pm.collectionVariables.set(\"reportId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot report someone else's conversation → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/reports",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{newUserToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetType\": \"CHAT\",\n  \"targetId\": \"{{buyerId}}:{{sellerId}}\",\n  \"reason\": \"snooping\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -3707,6 +4857,10 @@
     }
   ],
   "variable": [
+    {
+      "key": "orderTamperedId",
+      "value": ""
+    },
     {
       "key": "adminToken",
       "value": ""

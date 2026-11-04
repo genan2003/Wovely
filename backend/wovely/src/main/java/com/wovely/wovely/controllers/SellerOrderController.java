@@ -1,160 +1,102 @@
 package com.wovely.wovely.controllers;
 
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.wovely.wovely.exception.ApiException;
 import com.wovely.wovely.models.EOrderStatus;
 import com.wovely.wovely.models.ManualOrderRequest;
 import com.wovely.wovely.models.Order;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.services.OrderService;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import jakarta.validation.Valid;
 
 /**
- * Controller for seller-specific order operations.
- * Handles manual order creation for off-platform sales.
+ * Seller order operations. A seller may only act on their own orders (admins on any).
  */
 @RestController
 @RequestMapping("/api/seller")
-@CrossOrigin(origins = "http://localhost:4200")
 public class SellerOrderController {
 
     @Autowired
     private OrderService orderService;
 
-    /**
-     * Create a manual order for off-platform sales.
-     * Use this when a sale is made at a craft fair or in-person.
-     */
+    /** Manual order for off-platform sales (craft fair, in person). Seller-entered prices are accepted. */
     @PostMapping("/orders/manual")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#request.sellerId)")
     public ResponseEntity<?> createManualOrder(@Valid @RequestBody ManualOrderRequest request) {
-        try {
-            OrderDTO order = orderService.createManualOrder(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "message", "Manual order created successfully",
-                "order", order,
-                "orderNumber", order.getOrderNumber()
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
+        OrderDTO order = orderService.createManualOrder(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+            "message", "Manual order created successfully",
+            "order", order,
+            "orderNumber", order.getOrderNumber()));
     }
 
-    /**
-     * Get orders by seller ID.
-     */
     @GetMapping("/orders/seller/{sellerId}")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ResponseEntity<?> getOrdersBySellerId(@PathVariable String sellerId) {
-        try {
-            List<OrderDTO> orders = orderService.getOrdersBySellerId(sellerId);
-            return ResponseEntity.ok(Map.of(
-                "orders", orders,
-                "totalOrders", orders.size()
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
+    public Map<String, Object> getOrdersBySellerId(@PathVariable String sellerId) {
+        var orders = orderService.getOrdersBySellerId(sellerId);
+        return Map.of("orders", orders, "totalOrders", orders.size());
     }
 
-    /**
-     * Update order details (variations or shipping address) during pre-processing.
-     * Locked once order is in PROCESSING status or beyond.
-     */
+    /** Edit address/variations while PENDING or CONFIRMED; 409 once locked. */
     @PutMapping("/orders/{orderId}/edit")
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ResponseEntity<?> updateOrder(@PathVariable String orderId, @RequestBody Order updatedOrder) {
-        try {
-            OrderDTO order = orderService.updateOrderPreProcessing(orderId, updatedOrder);
-            if (order != null) {
-                return ResponseEntity.ok(Map.of(
-                    "message", "Order updated successfully",
-                    "order", order
-                ));
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "An unexpected error occurred: " + e.getMessage()));
-        }
+    public Map<String, Object> updateOrder(@PathVariable String orderId, @RequestBody Order updatedOrder) {
+        orderService.requireSellerOrder(orderId);
+        OrderDTO order = orderService.updateOrderPreProcessing(orderId, updatedOrder);
+        return Map.of("message", "Order updated successfully", "order", order);
     }
 
-    /**
-     * Update order status (e.g., to PROCESSING, SHIPPED, etc.).
-     * This may trigger auto-restocking if status is changed to CANCELLED or REFUNDED.
-     */
+    /** Move order through its lifecycle; CANCELLED/REFUNDED trigger auto-restock. */
     @PatchMapping("/orders/{orderId}/status")
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderId, @RequestBody Map<String, String> request) {
-        try {
-            String statusStr = request.get("status");
-            if (statusStr == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Status is required"));
-            }
-            
-            EOrderStatus newStatus = EOrderStatus.valueOf(statusStr.toUpperCase());
-            String reason = request.get("reason");
-            
-            Integer estimatedDeliveryDays = null;
-            if (request.containsKey("estimatedDeliveryDays") && request.get("estimatedDeliveryDays") != null) {
-                try {
-                    estimatedDeliveryDays = Integer.parseInt(request.get("estimatedDeliveryDays"));
-                } catch (NumberFormatException e) {
-                    // Ignore or log error
-                }
-            }
-            
-            OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, reason, null, estimatedDeliveryDays);
-            if (order != null) {
-                return ResponseEntity.ok(Map.of(
-                    "message", "Order status updated successfully",
-                    "order", order
-                ));
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid status value"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+    public Map<String, Object> updateOrderStatus(@PathVariable String orderId, @RequestBody Map<String, String> request) {
+        orderService.requireSellerOrder(orderId);
+        String statusStr = request.get("status");
+        if (statusStr == null) {
+            throw ApiException.badRequest("Status is required");
         }
+        EOrderStatus newStatus;
+        try {
+            newStatus = EOrderStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw ApiException.badRequest("Invalid status value");
+        }
+        Integer estimatedDeliveryDays = null;
+        String eta = request.get("estimatedDeliveryDays");
+        if (eta != null) {
+            try {
+                estimatedDeliveryDays = Integer.parseInt(eta);
+            } catch (NumberFormatException e) {
+                throw ApiException.badRequest("estimatedDeliveryDays must be a number");
+            }
+        }
+        OrderDTO order = orderService.updateOrderStatus(orderId, newStatus, request.get("reason"), null, estimatedDeliveryDays);
+        return Map.of("message", "Order status updated successfully", "order", order);
     }
 
-    /**
-     * Generate an automated eco-shipping label.
-     * Selects best low-CO2 carrier for the route.
-     */
     @PostMapping("/orders/{orderId}/eco-label")
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ResponseEntity<?> generateEcoLabel(@PathVariable String orderId) {
-        try {
-            OrderDTO order = orderService.generateEcoShippingLabel(orderId);
-            if (order != null) {
-                return ResponseEntity.ok(Map.of(
-                    "message", "Eco-shipping label generated successfully",
-                    "order", order,
-                    "label", order.getEcoShippingLabel()
-                ));
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
+    public Map<String, Object> generateEcoLabel(@PathVariable String orderId) {
+        orderService.requireSellerOrder(orderId);
+        OrderDTO order = orderService.generateEcoShippingLabel(orderId);
+        return Map.of(
+            "message", "Eco-shipping label generated successfully",
+            "order", order,
+            "label", order.getEcoShippingLabel());
     }
 }

@@ -10,11 +10,8 @@ import java.util.Map;
 
 import com.wovely.wovely.models.SellerReview;
 import com.wovely.wovely.repository.SellerReviewRepository;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/api/public/users")
 public class PublicUserController {
@@ -47,10 +44,29 @@ public class PublicUserController {
         return ResponseEntity.ok(sellerReviewRepository.findBySellerId(id));
     }
 
+    /**
+     * Review a seller as the authenticated buyer (GETs under /api/public are anonymous, this POST is not).
+     * Buyer id/name come from the token. Verified-purchase check: PLAN.md 3.3.
+     */
     @PostMapping("/seller/{id}/reviews")
-    public ResponseEntity<?> postSellerReview(@PathVariable String id, @RequestBody SellerReview review) {
-        review.setSellerId(id);
-        SellerReview saved = sellerReviewRepository.save(review);
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> postSellerReview(@PathVariable String id, @RequestBody SellerReview review,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.wovely.wovely.security.services.UserDetailsImpl me) {
+        if (!userRepository.existsById(id)) {
+            throw com.wovely.wovely.exception.ApiException.notFound("Seller not found");
+        }
+        if (me.getId().equals(id)) {
+            throw com.wovely.wovely.exception.ApiException.badRequest("You cannot review yourself");
+        }
+        for (int r : new int[] { review.getOverallRating(), review.getCommunicationRating(), review.getShippingRating() }) {
+            if (r < 1 || r > 5) {
+                throw com.wovely.wovely.exception.ApiException.badRequest("ratings must be between 1 and 5");
+            }
+        }
+        SellerReview saved = sellerReviewRepository.save(new SellerReview(id, me.getId(), me.getUsername(),
+                review.getOverallRating(), review.getCommunicationRating(), review.getShippingRating(),
+                review.getComment()));
         return ResponseEntity.ok(saved);
     }
 }

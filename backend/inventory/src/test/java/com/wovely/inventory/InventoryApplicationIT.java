@@ -3,7 +3,6 @@ package com.wovely.inventory;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,13 +19,12 @@ class InventoryApplicationIT extends AbstractMongoIT {
     @Test
     void sellerEndpointWithoutTokenIsRejected() throws Exception {
         mvc.perform(get("/api/inventory/seller/{sellerId}", "any-seller"))
-            .andExpect(status().is4xxClientError());
+            .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @Disabled("Known bug PLAN.md 2.1: inventory ignores the JWT roles claim, so every role check fails")
     void sellerTokenCanReadOwnInventory() throws Exception {
-        mvc.perform(get("/api/inventory/seller/{sellerId}", "seller")
+        mvc.perform(get("/api/inventory/seller/{sellerId}", TestTokens.SELLER_ID)
                 .header("Authorization", TestTokens.bearer(TestTokens.seller())))
             .andExpect(status().isOk());
     }

@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
@@ -19,7 +18,7 @@ public class UserController {
     UserRepository userRepository;
 
     @GetMapping("/profile/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.selfOrAdmin(#id)")
     public ResponseEntity<?> getUserProfile(@PathVariable String id) {
         return userRepository.findById(id)
             .map(user -> {
@@ -39,7 +38,7 @@ public class UserController {
     }
 
     @PutMapping("/profile/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.selfOrAdmin(#id)")
     public ResponseEntity<?> updateProfile(@PathVariable String id, @RequestBody Map<String, String> data) {
         Optional<User> userOpt = userRepository.findById(id);
         

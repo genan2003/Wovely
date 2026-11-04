@@ -1,0 +1,56 @@
+@startuml login-jwt
+!include ../_theme.puml
+title Sign-in and JWT use across services
+
+' Derived from: wovely AuthController, security/jwt/JwtUtils, security/jwt/AuthTokenFilter,
+' products|inventory security/{AuthTokenFilter,JwtUtils,OwnershipGuard}
+autonumber
+actor "Seller" as U
+participant "Angular SPA" as Web
+box "core service :8081" #FAF6EF
+  participant "AuthController" as Auth
+  participant "JwtUtils" as CoreJwt
+end box
+database "MongoDB\nusers" as DB
+box "products :8082 / inventory :8083" #E8F1E4
+  participant "AuthTokenFilter" as Filter
+  participant "OwnershipGuard\n@ownership" as Guard
+  participant "Seller controller" as Ctl
+end box
+
+U -> Web : username + password
+Web -> Auth ++ : POST /api/auth/signin
+Auth -> DB : findByUsername
+DB --> Auth : user (BCrypt hash, roles, accountStatus)
+alt credentials valid and account ACTIVE
+  Auth -> CoreJwt : generateJwtToken()
+  CoreJwt --> Auth : HS256 JWT\nsub=username, **uid=userId**, roles[]
+  Auth --> Web -- : 200 {accessToken, id, roles}
+  Web -> Web : sessionStorage.auth-token
+else wrong password / BANNED / SUSPENDED
+  Auth --> Web : 401 {status, error, message}
+end
+
+== Later: seller opens own inventory ==
+Web -> Filter ++ : GET /api/products/seller/{sellerId}\nAuthorization: Bearer <jwt>
+Filter -> Filter : verify signature with JWT_SECRET\nbuild JwtPrincipal(uid, username, roles)
+alt token invalid or expired
+  Filter --> Web : 401 (treated as anonymous)
+else token valid
+  Filter -> Guard : sellerOrAdmin(sellerId)
+  alt uid == sellerId (ROLE_SELLER) or ROLE_ADMIN
+    Guard --> Filter : true
+    Filter -> Ctl ++ : invoke
+    Ctl --> Web -- : 200 inventory
+  else someone else's sellerId
+    Guard --> Filter : false
+    Filter --> Web -- : 403 Access denied
+  end
+end
+
+note over Filter, Ctl
+  The core service resolves the subject from MongoDB on every request
+  (picks up bans immediately). products/inventory trust the signed claims
+  until expiry — short-lived tokens: PLAN.md 2.9
+end note
+@enduml

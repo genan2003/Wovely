@@ -7,12 +7,16 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.wovely.products.models.Product;
 import com.wovely.products.repository.ProductRepository;
+import com.wovely.products.clients.InventorySyncClient;
+import com.wovely.products.exception.ApiException;
+import com.wovely.products.security.JwtPrincipal;
+import com.wovely.products.security.OwnershipGuard;
+import com.wovely.products.services.StockService;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -20,34 +24,11 @@ public class ProductController {
   @Autowired
   ProductRepository productRepository;
 
-  private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+  @Autowired
+  InventorySyncClient inventorySync;
 
-  @org.springframework.beans.factory.annotation.Value("${inventory.api.url:http://localhost:8083/api/inventory}")
-  private String INVENTORY_API;
-
-  /**
-   * Sync changes with the inventory service.
-   */
-  private void syncWithInventory(String sellerId, String productId, Product product) {
-    try {
-      String url = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId;
-      
-      Map<String, Object> details = new HashMap<>();
-      details.put("productName", product.getName());
-      details.put("price", product.getPrice());
-      details.put("imageUrl", product.getImageUrl());
-      details.put("category", product.getCategory());
-      details.put("lowStockThreshold", product.getLowStockThreshold());
-      details.put("co2EmissionScore", product.getCo2EmissionScore());
-      details.put("shippingMethod", product.getShippingMethod());
-      details.put("isHandmade", product.getHandmade());
-      details.put("stockQuantity", product.getStockQuantity());
-      
-      restTemplate.put(url, details);
-    } catch (Exception e) {
-      System.err.println("Failed to sync with inventory service: " + e.getMessage());
-    }
-  }
+  @Autowired
+  StockService stockService;
 
   @GetMapping
   public ResponseEntity<List<Product>> getAllProducts(
@@ -126,47 +107,50 @@ public class ProductController {
         .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
   }
 
+  /**
+   * Create a listing. The seller is the caller (admins may create on behalf of {@code sellerId});
+   * client-supplied ids are ignored and new listings await admin approval (PENDING).
+   */
   @PostMapping
+  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
   public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-    try {
-      Product _product = new Product(
-          product.getName(),
-          product.getDescription(),
-          product.getPrice(),
-          product.getSellerId(),
-          product.getImageUrl(),
-          product.getCategory(),
-          product.getCategoryPath(),
-          product.getMaterials(),
-          product.getCity(),
-          product.getRegion(),
-          product.getLatitude(),
-          product.getLongitude(),
-          product.getCo2EmissionScore(),
-          product.getShippingMethod(),
-          product.getHandmade(),
-          product.getStockQuantity() != null ? product.getStockQuantity() : 0,
-          product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5);
-      
-      if (product.getId() != null) {
-          _product.setId(product.getId());
-      }
-      
-      _product.setStatus("APPROVED");
-      Product savedProduct = productRepository.save(_product);
-      return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
-    } catch (Exception e) {
-      System.err.println("Error creating product: " + e.getMessage());
-      e.printStackTrace();
-      return new ResponseEntity<Product>(HttpStatus.INTERNAL_SERVER_ERROR);
+    JwtPrincipal caller = OwnershipGuard.current();
+    String sellerId = caller.isAdmin() && product.getSellerId() != null ? product.getSellerId() : caller.userId();
+    if (sellerId == null) {
+      throw ApiException.forbidden("Token has no user id; please sign in again");
     }
+    if (product.getName() == null || product.getName().isBlank() || product.getPrice() == null || product.getPrice() < 0) {
+      throw ApiException.badRequest("name and a non-negative price are required");
+    }
+    Product _product = new Product(
+        product.getName(),
+        product.getDescription(),
+        product.getPrice(),
+        sellerId,
+        product.getImageUrl(),
+        product.getCategory(),
+        product.getCategoryPath(),
+        product.getMaterials(),
+        product.getCity(),
+        product.getRegion(),
+        product.getLatitude(),
+        product.getLongitude(),
+        product.getCo2EmissionScore(),
+        product.getShippingMethod(),
+        product.getHandmade(),
+        product.getStockQuantity() != null ? Math.max(0, product.getStockQuantity()) : 0,
+        product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5);
+    _product.setId(null);
+    _product.setStatus("PENDING");
+    Product savedProduct = productRepository.save(_product);
+    return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
   }
 
   /**
    * Get all products by seller ID (including non-approved ones for inventory management).
    */
   @GetMapping("/seller/{sellerId}")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getProductsBySellerId(@PathVariable String sellerId) {
     try {
       List<Product> products = productRepository.findBySellerId(sellerId);
@@ -193,7 +177,7 @@ public class ProductController {
    * Get seller dashboard summary.
    */
   @GetMapping("/seller/{sellerId}/dashboard")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getSellerDashboard(@PathVariable String sellerId) {
     try {
       List<Product> products = productRepository.findBySellerId(sellerId);
@@ -231,7 +215,7 @@ public class ProductController {
    * Update stock quantity for a product.
    */
   @PutMapping("/seller/{sellerId}/product/{productId}/stock")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> updateStock(@PathVariable String sellerId,
                                         @PathVariable String productId,
                                         @RequestBody Map<String, Integer> stockRequest) {
@@ -241,7 +225,7 @@ public class ProductController {
       
       product.setStockQuantity(stockRequest.get("quantity"));
       productRepository.save(product);
-      syncWithInventory(sellerId, productId, product);
+      inventorySync.sync(product);
       
       return ResponseEntity.ok(toVisualProductMap(product));
     } catch (Exception e) {
@@ -254,70 +238,19 @@ public class ProductController {
    * Restock a product (add to existing stock).
    */
   @PostMapping("/seller/{sellerId}/product/{productId}/restock")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> restockProduct(@PathVariable String sellerId,
                                            @PathVariable String productId,
                                            @RequestBody Map<String, Integer> restockRequest) {
-    try {
-      Product product = productRepository.findBySellerIdAndId(sellerId, productId)
-          .orElseThrow(() -> new RuntimeException("Product not found"));
-      
-      Integer quantity = restockRequest.get("quantity");
-      if (quantity == null || quantity <= 0) {
-        return ResponseEntity.badRequest().body(Map.of("error", "Valid quantity is required"));
-      }
-      
-      product.setStockQuantity(product.getStockQuantity() + quantity);
-      productRepository.save(product);
-      syncWithInventory(sellerId, productId, product);
-      
-      return ResponseEntity.ok(toVisualProductMap(product));
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", e.getMessage()));
-    }
-  }
-
-  /**
-   * Reduce stock for a product (Real-Time Deduction).
-   * Returns error if not enough stock available.
-   */
-  @PostMapping("/seller/{sellerId}/product/{productId}/reduce-stock")
-  public ResponseEntity<?> reduceStock(@PathVariable String sellerId,
-                                        @PathVariable String productId,
-                                        @RequestBody Map<String, Integer> reduceRequest) {
-    try {
-      Product product = productRepository.findBySellerIdAndId(sellerId, productId)
-          .orElseThrow(() -> new RuntimeException("Product not found"));
-      
-      Integer quantity = reduceRequest.get("quantity");
-      if (quantity == null || quantity <= 0) {
-        return ResponseEntity.badRequest().body(Map.of("error", "Valid quantity is required"));
-      }
-
-      if (product.getStockQuantity() < quantity) {
-        return ResponseEntity.badRequest().body(Map.of(
-            "error", "Not enough stock available",
-            "available", product.getStockQuantity(),
-            "requested", quantity
-        ));
-      }
-      
-      product.setStockQuantity(product.getStockQuantity() - quantity);
-      productRepository.save(product);
-      syncWithInventory(sellerId, productId, product);
-      
-      return ResponseEntity.ok(toVisualProductMap(product));
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(Map.of("error", e.getMessage()));
-    }
+    Product product = stockService.restock(sellerId, productId, restockRequest.get("quantity"));
+    return ResponseEntity.ok(toVisualProductMap(product));
   }
 
   /**
    * Update full product details for a seller.
    */
   @PutMapping("/seller/{sellerId}/product/{productId}")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> updateProduct(@PathVariable String sellerId,
                                         @PathVariable String productId,
                                         @RequestBody Product product) {
@@ -347,7 +280,7 @@ public class ProductController {
         }
         
         Product saved = productRepository.save(_product);
-        syncWithInventory(sellerId, productId, saved);
+        inventorySync.sync(saved);
         return new ResponseEntity<>(toVisualProductMap(saved), HttpStatus.OK);
       } else {
         return new ResponseEntity<>("Product not found with id: " + productId, HttpStatus.NOT_FOUND);
@@ -363,7 +296,7 @@ public class ProductController {
    * Delete a product for a seller.
    */
   @DeleteMapping("/seller/{sellerId}/product/{productId}")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> deleteProduct(@PathVariable String sellerId,
                                         @PathVariable String productId) {
     try {
@@ -382,7 +315,7 @@ public class ProductController {
    * Get low stock items for seller.
    */
   @GetMapping("/seller/{sellerId}/low-stock")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getLowStockItems(@PathVariable String sellerId) {
     try {
       List<Product> products = productRepository.findBySellerId(sellerId).stream()
@@ -404,7 +337,7 @@ public class ProductController {
    * Get out of stock items for seller.
    */
   @GetMapping("/seller/{sellerId}/out-of-stock")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getOutOfStockItems(@PathVariable String sellerId) {
     try {
       List<Product> products = productRepository.findBySellerId(sellerId).stream()
@@ -426,7 +359,7 @@ public class ProductController {
    * Get a specific product by seller ID and product ID.
    */
   @GetMapping("/seller/{sellerId}/product/{productId}")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getSellerProduct(@PathVariable String sellerId, 
                                              @PathVariable String productId) {
     try {
@@ -443,7 +376,7 @@ public class ProductController {
    * Get products by seller and category.
    */
   @GetMapping("/seller/{sellerId}/category/{category}")
-  @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+  @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
   public ResponseEntity<?> getProductsBySellerAndCategory(@PathVariable String sellerId, 
                                                            @PathVariable String category) {
     try {

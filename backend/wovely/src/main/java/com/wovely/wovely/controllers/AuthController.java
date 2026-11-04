@@ -14,7 +14,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +31,6 @@ import com.wovely.wovely.repository.UserRepository;
 import com.wovely.wovely.security.jwt.JwtUtils;
 import com.wovely.wovely.security.services.UserDetailsImpl;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -92,6 +90,12 @@ public class AuthController {
                 encoder.encode(signUpRequest.getPassword()));
 
         Set<String> strRoles = signUpRequest.getRoles();
+        if (strRoles != null && strRoles.stream().anyMatch(r -> "admin".equalsIgnoreCase(r))) {
+            // Admins are created by the seeder or by another admin, never via public signup (PLAN.md 1.1)
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Role 'admin' cannot be self-assigned."));
+        }
         Set<Role> roles = new HashSet<>();
 
         if (strRoles == null) {
@@ -101,11 +105,6 @@ public class AuthController {
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
-                    case "admin":
-                        Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(adminRole);
-                        break;
                     case "seller":
                         Role sellerRole = roleRepository.findByName(ERole.ROLE_SELLER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));

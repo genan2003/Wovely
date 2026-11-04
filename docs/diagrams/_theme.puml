@@ -1,0 +1,26 @@
+' Shared styling for all Wovely diagrams — include with  !include ../_theme.puml
+' Kept deliberately neutral; colour is used only to carry meaning:
+'   #E8F1E4 (moss tint)  = box: service boundary that enforces JWT/ownership
+'   #FAF6EF (linen)      = box: core service
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam ArrowColor #4A4A4A
+skinparam sequence {
+  ParticipantBorderColor #6B5B4B
+  ParticipantBackgroundColor #FAF6EF
+  LifeLineBorderColor #B8AC9C
+  ActorBorderColor #6B5B4B
+  ActorBackgroundColor #FAF6EF
+  GroupBorderColor #9C8B78
+  BoxBorderColor #B8AC9C
+}
+skinparam database {
+  BorderColor #6B5B4B
+  BackgroundColor #FAF6EF
+}
+skinparam note {
+  BorderColor #B8AC9C
+  BackgroundColor #FFFDF8
+}

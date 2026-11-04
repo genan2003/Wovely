@@ -9,7 +9,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
 /**
- * Mints JWTs in the same shape the core service issues (subject = username, {@code roles} claim),
+ * Mints JWTs in the same shape the core service issues (subject = username, {@code uid}, {@code roles}),
  * signed with the test secret from {@code application-test.properties}.
  *
  * <p>Use as {@code header("Authorization", TestTokens.bearer(TestTokens.seller()))}.
@@ -22,34 +22,49 @@ public final class TestTokens {
     private TestTokens() {
     }
 
+    public static final String BUYER_ID = "buyer-1";
+    public static final String OTHER_BUYER_ID = "buyer-2";
+    public static final String SELLER_ID = "seller-1";
+    public static final String OTHER_SELLER_ID = "seller-2";
+    public static final String ADMIN_ID = "admin-1";
+
     public static String buyer() {
-        return token("testuser", "ROLE_USER");
+        return token("testuser", BUYER_ID, "ROLE_USER");
+    }
+
+    public static String otherBuyer() {
+        return token("buyer2", OTHER_BUYER_ID, "ROLE_USER");
     }
 
     public static String seller() {
-        return token("seller", "ROLE_SELLER");
+        return token("seller", SELLER_ID, "ROLE_SELLER");
+    }
+
+    public static String otherSeller() {
+        return token("seller2", OTHER_SELLER_ID, "ROLE_SELLER");
     }
 
     public static String admin() {
-        return token("admin", "ROLE_ADMIN");
+        return token("admin", ADMIN_ID, "ROLE_ADMIN");
     }
 
-    public static String token(String username, String... roles) {
-        return token(username, 3_600_000L, roles);
+    public static String token(String username, String userId, String... roles) {
+        return token(username, userId, 3_600_000L, roles);
     }
 
-    public static String expired(String username, String... roles) {
-        return token(username, -60_000L, roles);
+    public static String expired(String username, String userId, String... roles) {
+        return token(username, userId, -60_000L, roles);
     }
 
     public static String bearer(String token) {
         return "Bearer " + token;
     }
 
-    private static String token(String username, long ttlMs, String... roles) {
+    private static String token(String username, String userId, long ttlMs, String... roles) {
         Date now = new Date();
         return Jwts.builder()
                 .setSubject(username)
+                .claim("uid", userId)
                 .claim("roles", List.of(roles))
                 .setIssuedAt(now)
                 .setExpiration(new Date(now.getTime() + ttlMs))

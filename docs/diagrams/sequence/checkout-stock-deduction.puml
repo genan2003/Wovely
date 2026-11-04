@@ -1,0 +1,68 @@
+@startuml checkout-stock-deduction
+!include ../_theme.puml
+title Checkout: server-side pricing and real-time stock deduction
+
+' Derived from: wovely BuyerOrderController, services/OrderService#createOrder,
+' clients/CatalogClient; products InternalProductController, services/StockService;
+' inventory InternalInventoryController
+autonumber
+actor "Buyer" as B
+participant "Angular SPA\n(cart)" as Web
+box "core service :8081" #FAF6EF
+  participant "BuyerOrderController" as Ctl
+  participant "OrderService" as Svc
+  participant "CatalogClient" as Cat
+end box
+participant "products :8082" as Prod
+participant "inventory :8083" as Inv
+database "MongoDB" as DB
+
+B -> Web : checkout one seller group
+Web -> Ctl ++ : POST /api/orders (JWT)\n{items:[{productId, quantity}], shippingAddress}
+note right of Web : legacy price / total / status / buyerId\nfields are ignored by the server
+Ctl -> Svc ++ : createOrder(request, buyer from JWT)
+
+loop each item
+  Svc -> Cat : getProduct(productId)
+  Cat -> Prod : GET /api/products/{id}
+  Prod --> Cat : name, **price**, sellerId, status
+  Svc -> Svc : require APPROVED, same seller,\nnot own product; total += price × qty
+end
+alt validation fails
+  Svc --> Web : 400 {message}
+end
+
+group Stock deduction (X-Internal-Api-Key)
+  loop each item
+    Svc -> Cat : reduceStock(sellerId, productId, qty)
+    Cat -> Prod : POST /internal/products/seller/{s}/product/{p}/reduce-stock
+    alt enough stock
+      Prod --> Cat : 200 {stockQuantity}
+      Cat -> Inv : POST /internal/inventory/.../reduce-stock
+      Inv --> Cat : 200 (failure only logged — mirror)
+    else stock too low
+      Prod --> Cat : 409 Conflict
+      Cat --> Svc : ApiException(409)
+      group Compensation
+        loop items already deducted
+          Svc -> Cat : restock(sellerId, productId, qty)
+          Cat -> Prod : POST /internal/.../restock
+        end
+      end
+      Svc --> Ctl : 409
+      Ctl --> Web : 409 "Insufficient stock for product …"
+    end
+  end
+end
+
+Svc -> DB : save Order\nbuyerId=JWT uid, status=PENDING, server total
+DB --> Svc : order
+Svc --> Ctl -- : OrderDTO
+Ctl --> Web -- : 201 Created
+Web --> B : order placed, cart group cleared
+
+note over Prod
+  NOTE read-check-write, not atomic:
+  concurrent buyers can oversell — PLAN.md 2.2
+end note
+@enduml

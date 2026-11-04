@@ -7,7 +7,6 @@ import com.wovely.products.models.Category;
 import com.wovely.products.repository.CategoryRepository;
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {

@@ -8,7 +8,6 @@ import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import com.wovely.wovely.models.EOrderStatus;
 import com.wovely.wovely.models.ManualOrderRequest;
@@ -18,6 +17,12 @@ import com.wovely.wovely.payload.request.OrderInterventionRequest;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.payload.response.OrderItemDTO;
 import com.wovely.wovely.repository.OrderRepository;
+import com.wovely.wovely.repository.UserRepository;
+import com.wovely.wovely.clients.CatalogClient;
+import com.wovely.wovely.exception.ApiException;
+import com.wovely.wovely.payload.request.CreateOrderRequest;
+import com.wovely.wovely.security.OwnershipGuard;
+import com.wovely.wovely.security.services.UserDetailsImpl;
 
 import com.wovely.wovely.models.AuditLog;
 import com.wovely.wovely.repository.AuditLogRepository;
@@ -34,20 +39,43 @@ public class OrderService {
     AuditLogRepository auditLogRepository;
 
     @Autowired
-    RestTemplate restTemplate;
+    CatalogClient catalogClient;
 
     @Autowired
-    EcoCarrierService ecoCarrierService;
+    UserRepository userRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${products.api.url:http://localhost:8082/api/products}")
-    private String PRODUCTS_API;
-
-    @org.springframework.beans.factory.annotation.Value("${inventory.api.url:http://localhost:8083/api/inventory}")
-    private String INVENTORY_API;
+    @Autowired
+    OwnershipGuard ownership;
 
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
         return orders.stream().map(this::convertToDto).collect(Collectors.toList());
+    }
+
+    /** Loads an order or throws 404. */
+    public Order requireOrder(String id) {
+        return orderRepository.findById(id).orElseThrow(() -> ApiException.notFound("Order not found"));
+    }
+
+    /** Order visible to its buyer, its seller or an admin; 404 if missing, 403 otherwise. */
+    public OrderDTO getOrderForParticipant(String id) {
+        Order order = requireOrder(id);
+        ownership.requireAnyOf(order.getBuyerId(), order.getSellerId());
+        return convertToDto(order);
+    }
+
+    /** Loads the order and checks the caller is its buyer (or an admin). */
+    public Order requireBuyerOrder(String id) {
+        Order order = requireOrder(id);
+        ownership.requireAnyOf(order.getBuyerId());
+        return order;
+    }
+
+    /** Loads the order and checks the caller is its seller (or an admin). */
+    public Order requireSellerOrder(String id) {
+        Order order = requireOrder(id);
+        ownership.requireAnyOf(order.getSellerId());
+        return order;
     }
 
     public OrderDTO getOrderById(String id) {
@@ -99,16 +127,17 @@ public class OrderService {
             String username = "system";
             String adminId = "system";
             
-            if (principal instanceof UserDetails) {
+            if (principal instanceof UserDetailsImpl me) {
+                username = me.getUsername();
+                adminId = me.getId();
+            } else if (principal instanceof UserDetails) {
                 username = ((UserDetails)principal).getUsername();
-                // In a real app, you'd fetch the User object to get the ID. 
-                // For this MVP, we'll just log the username.
             }
             
             AuditLog log = new AuditLog(adminId, username, type, targetId, details);
             auditLogRepository.save(log);
         } catch (Exception e) {
-            System.err.println("Audit logging failed: " + e.getMessage());
+            org.slf4j.LoggerFactory.getLogger(OrderService.class).error("Audit logging failed: {}", e.getMessage());
         }
     }
 
@@ -209,70 +238,12 @@ public class OrderService {
         return null;
     }
 
-    /**
-     * Reduce stock for an item in both products and inventory services (Real-Time Deduction).
-     */
     private void reduceStockInServices(String sellerId, String productId, int quantity) {
-        String productsUrl = PRODUCTS_API + "/seller/" + sellerId + "/product/" + productId + "/reduce-stock";
-        String inventoryUrl = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId + "/reduce-stock";
-
-        try {
-            // Try reducing in products service first
-            restTemplate.postForEntity(productsUrl, java.util.Map.of("quantity", quantity), Object.class);
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            // Extract the error message from the response body if available
-            String responseBody = e.getResponseBodyAsString();
-            if (responseBody.contains("Not enough stock available")) {
-                // Try to extract available quantity from response if possible
-                String detail = "";
-                try {
-                    // Simple parsing of "available":X in the JSON response
-                    if (responseBody.contains("\"available\":")) {
-                        int start = responseBody.indexOf("\"available\":") + 12;
-                        int end = responseBody.indexOf(",", start);
-                        if (end == -1) end = responseBody.indexOf("}", start);
-                        if (end != -1) {
-                            detail = " (Available: " + responseBody.substring(start, end).trim() + ", Requested: " + quantity + ")";
-                        }
-                    }
-                } catch (Exception ex) {
-                    // Fallback to simple message
-                }
-                throw new RuntimeException("Insufficient stock for product ID: " + productId + detail);
-            } else if (responseBody.contains("Product not found")) {
-                throw new RuntimeException("Product not found: " + productId);
-            }
-            throw new RuntimeException("Stock deduction failed: " + e.getMessage());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to reach products service: " + e.getMessage());
-        }
-
-        // Then try in inventory service (best effort sync)
-        try {
-            restTemplate.postForEntity(inventoryUrl, java.util.Map.of("quantity", quantity), Object.class);
-        } catch (Exception e) {
-            System.err.println("Inventory service sync failed for product " + productId + ": " + e.getMessage());
-        }
+        catalogClient.reduceStock(sellerId, productId, quantity);
     }
 
-    /**
-     * Restores stock for an item in both products and inventory services (Auto-Restock).
-     */
     private void restockInServices(String sellerId, String productId, int quantity) {
-        try {
-            String productsUrl = PRODUCTS_API + "/seller/" + sellerId + "/product/" + productId + "/restock";
-            String inventoryUrl = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId + "/restock";
-
-            restTemplate.postForEntity(productsUrl, java.util.Map.of("quantity", quantity), Object.class);
-            
-            try {
-                restTemplate.postForEntity(inventoryUrl, java.util.Map.of("quantity", quantity), Object.class);
-            } catch (Exception e) {
-                System.err.println("Inventory service restock sync failed for product " + productId + ": " + e.getMessage());
-            }
-        } catch (Exception e) {
-            System.err.println("Failed to restock in products service for product " + productId + ": " + e.getMessage());
-        }
+        catalogClient.restock(sellerId, productId, quantity);
     }
 
     /**
@@ -281,7 +252,6 @@ public class OrderService {
     private void restoreStockForOrder(Order order) {
         if (order.getItems() == null) return;
 
-        System.out.println("Restoring stock for order: " + order.getOrderNumber());
         for (OrderItem item : order.getItems()) {
             restockInServices(order.getSellerId(), item.getProductId(), item.getQuantity());
         }
@@ -348,40 +318,64 @@ public class OrderService {
     }
 
     /**
-     * Create a regular order (Real-Time Deduction).
-     * This is called when a buyer completes checkout.
+     * Checkout (real-time stock deduction). Prices, names, seller and totals come from the products
+     * service; buyer comes from the authenticated caller; status always starts PENDING (PLAN.md 1.5).
+     * All items must belong to one seller (the cart creates one order per seller).
      */
-    public OrderDTO createOrder(Order order) {
-        if (order.getCreatedAt() == null) order.setCreatedAt(new Date());
-        if (order.getUpdatedAt() == null) order.setUpdatedAt(new Date());
-        if (order.getStatus() == null) order.setStatus(EOrderStatus.PENDING);
-        
-        // Generate order number if not present
-        if (order.getOrderNumber() == null) {
-            order.setOrderNumber("ORD-" + System.currentTimeMillis() + "-" + 
-                (order.getBuyerId() != null ? order.getBuyerId().substring(0, Math.min(4, order.getBuyerId().length())).toUpperCase() : "GUEST"));
+    public OrderDTO createOrder(CreateOrderRequest request, UserDetailsImpl buyer) {
+        List<OrderItem> items = new ArrayList<>();
+        String sellerId = null;
+        double total = 0;
+        for (CreateOrderRequest.Item line : request.getItems()) {
+            CatalogClient.ProductSnapshot product = catalogClient.getProduct(line.getProductId());
+            if (!"APPROVED".equals(product.status())) {
+                throw ApiException.badRequest("Product is not available: " + product.name());
+            }
+            if (product.price() == null || product.price() < 0) {
+                throw ApiException.badRequest("Product has no valid price: " + product.name());
+            }
+            if (sellerId == null) {
+                sellerId = product.sellerId();
+            } else if (!sellerId.equals(product.sellerId())) {
+                throw ApiException.badRequest("All items of an order must belong to the same seller");
+            }
+            if (buyer.getId().equals(product.sellerId())) {
+                throw ApiException.badRequest("You cannot buy your own product");
+            }
+            items.add(new OrderItem(product.id(), product.name(), line.getQuantity(), product.price(),
+                    product.imageUrl(), line.getColor(), line.getSize()));
+            total += product.price() * line.getQuantity();
         }
 
-        // 1. Try to reduce stock for all items first (Real-Time Deduction)
-        List<OrderItem> reducedItems = new ArrayList<>();
-        if (order.getItems() != null) {
-            try {
-                for (OrderItem item : order.getItems()) {
-                    reduceStockInServices(order.getSellerId(), item.getProductId(), item.getQuantity());
-                    reducedItems.add(item);
-                }
-            } catch (Exception e) {
-                // 2. Compensation: Rollback stock reduction if any fails
-                for (OrderItem reducedItem : reducedItems) {
-                    restockInServices(order.getSellerId(), reducedItem.getProductId(), reducedItem.getQuantity());
-                }
-                throw new RuntimeException(e.getMessage());
+        Order order = new Order();
+        Date now = new Date();
+        order.setBuyerId(buyer.getId());
+        order.setBuyerName(buyer.getUsername());
+        order.setSellerId(sellerId);
+        order.setSellerName(userRepository.findById(sellerId).map(u -> u.getUsername()).orElse("Unknown seller"));
+        order.setItems(items.toArray(OrderItem[]::new));
+        order.setTotalAmount(Math.round(total * 100.0) / 100.0);
+        order.setStatus(EOrderStatus.PENDING);
+        order.setShippingAddress(request.getShippingAddress());
+        order.setCreatedAt(now);
+        order.setUpdatedAt(now);
+        order.setOrderNumber("ORD-" + System.currentTimeMillis() + "-"
+                + buyer.getId().substring(0, Math.min(4, buyer.getId().length())).toUpperCase());
+
+        // Deduct stock first; compensate already-deducted lines if any line fails
+        List<OrderItem> reduced = new ArrayList<>();
+        try {
+            for (OrderItem item : order.getItems()) {
+                reduceStockInServices(sellerId, item.getProductId(), item.getQuantity());
+                reduced.add(item);
             }
+        } catch (RuntimeException e) {
+            for (OrderItem item : reduced) {
+                restockInServices(sellerId, item.getProductId(), item.getQuantity());
+            }
+            throw e;
         }
-        
-        // 3. Save order only if stock reduction succeeded
-        Order savedOrder = orderRepository.save(order);
-        return convertToDto(savedOrder);
+        return convertToDto(orderRepository.save(order));
     }
 
     /**
@@ -397,7 +391,7 @@ public class OrderService {
             
             // Lock if status is beyond CONFIRMED (i.e., PROCESSING, SHIPPED, etc.)
             if (currentStatus != EOrderStatus.PENDING && currentStatus != EOrderStatus.CONFIRMED) {
-                throw new RuntimeException("Order is locked and cannot be edited in its current status: " + currentStatus);
+                throw ApiException.conflict("Order is locked and cannot be edited in its current status: " + currentStatus);
             }
             
             // Update items if provided

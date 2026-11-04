@@ -1,22 +1,37 @@
 package com.wovely.wovely.controllers;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.wovely.wovely.exception.ApiException;
+import com.wovely.wovely.models.Order;
 import com.wovely.wovely.models.OrderItem;
 import com.wovely.wovely.models.ReturnRequest;
-import com.wovely.wovely.models.Order;
-import com.wovely.wovely.repository.ReturnRequestRepository;
 import com.wovely.wovely.repository.OrderRepository;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import com.wovely.wovely.repository.ReturnRequestRepository;
+import com.wovely.wovely.security.OwnershipGuard;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
+/**
+ * Return requests. Only the order's buyer may open one; buyer/seller ids, prices and totals are
+ * taken from the order, not the client. Status lifecycle & restock: PLAN.md 2.6.
+ */
 @RestController
 @RequestMapping("/api/returns")
 public class ReturnRequestController {
+
+    private static final Set<String> STATUSES = Set.of("PICKED_UP", "ARRIVED", "INSPECTION", "REFUNDED", "REJECTED");
 
     @Autowired
     ReturnRequestRepository returnRequestRepository;
@@ -24,69 +39,80 @@ public class ReturnRequestController {
     @Autowired
     OrderRepository orderRepository;
 
+    @Autowired
+    OwnershipGuard ownership;
+
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
-    public ResponseEntity<?> createReturnRequest(@RequestBody ReturnRequest request) {
-        // 1. Find the original order
-        Optional<Order> orderOpt = orderRepository.findById(request.getOrderId());
-        if (orderOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Original order not found."));
+    public ReturnRequest createReturnRequest(@RequestBody ReturnRequest request) {
+        if (request.getOrderId() == null) {
+            throw ApiException.badRequest("orderId is required");
         }
+        Order order = orderRepository.findById(request.getOrderId())
+                .orElseThrow(() -> ApiException.badRequest("Original order not found."));
+        ownership.requireAnyOf(order.getBuyerId());
 
-        Order order = orderOpt.get();
-        List<String> requestProductIds = request.getItems().stream()
-            .map(OrderItem::getProductId)
-            .collect(Collectors.toList());
-
-        // 2. Mark items as returned in the order and check for duplicates
-        boolean updated = false;
+        List<String> requested = request.getItems() == null ? List.of()
+                : request.getItems().stream().map(OrderItem::getProductId).toList();
+        List<OrderItem> returned = new ArrayList<>();
         for (OrderItem item : order.getItems()) {
-            if (requestProductIds.contains(item.getProductId())) {
+            if (requested.contains(item.getProductId())) {
                 if (item.isReturned()) {
-                    return ResponseEntity.badRequest().body(java.util.Map.of("message", "Return already requested for item: " + item.getProductName()));
+                    throw ApiException.badRequest("Return already requested for item: " + item.getProductName());
                 }
                 item.setReturned(true);
-                updated = true;
+                returned.add(item);
             }
         }
-
-        if (!updated) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("message", "No valid items selected for return."));
+        if (returned.isEmpty()) {
+            throw ApiException.badRequest("No valid items selected for return.");
         }
 
-        // 3. Save order and return request
+        ReturnRequest toSave = new ReturnRequest();
+        toSave.setOrderId(order.getId());
+        toSave.setOrderNumber(order.getOrderNumber());
+        toSave.setBuyerId(order.getBuyerId());
+        toSave.setSellerId(order.getSellerId());
+        toSave.setSellerName(order.getSellerName());
+        toSave.setItems(returned);
+        toSave.setReason(request.getReason());
+        toSave.setStatus("PICKED_UP");
+        toSave.setTotalAmount(returned.stream().mapToDouble(i -> i.getPrice() * i.getQuantity()).sum());
+
         orderRepository.save(order);
-        ReturnRequest saved = returnRequestRepository.save(request);
-        return ResponseEntity.ok(saved);
+        return returnRequestRepository.save(toSave);
     }
 
     @GetMapping("/buyer/{buyerId}")
-    @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
-    public ResponseEntity<List<ReturnRequest>> getBuyerReturns(@PathVariable String buyerId) {
-        return ResponseEntity.ok(returnRequestRepository.findByBuyerId(buyerId));
+    @PreAuthorize("@ownership.selfOrAdmin(#buyerId)")
+    public List<ReturnRequest> getBuyerReturns(@PathVariable String buyerId) {
+        return returnRequestRepository.findByBuyerId(buyerId);
     }
 
     @GetMapping("/seller/{sellerId}")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ResponseEntity<List<ReturnRequest>> getSellerReturns(@PathVariable String sellerId) {
-        return ResponseEntity.ok(returnRequestRepository.findBySellerId(sellerId));
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
+    public List<ReturnRequest> getSellerReturns(@PathVariable String sellerId) {
+        return returnRequestRepository.findBySellerId(sellerId);
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<ReturnRequest>> getAllReturns() {
-        return ResponseEntity.ok(returnRequestRepository.findAll());
+    public List<ReturnRequest> getAllReturns() {
+        return returnRequestRepository.findAll();
     }
 
+    /** Seller of the order (or admin) moves the return along. */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
-    public ResponseEntity<?> updateReturnStatus(@PathVariable String id, @RequestBody java.util.Map<String, String> data) {
-        return returnRequestRepository.findById(id)
-            .map(req -> {
-                req.setStatus(data.get("status"));
-                returnRequestRepository.save(req);
-                return ResponseEntity.ok(req);
-            })
-            .orElse(ResponseEntity.notFound().build());
+    public ReturnRequest updateReturnStatus(@PathVariable String id, @RequestBody Map<String, String> data) {
+        ReturnRequest req = returnRequestRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Return request not found"));
+        ownership.requireAnyOf(req.getSellerId());
+        String status = data.get("status");
+        if (status == null || !STATUSES.contains(status)) {
+            throw ApiException.badRequest("status must be one of " + STATUSES);
+        }
+        req.setStatus(status);
+        return returnRequestRepository.save(req);
     }
 }

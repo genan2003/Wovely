@@ -1,0 +1,12 @@
+com/wovely/products/security/OwnershipGuard.class
+com/wovely/products/exception/ErrorBody.class
+com/wovely/products/clients/InventorySyncClient.class
+com/wovely/products/security/JwtPrincipal.class
+com/wovely/products/security/InternalApiKeyFilter.class
+com/wovely/products/security/CorsConfig.class
+com/wovely/products/exception/GlobalExceptionHandler.class
+com/wovely/products/controllers/InternalProductController.class
+com/wovely/products/security/InternalClientConfig.class
+com/wovely/products/services/StockService.class
+com/wovely/products/exception/ApiException.class
+com/wovely/products/security/RestAuthHandlers.class

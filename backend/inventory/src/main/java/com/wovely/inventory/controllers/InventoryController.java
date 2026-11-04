@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/inventory")
-@CrossOrigin(origins = "${cors.allowed.origins:http://localhost:4200}")
 public class InventoryController {
 
     @Autowired
@@ -33,7 +32,7 @@ public class InventoryController {
      * Returns items with images, names, and stock levels - no complex SKU codes.
      */
     @GetMapping("/seller/{sellerId}")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> getSellerInventory(@PathVariable String sellerId) {
         try {
             List<InventoryItem> items = inventoryService.getInventoryItems(sellerId);
@@ -60,7 +59,7 @@ public class InventoryController {
      * Get inventory items filtered by category.
      */
     @GetMapping("/seller/{sellerId}/category/{category}")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> getInventoryByCategory(@PathVariable String sellerId, 
                                                      @PathVariable String category) {
         try {
@@ -81,7 +80,7 @@ public class InventoryController {
      * Get low stock alerts.
      */
     @GetMapping("/seller/{sellerId}/low-stock")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> getLowStockAlerts(@PathVariable String sellerId) {
         try {
             List<InventoryItem> items = inventoryService.getLowStockItems(sellerId);
@@ -101,7 +100,7 @@ public class InventoryController {
      * Get out of stock items.
      */
     @GetMapping("/seller/{sellerId}/out-of-stock")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> getOutOfStockItems(@PathVariable String sellerId) {
         try {
             List<InventoryItem> items = inventoryService.getOutOfStockItems(sellerId);
@@ -121,7 +120,7 @@ public class InventoryController {
      * Get a specific inventory item by product ID.
      */
     @GetMapping("/seller/{sellerId}/product/{productId}")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> getInventoryItem(@PathVariable String sellerId, 
                                                @PathVariable String productId) {
         try {
@@ -135,30 +134,10 @@ public class InventoryController {
     }
 
     /**
-     * Sync full inventory item details (called by products service).
-     */
-    @PutMapping("/seller/{sellerId}/product/{productId}")
-    public ResponseEntity<?> syncInventoryItem(@PathVariable String sellerId,
-                                              @PathVariable String productId,
-                                              @RequestBody InventoryItem details) {
-        try {
-            return inventoryService.syncProductDetails(sellerId, productId, details)
-                .map(item -> {
-                    inventoryService.updateInventoryStats(sellerId);
-                    return ResponseEntity.ok(toVisualInventoryItem(item));
-                })
-                .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * Update stock quantity for a product.
      */
     @PutMapping("/seller/{sellerId}/product/{productId}/stock")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> updateStock(@PathVariable String sellerId,
                                           @PathVariable String productId,
                                           @RequestBody Map<String, Integer> stockRequest) {
@@ -184,7 +163,7 @@ public class InventoryController {
      * Restock a product (add to existing stock).
      */
     @PostMapping("/seller/{sellerId}/product/{productId}/restock")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> restockProduct(@PathVariable String sellerId,
                                              @PathVariable String productId,
                                              @RequestBody Map<String, Integer> restockRequest) {
@@ -207,50 +186,10 @@ public class InventoryController {
     }
 
     /**
-     * Reduce stock for a product (Real-Time Deduction).
-     * Returns error if not enough stock available.
-     */
-    @PostMapping("/seller/{sellerId}/product/{productId}/reduce-stock")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN', 'USER')")
-    public ResponseEntity<?> reduceStock(@PathVariable String sellerId,
-                                          @PathVariable String productId,
-                                          @RequestBody Map<String, Integer> reduceRequest) {
-        try {
-            Integer quantity = reduceRequest.get("quantity");
-            if (quantity == null || quantity <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Valid quantity is required"));
-            }
-
-            // Check if enough stock exists first
-            return inventoryService.getInventoryItem(sellerId, productId)
-                .map(item -> {
-                    if (item.getStockQuantity() < quantity) {
-                        return ResponseEntity.badRequest().body(Map.of(
-                            "error", "Not enough stock available",
-                            "available", item.getStockQuantity(),
-                            "requested", quantity
-                        ));
-                    }
-                    
-                    return inventoryService.reduceStock(sellerId, productId, quantity)
-                        .map(updatedItem -> {
-                            inventoryService.updateInventoryStats(sellerId);
-                            return ResponseEntity.ok(toVisualInventoryItem(updatedItem));
-                        })
-                        .orElse(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
-                })
-                .orElse(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * Add a new product to inventory.
      */
     @PostMapping("/seller/{sellerId}/product")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> addProductToInventory(@PathVariable String sellerId,
                                                     @RequestBody InventoryItem item) {
         try {
@@ -268,7 +207,7 @@ public class InventoryController {
      * Remove a product from inventory (soft delete).
      */
     @DeleteMapping("/seller/{sellerId}/product/{productId}")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> removeProduct(@PathVariable String sellerId,
                                             @PathVariable String productId) {
         try {
@@ -288,7 +227,7 @@ public class InventoryController {
      * Get inventory summary/dashboard data.
      */
     @GetMapping("/seller/{sellerId}/dashboard")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("@ownership.sellerOrAdmin(#sellerId)")
     public ResponseEntity<?> getInventoryDashboard(@PathVariable String sellerId) {
         try {
             List<InventoryItem> allItems = inventoryService.getInventoryItems(sellerId);

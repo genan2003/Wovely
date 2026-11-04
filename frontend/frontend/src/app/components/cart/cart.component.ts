@@ -315,23 +315,14 @@ export class CartComponent implements OnInit {
 
         // Create an observable for each seller group
         const orderRequests = grouped.map(g => {
+            // Only ids and quantities are sent: the server derives buyer, seller, prices,
+            // total and status itself (PLAN.md 1.5).
             const orderData = {
-                buyerId: user.id,
-                buyerName: user.username,
-                sellerId: g.sellerId,
-                sellerName: g.sellerName,
                 items: g.items.map(i => ({
                     productId: i.id!,
-                    productName: i.name,
-                    quantity: Number(i.quantity),
-                    price: Number(i.price),
-                    imageUrl: i.imageUrl
+                    quantity: Number(i.quantity)
                 })),
-                totalAmount: Number(this.calculateGroupTotal(g)),
-                status: 'PENDING',
-                shippingAddress: 'Buyer Default Address',
-                createdAt: new Date(),
-                updatedAt: new Date()
+                shippingAddress: 'Buyer Default Address'
             };
             return this.orderService.createOrder(orderData);
         });

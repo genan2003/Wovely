@@ -7,4 +7,6 @@ import com.wovely.products.models.Review;
 public interface ReviewRepository extends MongoRepository<Review, String> {
   List<Review> findByProductId(String productId);
   List<Review> findByUserId(String userId);
+
+  boolean existsByProductIdAndUserId(String productId, String userId);
 }

@@ -107,7 +107,7 @@ export class SellerOrdersComponent implements OnInit {
             },
             error: (err: HttpErrorResponse) => {
                 this.editLoading.set(false);
-                this.editError.set(err.error?.error || 'Failed to update order.');
+                this.editError.set(err.error?.message || err.error?.error || 'Failed to update order.');
                 console.error(err);
             }
         });
@@ -131,7 +131,7 @@ export class SellerOrdersComponent implements OnInit {
                 },
                 error: (err: HttpErrorResponse) => {
                     this.updatingStatus.set(false);
-                    alert('Failed to update status: ' + (err.error?.error || err.message));
+                    alert('Failed to update status: ' + (err.error?.message || err.error?.error || err.message));
                 }
             });
         }
@@ -150,7 +150,7 @@ export class SellerOrdersComponent implements OnInit {
                 },
                 error: (err: HttpErrorResponse) => {
                     this.updatingStatus.set(false);
-                    alert('Failed to cancel order: ' + (err.error?.error || err.message));
+                    alert('Failed to cancel order: ' + (err.error?.message || err.error?.error || err.message));
                 }
             });
         }
@@ -167,7 +167,7 @@ export class SellerOrdersComponent implements OnInit {
             },
             error: (err: HttpErrorResponse) => {
                 this.generatingLabel.set(false);
-                alert('Failed to generate eco-label: ' + (err.error?.error || err.message));
+                alert('Failed to generate eco-label: ' + (err.error?.message || err.error?.error || err.message));
             }
         });
     }

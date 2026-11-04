@@ -1,14 +1,33 @@
 package com.wovely.wovely.controllers;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.wovely.wovely.exception.ApiException;
 import com.wovely.wovely.models.ChatMessage;
 import com.wovely.wovely.repository.ChatMessageRepository;
-import java.util.List;
+import com.wovely.wovely.repository.UserRepository;
+import com.wovely.wovely.security.services.UserDetailsImpl;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
+/**
+ * Buyer–seller messaging. The sender is always the authenticated caller and you can only read
+ * conversations you take part in. Admins read chats only through reports (ReportController).
+ */
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
@@ -16,74 +35,68 @@ public class ChatController {
     @Autowired
     ChatMessageRepository chatMessageRepository;
 
-    @GetMapping("/conversation")
-    public ResponseEntity<List<ChatMessage>> getConversation(
-            @RequestParam String user1, 
-            @RequestParam String user2) {
-        try {
-            List<ChatMessage> messages = chatMessageRepository.findConversationLogs(user1, user2);
-            messages.sort((m1, m2) -> m1.getTimestamp().compareTo(m2.getTimestamp()));
-            
-            // Mark received messages as read
-            messages.stream()
-                .filter(m -> m.getReceiverId().equals(user1) && !m.isRead())
-                .forEach(m -> {
-                    m.setRead(true);
-                    chatMessageRepository.save(m);
-                });
+    @Autowired
+    UserRepository userRepository;
 
-            return ResponseEntity.ok(messages);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    /** Conversation between the caller ({@code user1}, must be you) and {@code user2}; marks received messages read. */
+    @GetMapping("/conversation")
+    public List<ChatMessage> getConversation(@RequestParam String user1, @RequestParam String user2,
+            @AuthenticationPrincipal UserDetailsImpl me) {
+        if (!me.getId().equals(user1)) {
+            throw ApiException.forbidden("You can only read your own conversations");
         }
+        List<ChatMessage> messages = new java.util.ArrayList<>(chatMessageRepository.findConversationLogs(user1, user2));
+        messages.sort((m1, m2) -> m1.getTimestamp().compareTo(m2.getTimestamp()));
+        messages.stream()
+            .filter(m -> m.getReceiverId().equals(me.getId()) && !m.isRead())
+            .forEach(m -> {
+                m.setRead(true);
+                chatMessageRepository.save(m);
+            });
+        return messages;
     }
 
+    /** Send a message as the authenticated user ({@code senderId} in the body is ignored). */
     @PostMapping("/send")
-    public ResponseEntity<ChatMessage> sendMessage(@RequestBody ChatMessage message) {
-        try {
-            ChatMessage _message = chatMessageRepository.save(new ChatMessage(
-                message.getSenderId(),
-                message.getReceiverId(),
-                message.getProductId(),
-                message.getProductThumbnail(),
-                message.getContent()
-            ));
-            return new ResponseEntity<>(_message, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ChatMessage> sendMessage(@RequestBody ChatMessage message,
+            @AuthenticationPrincipal UserDetailsImpl me) {
+        if (message.getReceiverId() == null || message.getContent() == null || message.getContent().isBlank()) {
+            throw ApiException.badRequest("receiverId and content are required");
         }
+        if (message.getReceiverId().equals(me.getId())) {
+            throw ApiException.badRequest("You cannot message yourself");
+        }
+        if (!userRepository.existsById(message.getReceiverId())) {
+            throw ApiException.badRequest("Receiver not found");
+        }
+        ChatMessage saved = chatMessageRepository.save(new ChatMessage(
+            me.getId(),
+            message.getReceiverId(),
+            message.getProductId(),
+            message.getProductThumbnail(),
+            message.getContent()));
+        return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
     @GetMapping("/unread/{userId}")
-    public ResponseEntity<List<ChatMessage>> getUnreadMessages(@PathVariable String userId) {
-        try {
-            List<ChatMessage> unread = chatMessageRepository.findByReceiverIdAndIsReadFalse(userId);
-            return ResponseEntity.ok(unread);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    @PreAuthorize("#userId == authentication.principal.id")
+    public List<ChatMessage> getUnreadMessages(@PathVariable String userId) {
+        return chatMessageRepository.findByReceiverIdAndIsReadFalse(userId);
     }
 
+    /** Latest message per conversation partner. Aggregation instead of findAll: PLAN.md 2.10. */
     @GetMapping("/conversations/{userId}")
-    public ResponseEntity<?> getConversations(@PathVariable String userId) {
-        try {
-            // This is a simple implementation. In a real app, this might be a complex MongoDB aggregation.
-            List<ChatMessage> allMessages = chatMessageRepository.findAll().stream()
-                .filter(m -> m.getSenderId().equals(userId) || m.getReceiverId().equals(userId))
-                .sorted((m1, m2) -> m2.getTimestamp().compareTo(m1.getTimestamp()))
-                .collect(java.util.stream.Collectors.toList());
-
-            java.util.Map<String, ChatMessage> conversations = new java.util.LinkedHashMap<>();
-            for (ChatMessage m : allMessages) {
-                String otherId = m.getSenderId().equals(userId) ? m.getReceiverId() : m.getSenderId();
-                if (!conversations.containsKey(otherId)) {
-                    conversations.put(otherId, m);
-                }
-            }
-            
-            return ResponseEntity.ok(conversations.values());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    @PreAuthorize("#userId == authentication.principal.id")
+    public Collection<ChatMessage> getConversations(@PathVariable String userId) {
+        List<ChatMessage> allMessages = chatMessageRepository.findAll().stream()
+            .filter(m -> userId.equals(m.getSenderId()) || userId.equals(m.getReceiverId()))
+            .sorted((m1, m2) -> m2.getTimestamp().compareTo(m1.getTimestamp()))
+            .toList();
+        Map<String, ChatMessage> conversations = new LinkedHashMap<>();
+        for (ChatMessage m : allMessages) {
+            String otherId = m.getSenderId().equals(userId) ? m.getReceiverId() : m.getSenderId();
+            conversations.putIfAbsent(otherId, m);
         }
+        return conversations.values();
     }
 }

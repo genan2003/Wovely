@@ -76,6 +76,13 @@ jobs:
     needs: [backend]
     steps:
       - uses: actions/checkout@v4
+      - name: Create .env with throw-away secrets
+        run: |
+          {
+            echo "JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')"
+            echo "INTERNAL_API_KEY=$(openssl rand -hex 32)"
+            echo "SPRING_PROFILES_ACTIVE=dev"
+          } > .env
       - name: Start stack
         run: docker compose up -d --build wp2-project inventory products wovely-backend
       - name: Wait for services

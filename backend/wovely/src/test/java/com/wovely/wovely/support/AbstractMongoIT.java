@@ -15,7 +15,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles({ "test", "dev" })
 public abstract class AbstractMongoIT {
 
     @ServiceConnection

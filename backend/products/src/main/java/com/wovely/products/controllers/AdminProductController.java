@@ -10,7 +10,6 @@ import com.wovely.products.repository.ProductRepository;
 import java.util.List;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/api/products/admin")
 @PreAuthorize("hasRole('ADMIN')")
@@ -19,34 +18,8 @@ public class AdminProductController {
   @Autowired
   ProductRepository productRepository;
 
-  private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-
-  @org.springframework.beans.factory.annotation.Value("${inventory.api.url:http://localhost:8083/api/inventory}")
-  private String INVENTORY_API;
-
-  /**
-   * Sync changes with the inventory service.
-   */
-  private void syncWithInventory(String sellerId, String productId, Product product) {
-    try {
-      String url = INVENTORY_API + "/seller/" + sellerId + "/product/" + productId;
-      
-      java.util.Map<String, Object> details = new java.util.HashMap<>();
-      details.put("productName", product.getName());
-      details.put("price", product.getPrice());
-      details.put("imageUrl", product.getImageUrl());
-      details.put("category", product.getCategory());
-      details.put("lowStockThreshold", product.getLowStockThreshold());
-      details.put("co2EmissionScore", product.getCo2EmissionScore());
-      details.put("shippingMethod", product.getShippingMethod());
-      details.put("isHandmade", product.getHandmade());
-      details.put("stockQuantity", product.getStockQuantity());
-      
-      restTemplate.put(url, details);
-    } catch (Exception e) {
-      System.err.println("Failed to sync with inventory service: " + e.getMessage());
-    }
-  }
+  @Autowired
+  com.wovely.products.clients.InventorySyncClient inventorySync;
 
   @GetMapping("/pending")
   public ResponseEntity<List<Product>> getPendingProducts() {
@@ -116,7 +89,7 @@ public class AdminProductController {
       // We do not change sellerId
       
       Product saved = productRepository.save(_product);
-      syncWithInventory(saved.getSellerId(), id, saved);
+      inventorySync.sync(saved);
       
       return new ResponseEntity<>(saved, HttpStatus.OK);
     } else {

@@ -1,53 +1,52 @@
 package com.wovely.products.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.POST;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Products service access rules.
+ * <ul>
+ *   <li>Catalog, categories and reviews: public reads.</li>
+ *   <li>Creating products: sellers/admins; managing them: owner or admin (see {@link OwnershipGuard}).</li>
+ *   <li>Stock mutations used by other services: {@code /internal/**}, internal API key only.</li>
+ * </ul>
+ */
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 public class WebSecurityConfig {
 
-    @Autowired
-    private AuthTokenFilter authTokenFilter;
-
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, JwtUtils jwtUtils, RestAuthHandlers authHandlers,
+            @Value("${wovely.internal.apiKey:}") String internalApiKey) throws Exception {
         http.csrf(csrf -> csrf.disable())
-            .cors(org.springframework.security.config.Customizer.withDefaults())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .cors(Customizer.withDefaults())
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(e -> e.authenticationEntryPoint(authHandlers).accessDeniedHandler(authHandlers))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/categories/**").permitAll()
-                .requestMatchers("/api/products/admin/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/products/seller/*/product/*/reduce-stock").permitAll()
-                .requestMatchers("/api/products/seller/*/product/*/restock").permitAll()
-                .requestMatchers("/api/products/seller/**").hasAnyAuthority("ROLE_SELLER", "ROLE_ADMIN")
-                .requestMatchers("/api/products/**").permitAll()
-                .requestMatchers("/api/reviews/**").permitAll()
-                .anyRequest().authenticated()
-            );
-
-        http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
+                .requestMatchers("/error").permitAll()
+                .requestMatchers("/internal/**").hasAuthority(JwtPrincipal.SERVICE_ROLE)
+                .requestMatchers(GET, "/api/categories/**").permitAll()
+                .requestMatchers("/api/categories/**").hasRole("ADMIN")
+                .requestMatchers("/api/products/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/products/seller/**").hasAnyRole("SELLER", "ADMIN")
+                .requestMatchers(GET, "/api/products", "/api/products/*").permitAll()
+                .requestMatchers(POST, "/api/products").hasAnyRole("SELLER", "ADMIN")
+                .requestMatchers(GET, "/api/reviews/**").permitAll()
+                .anyRequest().authenticated())
+            .addFilterBefore(new InternalApiKeyFilter(internalApiKey), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new AuthTokenFilter(jwtUtils), UsernamePasswordAuthenticationFilter.class);
         return http.build();
-    }
-
-    @Bean
-    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
-        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        configuration.setAllowCredentials(true);
-        configuration.addAllowedOrigin("http://localhost:4200");
-        configuration.addAllowedOrigin("http://localhost:8081");
-        configuration.addAllowedOrigin("http://localhost:8082");
-        configuration.addAllowedHeader("*");
-        configuration.addAllowedMethod("*");
-        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 }

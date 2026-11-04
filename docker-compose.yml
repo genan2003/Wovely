@@ -14,7 +14,11 @@ services:
     container_name: wovely-inventory
     ports:
       - "8083:8083"
-    command: ["--spring.data.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--spring.mongodb.uri=mongodb://wp2-project:27017/wp2-project"]
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://wp2-project:27017/wp2-project
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (see .env.example)}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
     depends_on:
       - wp2-project
     restart: unless-stopped
@@ -25,7 +29,12 @@ services:
     container_name: wovely-products
     ports:
       - "8082:8082"
-    command: ["--spring.data.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--spring.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--inventory.api.url=http://inventory:8083/api/inventory"]
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://wp2-project:27017/wp2-project
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (see .env.example)}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      INVENTORY_INTERNAL_URL: http://inventory:8083/internal/inventory
     depends_on:
       - wp2-project
       - inventory
@@ -37,7 +46,15 @@ services:
     container_name: wovely-backend
     ports:
       - "8081:8081"
-    command: ["--spring.data.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--spring.mongodb.uri=mongodb://wp2-project:27017/wp2-project", "--products.api.url=http://products:8082/api/products", "--inventory.api.url=http://inventory:8083/api/inventory"]
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://wp2-project:27017/wp2-project
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (see .env.example)}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env (see .env.example)}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      PRODUCTS_API_URL: http://products:8082/api/products
+      PRODUCTS_INTERNAL_URL: http://products:8082/internal/products
+      INVENTORY_INTERNAL_URL: http://inventory:8083/internal/inventory
     depends_on:
       - wp2-project
       - products

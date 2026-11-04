@@ -32,7 +32,7 @@ class ProductsApplicationIT extends AbstractMongoIT {
 
     @Test
     void sellerTokenCanReadSellerInventory() throws Exception {
-        mvc.perform(get("/api/products/seller/{sellerId}", "any-seller")
+        mvc.perform(get("/api/products/seller/{sellerId}", TestTokens.SELLER_ID)
                 .header("Authorization", TestTokens.bearer(TestTokens.seller())))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items").isArray());
@@ -40,7 +40,7 @@ class ProductsApplicationIT extends AbstractMongoIT {
 
     @Test
     void buyerTokenIsRejectedOnSellerEndpoints() throws Exception {
-        mvc.perform(get("/api/products/seller/{sellerId}", "any-seller")
+        mvc.perform(get("/api/products/seller/{sellerId}", TestTokens.SELLER_ID)
                 .header("Authorization", TestTokens.bearer(TestTokens.buyer())))
             .andExpect(status().isForbidden());
     }

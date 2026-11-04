@@ -11,7 +11,6 @@ import com.wovely.wovely.repository.ChatMessageRepository;
 import java.util.List;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 @RestController
 @RequestMapping("/api/reports")
 public class ReportController {
@@ -24,7 +23,25 @@ public class ReportController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
-    public ResponseEntity<?> createReport(@RequestBody Report report) {
+    public ResponseEntity<?> createReport(@RequestBody Report report,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.wovely.wovely.security.services.UserDetailsImpl me) {
+        if (!"CHAT".equals(report.getTargetType()) && !"PRODUCT".equals(report.getTargetType())) {
+            throw com.wovely.wovely.exception.ApiException.badRequest("targetType must be CHAT or PRODUCT");
+        }
+        if (report.getTargetId() == null || report.getTargetId().isBlank()) {
+            throw com.wovely.wovely.exception.ApiException.badRequest("targetId is required");
+        }
+        if ("CHAT".equals(report.getTargetType())
+                && !java.util.Arrays.asList(report.getTargetId().split(":")).contains(me.getId())) {
+            // A chat report must be about a conversation the reporter is part of ("userA:userB")
+            throw com.wovely.wovely.exception.ApiException.forbidden("You can only report your own conversations");
+        }
+        report.setId(null);
+        report.setReporterId(me.getId());
+        report.setReporterName(me.getUsername());
+        report.setStatus("PENDING");
+        report.setCreatedAt(java.time.LocalDateTime.now());
         Report saved = reportRepository.save(report);
         return ResponseEntity.ok(saved);
     }
