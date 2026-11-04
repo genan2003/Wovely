@@ -1,0 +1,37 @@
+# Local-only working docs
+CLAUDE.md
+PLAN.md
+
+# Dependencies & build output
+node_modules/
+target/
+dist/
+out-tsc/
+.angular/
+coverage/
+
+# Test artifacts
+frontend/frontend/test-results/
+frontend/frontend/playwright-report/
+frontend/frontend/blob-report/
+postman/results/
+docs/diagrams/rendered/
+
+# IDE / editor / language servers
+.idea/
+*.iml
+.metals/
+.bloop/
+.bsp/
+.vscode/
+!frontend/frontend/.vscode/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# OS / logs
+.DS_Store
+Thumbs.db
+*.log
