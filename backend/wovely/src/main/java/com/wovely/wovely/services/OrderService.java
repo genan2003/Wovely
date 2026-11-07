@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.wovely.wovely.models.EDeliveryOption;
 import com.wovely.wovely.models.EOrderStatus;
 import com.wovely.wovely.models.ManualOrderRequest;
 import com.wovely.wovely.models.Order;
@@ -16,6 +17,8 @@ import com.wovely.wovely.models.OrderItem;
 import com.wovely.wovely.payload.request.OrderInterventionRequest;
 import com.wovely.wovely.payload.response.OrderDTO;
 import com.wovely.wovely.payload.response.OrderItemDTO;
+import com.wovely.wovely.payload.response.OrderTimelineEntryDTO;
+import com.wovely.wovely.models.OrderStatusChange;
 import com.wovely.wovely.repository.OrderRepository;
 import com.wovely.wovely.repository.UserRepository;
 import com.wovely.wovely.clients.CatalogClient;
@@ -220,7 +223,12 @@ public class OrderService {
                 && (order.getTrackingNumber() == null || order.getTrackingNumber().isBlank())) {
             throw ApiException.conflict("Generate a shipping label (or get a tracking number) before shipping");
         }
+        Date now = new Date();
         order.setStatus(to);
+        order.recordStatusChange(change(from, to, now, actor, reason)); // same save as the status (PLAN.md 7.1)
+        if (to == EOrderStatus.DELIVERED && order.getDeliveredAt() == null) {
+            order.setDeliveredAt(now); // starts the return window
+        }
         if (to == EOrderStatus.CANCELLED) {
             order.setCancellationReason(reason);
         } else if (to == EOrderStatus.REFUNDED) {
@@ -234,6 +242,23 @@ public class OrderService {
         } else if (to == EOrderStatus.COMPLETED) {
             walletService.releaseToSeller(order);
         }
+    }
+
+    /** Request decimal → cents; a third decimal is a 400, never silently rounded (PLAN.md 7.5). */
+    private static long centsOf(java.math.BigDecimal amount) {
+        try {
+            return com.wovely.common.money.Money.centsOf(amount);
+        } catch (IllegalArgumentException e) {
+            throw ApiException.badRequest("price: " + e.getMessage());
+        }
+    }
+
+    /** Timeline entry for the current caller; SYSTEM (or no caller) is recorded as "system". */
+    private static OrderStatusChange change(EOrderStatus from, EOrderStatus to, Date at, Actor actor, String reason) {
+        UserDetailsImpl me = OwnershipGuard.current();
+        String actorId = actor == Actor.SYSTEM || me == null ? "system" : me.getId();
+        String why = reason == null || reason.isBlank() ? null : reason.trim();
+        return new OrderStatusChange(from, to, at, actor.name(), actorId, why);
     }
 
     private void reduceStockInServices(String sellerId, String productId, int quantity) {
@@ -274,21 +299,19 @@ public class OrderService {
                 item.getProductId(),
                 item.getProductName(),
                 item.getQuantity(),
-                item.getPrice(),
+                centsOf(item.getPrice()),
                 item.getImageUrl()
             ))
             .toArray(OrderItem[]::new);
             
         order.setItems(items);
         
-        // Calculate total
-        double total = request.getItems().stream()
-            .mapToDouble(item -> item.getPrice() * item.getQuantity())
-            .sum();
-        order.setTotalAmount(total);
+        order.recomputeTotal(); // items only: manual sales have no delivery fee
         
         order.setStatus(EOrderStatus.COMPLETED); // Manual orders are typically completed immediately
         order.setCreatedAt(new Date());
+        order.recordStatusChange(change(null, EOrderStatus.COMPLETED, order.getCreatedAt(), Actor.SELLER,
+                "Recorded manually by the seller"));
         order.setUpdatedAt(new Date());
         
         // Optional fields
@@ -326,13 +349,12 @@ public class OrderService {
                 request.getShippingAddress());
         List<OrderItem> items = new ArrayList<>();
         String sellerId = null;
-        double total = 0;
         for (CreateOrderRequest.Item line : request.getItems()) {
             CatalogClient.ProductSnapshot product = catalogClient.getProduct(line.getProductId());
             if (!"APPROVED".equals(product.status())) {
                 throw ApiException.badRequest("Product is not available: " + product.name());
             }
-            if (product.price() == null || product.price() < 0) {
+            if (product.priceCents() == null || product.priceCents() < 0) {
                 throw ApiException.badRequest("Product has no valid price: " + product.name());
             }
             if (sellerId == null) {
@@ -343,9 +365,8 @@ public class OrderService {
             if (buyer.getId().equals(product.sellerId())) {
                 throw ApiException.badRequest("You cannot buy your own product");
             }
-            items.add(new OrderItem(product.id(), product.name(), line.getQuantity(), product.price(),
+            items.add(new OrderItem(product.id(), product.name(), line.getQuantity(), product.priceCents(),
                     product.imageUrl(), line.getColor(), line.getSize()));
-            total += product.price() * line.getQuantity();
         }
 
         Order order = new Order();
@@ -355,10 +376,18 @@ public class OrderService {
         order.setSellerId(sellerId);
         order.setSellerName(userRepository.findById(sellerId).map(u -> u.getUsername()).orElse("Unknown seller"));
         order.setItems(items.toArray(OrderItem[]::new));
-        order.setTotalAmount(Math.round(total * 100.0) / 100.0);
+        EDeliveryOption delivery = request.getDeliveryOption();
+        if (delivery == null) {
+            throw ApiException.badRequest("deliveryOption is required");
+        }
+        order.setDeliveryOption(delivery);
+        order.setDeliveryFeeCents(delivery.feeCents());
+        order.setEstimatedDeliveryDays(delivery.estimatedDays());
+        order.recomputeTotal(); // items + delivery fee
         order.setStatus(EOrderStatus.PENDING);
         order.setShippingAddress(shippingAddress);
         order.setCreatedAt(now);
+        order.recordStatusChange(change(null, EOrderStatus.PENDING, now, Actor.BUYER, null));
         order.setUpdatedAt(now);
         order.setOrderNumber("ORD-" + System.currentTimeMillis() + "-"
                 + buyer.getId().substring(0, Math.min(4, buyer.getId().length())).toUpperCase());
@@ -396,6 +425,9 @@ public class OrderService {
         Order order = requireOrder(orderId);
         if (!OrderStatusPolicy.isEditable(order.getStatus())) {
             throw ApiException.conflict("Order is locked and cannot be edited in its current status: " + order.getStatus());
+        }
+        if (!OrderStatusPolicy.isEditable(order)) {
+            throw ApiException.conflict("Order is locked: a shipping label was already generated for it");
         }
         List<String> changes = new ArrayList<>();
         if (request.getItems() != null) {
@@ -446,7 +478,7 @@ public class OrderService {
                 if (!"APPROVED".equals(p.status()) || !sellerId.equals(p.sellerId())) {
                     throw ApiException.badRequest("Product cannot be added to this order: " + p.name());
                 }
-                item = new OrderItem(p.id(), p.name(), 0, p.price(), p.imageUrl());
+                item = new OrderItem(p.id(), p.name(), 0, p.priceCents(), p.imageUrl());
             }
             int delta = line.getQuantity() - oldQty;
             if (delta > 0) deductions.put(item.getProductId(), delta);
@@ -477,8 +509,7 @@ public class OrderService {
         restocks.forEach((pid, qty) -> inventoryClient.release(sellerId, pid, qty));
 
         order.setItems(next.toArray(OrderItem[]::new));
-        double total = next.stream().mapToDouble(i -> i.getPrice() * i.getQuantity()).sum();
-        order.setTotalAmount(Math.round(total * 100.0) / 100.0);
+        order.recomputeTotal(); // the delivery fee stays as chosen at checkout
         return "items updated (deducted " + deductions + ", restocked " + restocks + ")";
     }
 
@@ -522,7 +553,7 @@ public class OrderService {
                     item.getProductId(),
                     item.getProductName(),
                     item.getQuantity(),
-                    item.getPrice(),
+                    item.getPriceCents(),
                     item.getImageUrl(),
                     item.isReturned(),
                     item.isReviewed()
@@ -538,7 +569,7 @@ public class OrderService {
             order.getSellerId(),
             order.getSellerName(),
             items,
-            order.getTotalAmount(),
+            order.getTotalCents(),
             order.getStatus(),
             order.getCreatedAt(),
             order.getUpdatedAt(),
@@ -552,8 +583,12 @@ public class OrderService {
             order.getEcoShippingLabel(),
             order.getEstimatedDeliveryDays(),
             order.isReviewed()
-        ).withRefundedAmount(order.getRefundedAmount())
+        ).withRefunded(order.getRefundedCents())
          .withShipping(order.getCarrierName(), order.getCarrierMethod(), order.getShippingDistanceKm(),
-                order.getEstimatedCo2Kg(), order.getLabelGeneratedAt());
+                order.getEstimatedCo2Kg(), order.getLabelGeneratedAt())
+         .withReturnWindow(order.getDeliveredAt(), order.getReturnDeadline())
+         .withDelivery(order.getDeliveryOption(), order.getDeliveryFeeCents())
+         .withEditable(OrderStatusPolicy.isEditable(order))
+         .withTimeline(order.timeline().stream().map(OrderTimelineEntryDTO::of).toList());
     }
 }

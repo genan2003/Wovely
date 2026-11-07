@@ -34,7 +34,7 @@ class PurchaseVerificationIT extends AbstractMongoIT {
         o.setOrderNumber("ORD-" + UUID.randomUUID());
         OrderItem[] items = new OrderItem[productIds.length];
         for (int i = 0; i < productIds.length; i++) {
-            items[i] = new OrderItem(productIds[i], "Item", 1, 5.0, "img");
+            items[i] = new OrderItem(productIds[i], "Item", 1, 500L, "img");
         }
         o.setItems(items);
         orders.save(o);

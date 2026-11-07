@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { InventoryItem, InventoryDashboard, InventoryResponse } from '../models/inventory.model';
 import { ManualOrderRequest, ManualOrderResponse } from '../models/manual-order.model';
+import { Order, UpdateOrderRequest } from '../models/order.model';
+import { Product } from '../models/product.model';
 import { environment } from '../../environments/environment';
 
 const PRODUCTS_API = environment.apiUrl + '/products';
@@ -82,7 +84,7 @@ export class InventoryService {
     /**
      * Add a new product to inventory (creates product in products service).
      */
-    addProduct(sellerId: string, item: Partial<InventoryItem>): Observable<any> {
+    addProduct(sellerId: string, item: Partial<InventoryItem>): Observable<Product> {
         const product = {
             name: item.productName,
             description: item.description || item.productName || '',
@@ -104,7 +106,7 @@ export class InventoryService {
             lowStockThreshold: item.lowStockThreshold || 5,
             status: 'PENDING'
         };
-        return this.http.post(`${PRODUCTS_API}`, product);
+        return this.http.post<Product>(`${PRODUCTS_API}`, product);
     }
 
     /**
@@ -155,29 +157,29 @@ export class InventoryService {
     /**
      * Get orders by seller ID.
      */
-    getOrdersBySeller(sellerId: string): Observable<{ orders: any[]; totalOrders: number }> {
-        return this.http.get<{ orders: any[]; totalOrders: number }>(`${SELLER_API}/orders/seller/${sellerId}`);
+    getOrdersBySeller(sellerId: string): Observable<{ orders: Order[]; totalOrders: number }> {
+        return this.http.get<{ orders: Order[]; totalOrders: number }>(`${SELLER_API}/orders/seller/${sellerId}`);
     }
 
     /**
      * Update order details (variations or shipping address) during pre-processing.
-     * Locked once order is in PROCESSING status or beyond.
+     * Locked once the order moves beyond PROCESSING or gets a shipping label (409).
      */
-    updateOrder(orderId: string, orderData: any): Observable<any> {
-        return this.http.put<any>(`${SELLER_API}/orders/${orderId}/edit`, orderData);
+    updateOrder(orderId: string, orderData: UpdateOrderRequest): Observable<Order> {
+        return this.http.put<Order>(`${SELLER_API}/orders/${orderId}/edit`, orderData);
     }
 
     /**
      * Update order status (e.g., to PROCESSING, SHIPPED, etc.).
      */
-    updateOrderStatus(orderId: string, status: string, reason?: string, estimatedDeliveryDays?: number): Observable<any> {
-        return this.http.patch<any>(`${SELLER_API}/orders/${orderId}/status`, { status, reason, estimatedDeliveryDays });
+    updateOrderStatus(orderId: string, status: string, reason?: string, estimatedDeliveryDays?: number): Observable<Order> {
+        return this.http.patch<Order>(`${SELLER_API}/orders/${orderId}/status`, { status, reason, estimatedDeliveryDays });
     }
 
     /**
      * Automated Eco-Shipping: Best Low-CO2 Carrier selection and label generation.
      */
-    generateEcoLabel(orderId: string): Observable<any> {
-        return this.http.post<any>(`${SELLER_API}/orders/${orderId}/eco-label`, {});
+    generateEcoLabel(orderId: string): Observable<{ label: string }> {
+        return this.http.post<{ label: string }>(`${SELLER_API}/orders/${orderId}/eco-label`, {});
     }
 }

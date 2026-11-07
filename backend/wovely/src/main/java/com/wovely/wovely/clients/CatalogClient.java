@@ -24,7 +24,7 @@ public class CatalogClient {
 
     /** The fields of a product the core service relies on. */
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
-    public record ProductSnapshot(String id, String name, Double price, String sellerId, String imageUrl,
+    public record ProductSnapshot(String id, String name, Long priceCents, String sellerId, String imageUrl,
             String status, Integer stockQuantity) {
     }
 

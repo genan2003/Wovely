@@ -28,6 +28,7 @@ public class ManualOrderRequest {
 
     @NotNull(message = "Order items are required")
     @NotEmpty(message = "Order must have at least one item")
+    @jakarta.validation.Valid
     private List<ManualOrderItemRequest> items;
 
     private String notes;

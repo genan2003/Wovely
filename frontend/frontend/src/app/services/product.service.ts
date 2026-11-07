@@ -12,32 +12,19 @@ const API_URL = environment.apiUrl + '/products';
 export class ProductService {
     private http = inject(HttpClient);
 
-    constructor() { }
-
-    getAllProducts(filters?: any): Observable<Product[]> {
-        let url = API_URL;
-        if (filters) {
-            const params = new URLSearchParams();
-            Object.keys(filters).forEach(key => {
-                const value = filters[key];
-                if (value !== null && value !== undefined && value !== '') {
-                    if (Array.isArray(value)) {
-                        value.forEach(v => params.append(key, v));
-                    } else {
-                        params.append(key, value);
-                    }
-                }
-            });
-            const queryString = params.toString();
-            if (queryString) {
-                url += `?${queryString}`;
+    /** Empty filter values are left out of the query. */
+    getAllProducts(filters?: object): Observable<Product[]> {
+        const params: Record<string, string | number | boolean> = {};
+        Object.entries(filters ?? {}).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '' && value !== false) {
+                params[key] = value;
             }
-        }
-        return this.http.get<Product[]>(url);
+        });
+        return this.http.get<Product[]>(API_URL, { params });
     }
 
     getProductsByCategory(category: string): Observable<Product[]> {
-        return this.http.get<Product[]>(`${API_URL}?category=${category}`);
+        return this.http.get<Product[]>(API_URL, { params: { category } });
     }
 
     getProductById(id: string): Observable<Product> {

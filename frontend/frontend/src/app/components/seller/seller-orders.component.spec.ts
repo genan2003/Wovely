@@ -5,15 +5,15 @@ import { vi } from 'vitest';
 import { SellerOrdersComponent } from './seller-orders.component';
 import { StorageService } from '../../services/storage.service';
 import { provideTestDefaults } from '../../../testing/test-providers';
+import { anOrder } from '../../../testing/fixtures';
+import { Order, OrderStatus } from '../../models/order.model';
+import { DialogService } from '../../services/dialog.service';
 
 /** PLAN.md 3.6 — "Ship with Wovely": buy a label, see carrier/CO₂/tracking, print it safely. */
 describe('SellerOrdersComponent', () => {
   let http: HttpTestingController;
 
-  const order = (over: Record<string, unknown> = {}) => ({
-    id: 'o-1', orderNumber: 'ORD-1', buyerName: 'testuser', status: 'PROCESSING', totalAmount: 20,
-    createdAt: '2026-11-01', items: [], ...over,
-  });
+  const order = (over: Partial<Order> = {}) => anOrder({ status: OrderStatus.PROCESSING, totalAmount: 20, ...over });
 
   function setup(orders: unknown[]) {
     TestBed.configureTestingModule({
@@ -37,9 +37,9 @@ describe('SellerOrdersComponent', () => {
 
   it('offers "Ship with Wovely" for confirmed/processing orders without a label only', () => {
     const fixture = setup([
-      order({ id: 'a', status: 'CONFIRMED' }),
-      order({ id: 'b', status: 'PROCESSING', ecoShippingLabel: 'L', trackingNumber: 'WVL-1' }),
-      order({ id: 'c', status: 'SHIPPED' }),
+      order({ id: 'a', status: OrderStatus.CONFIRMED }),
+      order({ id: 'b', status: OrderStatus.PROCESSING, ecoShippingLabel: 'L', trackingNumber: 'WVL-1' }),
+      order({ id: 'c', status: OrderStatus.SHIPPED }),
     ]);
     const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
     expect(rows[0].textContent).toContain('Ship with Wovely');
@@ -74,5 +74,23 @@ describe('SellerOrdersComponent', () => {
     expect(doc.querySelector('img')).toBeNull();
     expect(doc.querySelector('pre')?.textContent).toContain('<img src=x');
     expect(print).toHaveBeenCalled();
+  });
+
+  it('follows the server on editing and lets sellers cancel until shipping (README: edit locks beyond Processing)', () => {
+    const fixture = setup([
+      order({ id: 'a', status: OrderStatus.PROCESSING, editable: true }),
+      order({ id: 'b', status: OrderStatus.PROCESSING, ecoShippingLabel: 'L', editable: false }),
+      order({ id: 'c', status: OrderStatus.SHIPPED, editable: false }),
+    ]);
+    const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
+    const edit = (row: Element) => [...row.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Edit')!;
+    const hasCancel = (row: Element) => [...row.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Cancel');
+    expect(edit(rows[0]).disabled).toBe(false);
+    expect(edit(rows[1]).disabled).toBe(true);
+    expect(edit(rows[1]).getAttribute('title')).toContain('shipping label');
+    expect(edit(rows[2]).disabled).toBe(true);
+    expect(hasCancel(rows[0])).toBe(true);
+    expect(hasCancel(rows[1])).toBe(true);
+    expect(hasCancel(rows[2])).toBe(false);
   });
 });

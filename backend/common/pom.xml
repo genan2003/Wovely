@@ -33,6 +33,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+		<!-- Only for com.wovely.common.money.MoneyMigration; every service that uses it brings MongoDB itself (PLAN.md 7.5) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-mongodb</artifactId>
+			<optional>true</optional>
+		</dependency>
 		<!-- OpenAPI 3 docs + Swagger UI for every service (PLAN.md 4.5) -->
 		<dependency>
 			<groupId>org.springdoc</groupId>

@@ -1,32 +1,22 @@
-.chat-container {
-    width: 350px;
-    height: 450px;
-    display: flex;
-    flex-direction: column;
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: min(30rem, 75vh);
+  background: var(--wv-surface-raised);
+  border: 1px solid var(--wv-line);
+  border-radius: var(--wv-radius-m);
+  box-shadow: var(--wv-shadow-2);
+  overflow: hidden;
 }
-
-.chat-messages {
-    flex-grow: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-
-.message-bubble {
-    max-width: 80%;
-}
-
-.status-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #ccc;
-}
-
-.status-indicator.online {
-    background: #28a745;
-}
-
-.typing-indicator {
-    font-style: italic;
-}
+.chat__head { display: flex; align-items: center; justify-content: space-between; padding: var(--wv-space-3) var(--wv-space-4); background: var(--wv-primary); color: var(--wv-on-primary); }
+.chat__head h2 { margin: 0; font-size: var(--wv-text-md); color: inherit; }
+.chat__close { appearance: none; background: none; border: 0; color: inherit; padding: var(--wv-space-1); }
+.chat__context { display: flex; align-items: center; gap: var(--wv-space-2); padding: var(--wv-space-2) var(--wv-space-4); background: var(--wv-cloth-deep); font-size: var(--wv-text-sm); }
+.chat__context img { width: 2.5rem; height: 2.5rem; object-fit: cover; }
+.chat-messages { flex: 1; display: flex; flex-direction: column; gap: var(--wv-space-2); overflow-y: auto; padding: var(--wv-space-4); }
+.chat__empty { margin: auto; color: var(--wv-ink-soft); text-align: center; }
+.bubble { align-self: flex-start; max-width: 80%; padding: var(--wv-space-2) var(--wv-space-3); background: var(--wv-cloth-deep); border-radius: var(--wv-radius-m); }
+.bubble--mine { align-self: flex-end; background: var(--wv-primary); color: var(--wv-on-primary); }
+.bubble p { margin: 0; overflow-wrap: anywhere; }
+.bubble time { display: block; font-size: 0.75rem; text-align: end; opacity: 0.85; }
+.chat__compose { display: flex; gap: var(--wv-space-2); padding: var(--wv-space-3); border-top: 1px solid var(--wv-line); }

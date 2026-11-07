@@ -32,7 +32,7 @@ public class StockLedger {
     }
 
     /** Product details shown in the seller's inventory views (not authoritative for anything). */
-    public record Details(String productName, Double price, String imageUrl, String category, String co2EmissionScore,
+    public record Details(String productName, Long priceCents, String imageUrl, String category, String co2EmissionScore,
             String shippingMethod, Boolean isHandmade) {
     }
 
@@ -55,7 +55,7 @@ public class StockLedger {
             u.setOnInsert("lowStockThreshold", 5);
         }
         if (d != null) {
-            u.set("productName", d.productName()).set("price", d.price()).set("imageUrl", d.imageUrl())
+            u.set("productName", d.productName()).set("priceCents", d.priceCents()).set("imageUrl", d.imageUrl())
                     .set("category", d.category()).set("co2EmissionScore", d.co2EmissionScore())
                     .set("shippingMethod", d.shippingMethod()).set("isHandmade", d.isHandmade());
         }

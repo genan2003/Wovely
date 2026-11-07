@@ -77,8 +77,21 @@ public final class OrderStatusPolicy {
         return (to == CANCELLED || to == REFUNDED) && NOT_SHIPPED.contains(from);
     }
 
-    /** Items/address may only be edited before processing starts. */
+    /**
+     * README acceptance criterion: "the Order Edit button must be disabled once the order status moves beyond
+     * Processing" — so PENDING, CONFIRMED and PROCESSING are editable, SHIPPED and later are not.
+     */
     public static boolean isEditable(EOrderStatus status) {
-        return status == PENDING || status == CONFIRMED;
+        return status == PENDING || status == CONFIRMED || status == PROCESSING;
+    }
+
+    /**
+     * An order is editable while its status allows it and nothing has been booked with a carrier yet: once a
+     * shipping label or tracking number exists the parcel is packed for that content and address.
+     */
+    public static boolean isEditable(com.wovely.wovely.models.Order order) {
+        return isEditable(order.getStatus())
+                && order.getEcoShippingLabel() == null
+                && (order.getTrackingNumber() == null || order.getTrackingNumber().isBlank());
     }
 }

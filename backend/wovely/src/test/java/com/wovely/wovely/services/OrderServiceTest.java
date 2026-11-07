@@ -188,7 +188,7 @@ class OrderServiceTest {
         order.setStatus(EOrderStatus.PENDING);
         OrderDTO dto = service.updateOrderPreProcessing("o-1", items(new CreateOrderRequest.Item("p-1", 5)));
         verify(inventoryClient).reserve("seller-1", "p-1", 3);
-        assertThat(dto.getTotalAmount()).isEqualTo(50.0);
+        assertThat(dto.getTotalCents()).isEqualTo(5000L);
     }
 
     @Test
@@ -202,18 +202,18 @@ class OrderServiceTest {
     @Test
     void replacingAnItemRestocksTheOldAndPricesTheNewFromTheCatalog() {
         order.setStatus(EOrderStatus.PENDING);
-        when(catalogClient.getProduct("p-2")).thenReturn(new ProductSnapshot("p-2", "Mug", 7.5, "seller-1", "i", "APPROVED", 9));
+        when(catalogClient.getProduct("p-2")).thenReturn(new ProductSnapshot("p-2", "Mug", 750L, "seller-1", "i", "APPROVED", 9));
         OrderDTO dto = service.updateOrderPreProcessing("o-1", items(new CreateOrderRequest.Item("p-2", 2)));
         verify(inventoryClient).reserve("seller-1", "p-2", 2);
         verify(inventoryClient).release("seller-1", "p-1", 2);
-        assertThat(dto.getItems()).singleElement().satisfies(i -> assertThat(i.getPrice()).isEqualTo(7.5));
-        assertThat(dto.getTotalAmount()).isEqualTo(15.0);
+        assertThat(dto.getItems()).singleElement().satisfies(i -> assertThat(i.getPriceCents()).isEqualTo(750L));
+        assertThat(dto.getTotalCents()).isEqualTo(1500L);
     }
 
     @Test
     void failedDeductionIsCompensatedAndOrderUnchanged() {
         order.setStatus(EOrderStatus.PENDING);
-        order.setItems(new OrderItem[] { new OrderItem("p-1", "Basket", 1, 10.0, ""), new OrderItem("p-3", "Rug", 1, 30.0, "") });
+        order.setItems(new OrderItem[] { new OrderItem("p-1", "Basket", 1, 1000L, ""), new OrderItem("p-3", "Rug", 1, 3000L, "") });
         doThrow(ApiException.conflict("Insufficient stock for product p-3")).when(inventoryClient).reserve("seller-1", "p-3", 4);
         assertThatThrownBy(() -> service.updateOrderPreProcessing("o-1",
                 items(new CreateOrderRequest.Item("p-1", 2), new CreateOrderRequest.Item("p-3", 5))))
@@ -225,15 +225,15 @@ class OrderServiceTest {
     @Test
     void addingAnotherSellersProductIsRejected() {
         order.setStatus(EOrderStatus.PENDING);
-        when(catalogClient.getProduct("p-9")).thenReturn(new ProductSnapshot("p-9", "Other", 1.0, "seller-2", "", "APPROVED", 9));
+        when(catalogClient.getProduct("p-9")).thenReturn(new ProductSnapshot("p-9", "Other", 100L, "seller-2", "", "APPROVED", 9));
         assertThatThrownBy(() -> service.updateOrderPreProcessing("o-1",
                 items(new CreateOrderRequest.Item("p-1", 2), new CreateOrderRequest.Item("p-9", 1))))
             .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
     @Test
-    void editIsLockedOnceProcessing() {
-        order.setStatus(EOrderStatus.PROCESSING);
+    void editIsLockedOnceTheOrderMovesBeyondProcessing() {
+        order.setStatus(EOrderStatus.SHIPPED);
         assertThatThrownBy(() -> service.updateOrderPreProcessing("o-1", items(new CreateOrderRequest.Item("p-1", 1))))
             .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
     }
@@ -327,5 +327,31 @@ class OrderServiceTest {
         service.transition(done, EOrderStatus.COMPLETED, OrderStatusPolicy.Actor.BUYER, null);
         verify(walletService).releaseToSeller(done);
         verify(walletService, never()).refundRemaining(done);
+    }
+
+    @Test
+    void deliveryStampsTheStartOfTheReturnWindowOnce() {
+        var shipped = com.wovely.wovely.support.Orders.order("o-s", "buyer-1", "seller-1", EOrderStatus.SHIPPED);
+        org.assertj.core.api.Assertions.assertThat(shipped.getDeliveredAt()).isNull();
+        service.transition(shipped, EOrderStatus.DELIVERED, OrderStatusPolicy.Actor.BUYER, null);
+        java.util.Date delivered = shipped.getDeliveredAt();
+        org.assertj.core.api.Assertions.assertThat(delivered).isNotNull();
+        service.transition(shipped, EOrderStatus.COMPLETED, OrderStatusPolicy.Actor.BUYER, null);
+        org.assertj.core.api.Assertions.assertThat(shipped.getDeliveredAt()).isSameAs(delivered);
+    }
+
+    @Test
+    void sellerItemEditsKeepTheDeliveryFeeInTheTotal() {
+        var o = com.wovely.wovely.support.Orders.order("o-f", "buyer-1", "seller-1", EOrderStatus.PENDING); // p-1 × 2 @ 10
+        o.setDeliveryOption(com.wovely.wovely.models.EDeliveryOption.ELECTRIC_VAN);
+        o.setDeliveryFeeCents(1500L);
+        o.recomputeTotal();
+        org.assertj.core.api.Assertions.assertThat(o.getTotalCents()).isEqualTo(3500L);
+        o.getItems()[0].setQuantity(1);
+        o.recomputeTotal();
+        org.assertj.core.api.Assertions.assertThat(o.getTotalCents()).isEqualTo(2500L);
+        o.setDeliveryFeeCents(null); // manual sales and legacy orders: items only
+        o.recomputeTotal();
+        org.assertj.core.api.Assertions.assertThat(o.getTotalCents()).isEqualTo(1000L);
     }
 }

@@ -42,7 +42,7 @@ public class InventoryClient {
         body.put("initialQuantity", initialQuantity);
         body.put("lowStockThreshold", p.getLowStockThreshold());
         body.put("productName", p.getName());
-        body.put("price", p.getPrice());
+        body.put("priceCents", p.getPriceCents());
         body.put("imageUrl", p.getImageUrl());
         body.put("category", p.getCategory());
         body.put("co2EmissionScore", p.getCo2EmissionScore());

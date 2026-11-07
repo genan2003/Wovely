@@ -1,0 +1,47 @@
+@startuml buyer
+!include ../_theme.puml
+title Buyer use cases
+
+' Derived from: README.md Story 3; wovely BuyerOrderController, ReturnRequestController, ChatController,
+' WalletController, AddressController, ReportController, PublicUserController; products ProductController, ReviewController
+left to right direction
+actor "Guest" as Guest
+actor "Buyer\nROLE_USER" as Buyer
+Guest <|-- Buyer
+
+rectangle "Wovely" {
+  usecase "Browse and filter catalog" as Browse
+  usecase "Filter by delivery emission" as Eco
+  usecase "View product and maker profile" as View
+  usecase "Create an account" as Signup
+  usecase "Keep a cart" as Cart
+  usecase "Save favourites" as Fav
+  usecase "Check out" as Checkout
+  usecase "Choose a saved address" as Address
+  usecase "Pay from wallet" as Pay
+  usecase "Add funds to wallet" as TopUp
+  usecase "Cancel an order" as Cancel
+  usecase "Confirm receipt" as Receipt
+  usecase "Review product and seller" as Review
+  usecase "Request a return" as Return
+  usecase "Message a maker" as Chat
+  usecase "Report a listing or chat" as Report
+}
+
+Guest --> Browse
+Guest --> View
+Guest --> Signup
+Guest --> Cart
+Eco .> Browse : <<extend>>
+Buyer --> Fav
+Buyer --> Checkout
+Buyer --> TopUp
+Buyer --> Cancel
+Buyer --> Receipt
+Buyer --> Review
+Buyer --> Return
+Buyer --> Chat
+Buyer --> Report
+Checkout .> Address : <<include>>
+Checkout .> Pay : <<include>>
+@enduml

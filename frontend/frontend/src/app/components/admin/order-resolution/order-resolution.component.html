@@ -1,13 +1,13 @@
 <div class="order-resolution-container">
   <div class="order-header">
-    <h1>Order Override & Resolution Engine</h1>
-    <p>Search, view, and manage orders with manual intervention capabilities</p>
+    <h2>Orders</h2>
+    <p>Find any order and step in when a buyer and seller can’t settle it themselves.</p>
   </div>
 
   <!-- Search & Filter Bar -->
   <div class="search-bar">
     <div class="search-inputs">
-      <select [(ngModel)]="searchType" class="search-type-select">
+      <select [(ngModel)]="searchType" class="search-type-select" aria-label="Search in">
         <option value="all">All Fields</option>
         <option value="buyer">Buyer Name/ID</option>
         <option value="seller">Seller Name/ID</option>
@@ -16,7 +16,8 @@
       <input 
         type="text" 
         [(ngModel)]="searchQuery" 
-        placeholder="Search orders..." 
+        placeholder="Search orders" 
+        aria-label="Search orders"
         class="search-input"
         (keyup.enter)="searchOrders()"
       />
@@ -89,7 +90,6 @@
     </div>
   } @else if (filteredOrders().length === 0) {
     <div class="empty-state">
-      <div class="icon">📦</div>
       <h3>No orders found</h3>
       <p>There are no orders matching your current search criteria.</p>
     </div>
@@ -98,7 +98,7 @@
       <!-- Orders List -->
       <div class="orders-list-panel">
         <h2>Orders ({{ filteredOrders().length }})</h2>
-        <div class="orders-list">
+        <div class="orders-list" tabindex="0" role="region" aria-label="Orders found">
           @for (order of filteredOrders(); track order.id) {
             <div 
               class="order-list-item" 
@@ -117,7 +117,7 @@
                   <span class="party-label">Seller:</span> {{ order.sellerName }}
                 </div>
                 <div class="order-meta">
-                  <span class="order-total">${{ order.totalAmount }}</span>
+                  <span class="order-total">{{ order.totalAmount | number: '1.2-2' }} RON</span>
                   <span class="order-date">{{ formatDate(order.createdAt) }}</span>
                 </div>
                 @if (order.isDisputed) {
@@ -173,6 +173,15 @@
             </div>
 
             <div class="detail-section">
+              <h3>Timeline</h3>
+              <app-order-timeline
+                [timeline]="selectedOrder()!.timeline"
+                [status]="selectedOrder()!.status"
+                [label]="'Timeline of order ' + selectedOrder()!.orderNumber"
+              />
+            </div>
+
+            <div class="detail-section">
               <h3>Parties</h3>
               <div class="detail-row">
                 <span class="detail-label">Buyer:</span>
@@ -190,22 +199,22 @@
                 @for (item of selectedOrder()!.items; track item.productId) {
                   <div class="order-item">
                     @if (item.imageUrl) {
-                      <img [src]="item.imageUrl" alt="{{ item.productName }}" class="item-image" />
+                      <img [src]="item.imageUrl || 'placeholder-product.svg'" alt="{{ item.productName }}" class="item-image" />
                     }
                     <div class="item-details">
                       <div class="item-name">{{ item.productName }}</div>
                       <div class="item-meta">
                         <span>Qty: {{ item.quantity }}</span>
-                        <span>${{ item.price }} each</span>
+                        <span>{{ item.price | number: '1.2-2' }} RON each</span>
                       </div>
                     </div>
-                    <div class="item-total">${{ item.quantity * item.price }}</div>
+                    <div class="item-total">{{ item.quantity * item.price }} RON</div>
                   </div>
                 }
               </div>
               <div class="order-total-row">
                 <span>Total Amount:</span>
-                <span class="total-amount">${{ selectedOrder()!.totalAmount }}</span>
+                <span class="total-amount">{{ selectedOrder()!.totalAmount | number: '1.2-2' }} RON</span>
               </div>
             </div>
 

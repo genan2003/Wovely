@@ -1,5 +1,4 @@
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Client, IMessage } from '@stomp/stompjs';
 import { Subject } from 'rxjs';
@@ -22,7 +21,6 @@ export const defaultStompFactory: StompClientFactory = (config) => new Client(co
 export class RealtimeService {
   private storage = inject(StorageService);
   private http = inject(HttpClient);
-  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   factory: StompClientFactory = defaultStompFactory;
 
   private client: ReturnType<StompClientFactory> | null = null;
@@ -35,7 +33,7 @@ export class RealtimeService {
   readonly unreadCount = signal(0);
 
   start(): void {
-    if (!this.isBrowser || this.client || !this.storage.getToken()) return;
+    if (this.client || !this.storage.getToken()) return;
     this.refreshUnread();
     this.client = this.factory({
       brokerURL: wsUrl(),

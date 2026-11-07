@@ -28,7 +28,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     http.match(() => true).forEach((req) => req.flush([]));
     await fixture.whenStable();
-    const brand = (fixture.nativeElement as HTMLElement).querySelector('.navbar-brand');
+    const brand = (fixture.nativeElement as HTMLElement).querySelector('.wv-brand');
     expect(brand?.textContent?.trim()).toBe('Wovely');
   });
 

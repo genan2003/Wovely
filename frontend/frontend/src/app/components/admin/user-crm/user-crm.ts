@@ -12,7 +12,6 @@ export const USER_SEARCH_DEBOUNCE_MS = 250;
 
 @Component({
   selector: 'app-user-crm',
-  standalone: true,
   imports: [DatePipe, FormsModule, UserProfileComponent],
   templateUrl: './user-crm.html',
   styleUrls: ['./user-crm.css'],

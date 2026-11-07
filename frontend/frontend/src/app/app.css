@@ -1,92 +1,138 @@
-/* Navbar Theme */
-.navbar {
-    background-color: transparent !important;
-    border-bottom: 2px solid #A68A64 !important;
-    padding: 1rem 4rem !important; /* Added 4rem horizontal padding */
+.wv-skip {
+  position: absolute;
+  z-index: 1200;
+  inset-block-start: var(--wv-space-2);
+  inset-inline-start: var(--wv-space-2);
+  padding: var(--wv-space-2) var(--wv-space-4);
+  background: var(--wv-primary);
+  color: var(--wv-on-primary);
+  border: 0;
+  border-radius: var(--wv-radius-s);
+  transform: translateY(-200%);
+}
+.wv-skip:focus { transform: none; }
+
+main:focus { outline: none; }
+
+.shell { position: relative; z-index: 1000; background: var(--wv-surface); box-shadow: var(--wv-shadow-1); }
+
+/* The only motion on load: the cloth is woven across the top of the page, once */
+.weave-in { transform-origin: left; animation: weave 900ms var(--wv-ease) both; }
+@keyframes weave { from { transform: scaleX(0); } }
+
+.shell__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--wv-space-4);
+  max-width: var(--wv-page-width);
+  margin-inline: auto;
+  padding: var(--wv-space-2) var(--wv-gutter);
 }
 
-@media (max-width: 992px) {
-    .navbar {
-        padding: 1rem 1.5rem !important;
-    }
+.wv-brand {
+  font-family: var(--wv-font-display);
+  font-size: var(--wv-text-xl);
+  color: var(--wv-ink);
+  text-decoration: none;
+  line-height: 1;
 }
+.wv-brand:hover { color: var(--wv-primary-hover); }
 
-.navbar-brand {
-    color: #2A4335 !important;
-    font-weight: 400;
-    font-size: 2.2rem !important;
-    font-family: 'Lobster', cursive !important;
+.shell__actions { display: flex; align-items: center; gap: var(--wv-space-1); margin-inline-start: auto; }
+
+.shell__menu { position: relative; }
+
+.shell__link {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wv-space-1);
+  min-height: 2.75rem;
+  padding: 0 var(--wv-space-3);
+  background: none;
+  border: 0;
+  color: var(--wv-ink);
+  font-weight: 600;
+  text-decoration: none;
 }
+.shell__link:hover { color: var(--wv-primary-hover); }
+.shell__link .bi-chevron-down { font-size: 0.7em; transition: transform 150ms var(--wv-ease); }
+.shell__link[aria-expanded='true'] .bi-chevron-down { transform: rotate(180deg); }
+.shell__person { display: none; font-size: 1.25rem; }
 
-/* User Profile Circle */
-.user-menu-wrapper {
-    width: 42px;
-    height: 42px;
-    background-color: #FEF9F3;
-    border: 1px solid #A68A64;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.2s ease;
+.shell__icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--wv-ink);
+  font-size: 1.3rem;
+  text-decoration: none;
 }
+.shell__icon:hover, .shell__icon.active { color: var(--wv-primary-hover); }
 
-.user-menu-wrapper:hover {
-    background-color: #FFFFFF;
+.shell__count {
+  position: absolute;
+  inset-block-start: 0.2rem;
+  inset-inline-end: 0.1rem;
+  min-width: 1.15rem;
+  padding: 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+  color: var(--wv-on-primary);
+  background: var(--wv-primary);
+  border-radius: var(--wv-radius-pill);
 }
+.unread-badge { background: var(--wv-eco-zero-bg); color: var(--wv-eco-zero-ink); }
 
-.user-icon-img {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
+.shell__panel {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  min-width: 13rem;
+  padding: var(--wv-space-2);
+  background: var(--wv-surface-raised);
+  border: 1px solid var(--wv-line);
+  border-radius: var(--wv-radius-s);
+  box-shadow: var(--wv-shadow-2);
 }
+.shell__panel--end { inset-inline: auto 0; }
+.shell__panel--wide { width: min(36rem, calc(100vw - 2 * var(--wv-gutter))); padding: var(--wv-space-3); }
 
-/* Fix Dropdown bridge to ensure hover is stable */
-.nav-item.dropdown {
-    position: relative;
-    padding-bottom: 10px;
-    margin-bottom: -10px;
+.shell__panel a, .shell__panel button {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: var(--wv-space-2) var(--wv-space-3);
+  background: none;
+  border: 0;
+  border-radius: var(--wv-radius-s);
+  color: var(--wv-ink);
+  text-align: start;
+  text-decoration: none;
 }
+.shell__panel a:hover, .shell__panel button:hover { background: var(--wv-cloth-deep); color: var(--wv-ink); }
+.shell__panel .wv-stitch { margin-block: var(--wv-space-2); }
 
-.user-dropdown-menu {
-    left: auto !important;
-    right: 0 !important;
-    transform: none !important;
-    min-width: 220px;
-    margin-top: 0.5rem !important;
-    border: 1px solid #A68A64 !important;
-    background-color: #FEF9F3 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(42, 67, 53, 0.1) !important;
+.shell__all { font-weight: 650; }
+.shell__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--wv-space-3);
+  margin-top: var(--wv-space-2);
 }
+.shell__group { font-family: var(--wv-font-display); }
 
-.dropdown-item {
-    color: #2A4335 !important;
-    padding: 0.6rem 1.2rem;
-    font-weight: 500;
+@media (max-width: 40rem) {
+  .shell__bar { gap: var(--wv-space-1); }
+  .shell__name { display: none; }
+  .shell__person { display: inline; }
+  .shell__link { padding-inline: var(--wv-space-2); }
+  .shell__menu:first-of-type { position: static; }
+  .shell__panel--wide { inset-inline: var(--wv-gutter); width: auto; }
+  .shell__join { display: none; }
 }
-
-.dropdown-item:hover {
-    background-color: #2A4335 !important;
-    color: #F5E6D6 !important;
-}
-
-.nav-link {
-    color: #2A4335 !important;
-    font-weight: 600;
-    margin: 0 0.5rem;
-}
-
-.navbar .bi-cart3 {
-    color: #2A4335 !important;
-}
-
-.badge.bg-danger {
-    background-color: #A68A64 !important;
-    color: #FFFFFF !important;
-}
-
-/* Unread chat badge (PLAN.md 3.4) */
-.unread-badge { background: var(--wv-eco-zero-bg); color: var(--wv-eco-zero-ink); font-size: 0.7rem; }

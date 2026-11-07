@@ -23,8 +23,8 @@ queue "RabbitMQ" as MQ
 database "MongoDB" as DB
 
 B -> Web : checkout one seller group
-Web -> Ctl ++ : POST /api/orders (JWT)\n{items:[{productId, quantity}], addressId}
-note right of Web : legacy price / total / status / buyerId\nfields are ignored by the server
+Web -> Ctl ++ : POST /api/orders (JWT)\n{items:[{productId, quantity}], addressId, deliveryOption}
+note right of Web : legacy price / total / status / buyerId and any\ndeliveryFee are ignored; missing deliveryOption → 400
 Ctl -> Svc ++ : createOrder(request, buyer from JWT)
 Svc -> Addr : resolveForCheckout(buyerId, addressId, shippingAddress)
 note right of Addr : addressId from the buyer's own book,\nelse legacy free text, else the default entry
@@ -38,9 +38,10 @@ Addr --> Svc : formatted address
 loop each item
   Svc -> Cat : getProduct(productId)
   Cat -> Prod : GET /api/products/{id}
-  Prod --> Cat : name, **price**, sellerId, status
-  Svc -> Svc : require APPROVED, same seller,\nnot own product; total += price × qty
+  Prod --> Cat : name, **priceCents**, sellerId, status
+  Svc -> Svc : require APPROVED, same seller,\nnot own product
 end
+Svc -> Svc : deliveryFeeCents = EDeliveryOption feeCents;\ntotalCents = Σ priceCents × qty + deliveryFeeCents\n(whole cents, no floating point)
 alt validation fails
   Svc --> Web : 400 {message}
 end

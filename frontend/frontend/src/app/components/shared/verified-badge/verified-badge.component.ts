@@ -6,7 +6,6 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  */
 @Component({
   selector: 'app-verified-badge',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span class="wv-verified" [attr.title]="explanation()">

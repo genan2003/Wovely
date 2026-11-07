@@ -1,0 +1,41 @@
+@startuml product-status
+!include ../_theme.puml
+title Listing status (Product.STATUSES)
+
+' Derived from: products models/Product, services/ListingService#create, #updateBySeller, #editByAdmin,
+' #moderate, #archive, controllers/{ProductController,AdminProductController}, services/CatalogQueryService
+hide empty description
+
+[*] --> PENDING : seller lists product
+PENDING --> APPROVED : admin
+PENDING --> REJECTED : admin
+PENDING --> NEEDS_CHANGES : admin
+
+APPROVED --> PENDING : seller edits name, description,\nimage, category or materials
+NEEDS_CHANGES --> PENDING : seller edits anything\n(resubmission)
+APPROVED --> APPROVED : seller edits price, stock,\nlocation or delivery
+PENDING --> PENDING : seller edit
+
+APPROVED --> ARCHIVED : seller removes\n(stock record deactivated)
+PENDING --> ARCHIVED : seller removes
+REJECTED --> ARCHIVED : seller removes
+NEEDS_CHANGES --> ARCHIVED : seller removes
+
+APPROVED : visible in the catalog, can be bought
+PENDING : in the admin approval queue,\nhidden from buyers
+REJECTED : final: a seller edit returns 409
+ARCHIVED : soft-deleted: seller edits and views return 404
+
+note right of PENDING
+  A resubmission is audited as PRODUCT_RESUBMITTED.
+  Missing fields in an edit keep their value; blank
+  text and a missing value count as the same, so an
+  unchanged form doesn't trigger a review.
+end note
+
+note bottom of APPROVED
+  Admin content edits (PUT /api/products/admin/{id}) never change the status.
+  PUT /api/products/admin/{id}/status accepts any value in STATUSES from any
+  status, so an admin can also move a listing between these states directly.
+end note
+@enduml

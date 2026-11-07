@@ -1,15 +1,28 @@
-import { Injectable, signal, effect, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, signal, effect, inject, untracked } from '@angular/core';
 import { Product } from '../models/product.model';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ProductService } from './product.service';
+import { AuthService } from './auth.service';
+import { DeliveryOptionService } from './delivery-option.service';
+import { DeliveryOptionId } from '../models/delivery-option';
+
+/** Guests keep the original key, so a cart built before this change survives. */
+const GUEST_CART_KEY = 'wovely_cart';
+const cartKey = (userId: string | undefined) => (userId ? `${GUEST_CART_KEY}_${userId}` : GUEST_CART_KEY);
+
+export interface ShippingOption {
+    id: DeliveryOptionId;
+    name: string;
+    price: number;
+    co2: number;
+}
 
 export interface CartItem extends Product {
     quantity: number;
-    shippingCost?: number;
-    shippingName?: string;
+    /** Delivery chosen for this item's seller; the server prices it at checkout. */
+    deliveryOptionId?: DeliveryOptionId;
 }
 
 export interface CartGroup {
@@ -18,99 +31,107 @@ export interface CartGroup {
     items: CartItem[];
     deliveryCost: number;
     deliveryMethod: string;
-    selectedShipping?: any;
-    shippingOptions: any[];
+    selectedShipping?: ShippingOption;
+    shippingOptions: ShippingOption[];
 }
 
 @Injectable({
     providedIn: 'root'
 })
 export class CartService {
-    private platformId = inject(PLATFORM_ID);
-    public items = signal<CartItem[]>([]);
     private productService = inject(ProductService);
+    private auth = inject(AuthService);
+    private delivery = inject(DeliveryOptionService);
+
+    /**
+     * Where the current items are persisted; follows the signed-in user (PLAN.md 5.6). It starts on
+     * the guest cart, so a returning signed-in user also picks up anything left under the old shared key.
+     */
+    private activeKey = GUEST_CART_KEY;
+    public items = signal<CartItem[]>(this.read(GUEST_CART_KEY));
 
     constructor() {
-        if (isPlatformBrowser(this.platformId)) {
-            // Load cart from local storage
-            const savedCart = localStorage.getItem('wovely_cart');
-            if (savedCart) {
-                this.items.set(JSON.parse(savedCart));
-            }
-
-            // Persist cart to local storage whenever it changes
-            effect(() => {
-                localStorage.setItem('wovely_cart', JSON.stringify(this.items()));
-            });
-        }
+        effect(() => {
+            const key = cartKey(this.auth.user()?.id);
+            untracked(() => this.switchTo(key));
+        });
+        effect(() => localStorage.setItem(this.activeKey, JSON.stringify(this.items())));
     }
 
-    addToCart(product: Product, shipping?: { name: string, price: number }) {
+    private read(key: string): CartItem[] {
+        const saved = localStorage.getItem(key);
+        return saved ? (JSON.parse(saved) as CartItem[]) : [];
+    }
+
+    /**
+     * Logging in carries what a guest collected into that user's own cart; logging out
+     * leaves the user's cart behind, so the next person on this browser can't see it.
+     */
+    private switchTo(key: string): void {
+        if (key === this.activeKey) {
+            return;
+        }
+        const isLogin = this.activeKey === GUEST_CART_KEY;
+        const guestItems = isLogin ? this.items() : [];
+        if (isLogin) {
+            localStorage.removeItem(GUEST_CART_KEY);
+        }
+        this.activeKey = key;
+        this.items.set(this.merge(this.read(key), guestItems));
+    }
+
+    private merge(saved: CartItem[], incoming: CartItem[]): CartItem[] {
+        const merged = saved.map((item) => {
+            const match = incoming.find((other) => other.id === item.id);
+            return match ? { ...item, quantity: item.quantity + match.quantity } : item;
+        });
+        return [...merged, ...incoming.filter((item) => !saved.some((other) => other.id === item.id))];
+    }
+
+    addToCart(product: Product) {
         this.items.update(currentItems => {
             const existingItem = currentItems.find(item => item.id === product.id);
             if (existingItem) {
-                return currentItems.map(item => 
-                    item.id === product.id 
-                        ? { 
-                            ...item, 
-                            quantity: item.quantity + 1,
-                            shippingCost: shipping?.price ?? item.shippingCost ?? 15,
-                            shippingName: shipping?.name ?? item.shippingName ?? 'Standard Eco-Delivery'
-                          } 
-                        : item
+                return currentItems.map(item =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
                 );
             }
-            return [...currentItems, { 
-                ...product, 
-                quantity: 1, 
-                shippingCost: shipping?.price ?? 15,
-                shippingName: shipping?.name ?? 'Standard Eco-Delivery'
-            }];
+            return [...currentItems, { ...product, quantity: 1 }];
         });
     }
 
+    /** One group per seller (one order each), with the server's delivery options and the chosen one. */
     getGroupedItems(): CartGroup[] {
-        const items = this.items();
+        const options: ShippingOption[] = this.delivery.options()
+            .map(o => ({ id: o.id, name: o.label, price: o.fee, co2: o.co2Kg }));
+        const fallback = this.delivery.defaultOption();
         const groups: { [key: string]: CartGroup } = {};
-        
-        items.forEach(item => {
+
+        this.items().forEach(item => {
             const sellerId = item.sellerId;
             if (!groups[sellerId]) {
-                const defaultOptions = [
-                    { id: 'eco-1', name: 'Bicycle Delivery', price: 10, co2: 0.1 },
-                    { id: 'eco-2', name: 'Electric Van', price: 15, co2: 0.5 },
-                    { id: 'eco-3', name: 'Carbon Neutral Courier', price: 25, co2: 1.2 }
-                ];
-                
+                const selected = options.find(o => o.id === item.deliveryOptionId)
+                    ?? options.find(o => o.id === fallback?.id);
                 groups[sellerId] = {
-                    sellerId: sellerId,
+                    sellerId,
                     sellerName: item.sellerName || 'Artisan Shop',
                     items: [],
-                    deliveryCost: item.shippingCost ?? 15,
-                    deliveryMethod: item.shippingName ?? 'Electric Van',
-                    shippingOptions: defaultOptions,
-                    selectedShipping: defaultOptions.find(o => o.name === (item.shippingName ?? 'Electric Van')) || defaultOptions[1]
+                    deliveryCost: selected?.price ?? 0,
+                    deliveryMethod: selected?.name ?? '',
+                    shippingOptions: options,
+                    selectedShipping: selected,
                 };
             }
             groups[sellerId].items.push(item);
         });
-        
+
         return Object.values(groups);
     }
 
-    setShippingForSeller(sellerId: string, option: any) {
-        this.items.update(currentItems => {
-            return currentItems.map(item => {
-                if (item.sellerId === sellerId) {
-                    return {
-                        ...item,
-                        shippingCost: option.price,
-                        shippingName: option.name
-                    };
-                }
-                return item;
-            });
-        });
+    setShippingForSeller(sellerId: string, option: ShippingOption) {
+        this.items.update(currentItems =>
+            currentItems.map(item => item.sellerId === sellerId ? { ...item, deliveryOptionId: option.id } : item)
+        );
     }
 
     removeFromCart(productId: string) {

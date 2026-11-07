@@ -15,13 +15,4 @@ public interface InventoryItemRepository extends MongoRepository<InventoryItem, 
     
     Optional<InventoryItem> findBySellerIdAndProductId(String sellerId, String productId);
     
-    List<InventoryItem> findBySellerIdAndCategory(String sellerId, String category);
-    
-    List<InventoryItem> findBySellerIdAndStockQuantityLessThanEqual(String sellerId, int threshold);
-    
-    List<InventoryItem> findBySellerIdAndIsActiveAndStockQuantityEquals(String sellerId, Boolean isActive, int quantity);
-    
-    long countBySellerId(String sellerId);
-    
-    long countBySellerIdAndStockQuantityLessThanEqual(String sellerId, int threshold);
 }

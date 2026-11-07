@@ -17,7 +17,8 @@ public class ReturnRequest {
     private List<OrderItem> items;
     private String reason;
     private String status; // PICKED_UP, ARRIVED, INSPECTION, REFUNDED
-    private Double totalAmount;
+    /** Item prices being returned, in RON cents (PLAN.md 7.5). */
+    private Long totalCents;
     private LocalDateTime createdAt;
 
     public ReturnRequest() {
@@ -43,8 +44,12 @@ public class ReturnRequest {
     public void setReason(String reason) { this.reason = reason; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-    public Double getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
+    /** Decimal view for JSON (scale 2); derived, never stored. */
+    @org.springframework.data.annotation.Transient
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "totalAmount", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    public java.math.BigDecimal getTotalAmount() { return com.wovely.common.money.Money.toDecimal(totalCents); }
+    public Long getTotalCents() { return totalCents; }
+    public void setTotalCents(Long totalCents) { this.totalCents = totalCents; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

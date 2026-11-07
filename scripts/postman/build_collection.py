@@ -151,6 +151,25 @@ pm.test("explains username is taken", () => pm.expect(pm.response.json().message
         body={"username": "wannabe_admin", "email": "wannabe@wovely.test", "password": "secret123", "roles": ["admin"]},
         tests=f"""{status(400)}
 pm.test("explains admin cannot be self-assigned", () => pm.expect(pm.response.json().message).to.match(/cannot be self-assigned/i));"""),
+    req("Sign up with an unknown role → 400", "POST", f"{CORE}/api/auth/signup",
+        body={"username": "role_guess", "email": "role_guess@wovely.test", "password": "secret123", "roles": ["moderator"]},
+        tests=f"""{status(400)}
+pm.test("names the allowed roles", () => pm.expect(pm.response.json().message).to.match(/'user' or 'seller'/));"""),
+    req("Sign up as a maker (seller)", "POST", f"{CORE}/api/auth/signup",
+        pre="""
+const suffix = Date.now().toString(36);
+pm.collectionVariables.set("newSellerName", ("mk_" + suffix).slice(0, 20));
+""",
+        body={"username": "{{newSellerName}}", "email": "{{newSellerName}}@wovely.test", "password": "secret123", "roles": ["seller"]},
+        tests=status(200)),
+    req("New maker signs in with ROLE_SELLER", "POST", f"{CORE}/api/auth/signin",
+        body={"username": "{{newSellerName}}", "password": "secret123"},
+        tests=f"""{status(200)}
+pm.test("seller role, no admin", () => {{
+  const roles = pm.response.json().roles;
+  pm.expect(roles).to.include("ROLE_SELLER");
+  pm.expect(roles).to.not.include("ROLE_ADMIN");
+}});"""),
     req("Sign in with wrong password → 401", "POST", f"{CORE}/api/auth/signin",
         body={"username": "seller", "password": "wrong-password"},
         tests=status(401)),
@@ -234,8 +253,15 @@ pm.test("belongs to the seller", () => pm.expect(body.sellerId).to.eql(pm.collec
 pm.test("stock is 5", () => pm.expect(body.stockQuantity).to.eql(5));
 pm.test("new listings await moderation (PENDING)", () => pm.expect(body.status).to.eql("PENDING"));
 pm.test("carbon-neutral courier → LOW delivery emission (PLAN 3.5)", () => pm.expect(body.deliveryEmission).to.eql("LOW"));
+pm.test("price stored as whole cents, shown as a decimal too (PLAN 7.5)", () => {{
+  pm.expect(body.priceCents).to.eql(4250);
+  pm.expect(body.price).to.eql(42.5);
+}});
 pm.collectionVariables.set("productId", body.id);
 pm.collectionVariables.set("productPrice", body.price);"""),
+    req("Price with three decimals → 400, never rounded (PLAN 7.5)", "POST", f"{PRODUCTS}/api/products", token="sellerToken",
+        body={"name": "QA Rounding Basket", "price": 12.345, "category": "{{rootCategoryName}}", "stockQuantity": 1},
+        tests=status(400)),
     req("Pending product is not in the public catalog", "GET", f"{PRODUCTS}/api/products",
         tests=f"""{status(200)}
 pm.test("not listed before approval", () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(pm.collectionVariables.get("productId")));"""),
@@ -248,8 +274,8 @@ pm.test("status is APPROVED", () => pm.expect(pm.response.json().status).to.eql(
     req("Buyer cannot moderate products → 403", "PUT", f"{PRODUCTS}/api/products/admin/{{{{productId}}}}/status", token="buyerToken",
         body={"status": "REJECTED"}, tests=status(403)),
     req("Admin lists pending products", "GET", f"{PRODUCTS}/api/products/admin/pending", token="adminToken",
-        tests=f"""{status(200, 204)}
-if (pm.response.code === 200) pm.test("is an array", () => pm.expect(pm.response.json()).to.be.an("array"));"""),
+        tests=f"""{status(200)}
+pm.test("is an array, even when empty", () => pm.expect(pm.response.json()).to.be.an("array"));"""),
     req("Catalog contains approved product", "GET", f"{PRODUCTS}/api/products",
         tests=f"""{status(200)}
 const list = pm.response.json();
@@ -303,7 +329,30 @@ pm.test("stock is 10", () => pm.expect(pm.response.json().stockQuantity).to.eql(
 {JSON_OK}
 pm.test("price updated", () => pm.expect(body.price).to.eql(45));
 pm.test("stock unchanged", () => pm.expect(body.stockQuantity).to.eql(10));
+pm.test("new description sends the listing back for review", () => pm.expect(body.status).to.eql("PENDING"));
+pm.test("fields not sent are kept (materials)", () => pm.expect(body.materials).to.eql(["willow"]));
 pm.collectionVariables.set("productPrice", body.price);"""),
+    req("Resubmitted listing leaves the catalog", "GET", f"{PRODUCTS}/api/products",
+        tests=f"""{status(200)}
+pm.test("not listed while awaiting review", () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(pm.collectionVariables.get("productId")));"""),
+    req("Resubmitted listing is in the approval queue", "GET", f"{PRODUCTS}/api/products/admin/pending", token="adminToken",
+        tests=f"""{status(200)}
+pm.test("queue contains it", () => pm.expect(pm.response.json().map(p => p.id)).to.include(pm.collectionVariables.get("productId")));"""),
+    req("Admin re-approves the edited listing", "PUT", f"{PRODUCTS}/api/products/admin/{{{{productId}}}}/status", token="adminToken",
+        body={"status": "APPROVED", "reason": "Edit reviewed"},
+        tests=f"""{status(200)}
+pm.test("live again", () => pm.expect(pm.response.json().status).to.eql("APPROVED"));"""),
+    req("Seller cannot approve their own listing; price-only edit stays live", "PUT", f"{PRODUCTS}/api/products/seller/{{{{sellerId}}}}/product/{{{{productId}}}}", token="sellerToken",
+        body={"price": 45.0, "status": "APPROVED"},
+        tests=f"""{status(200)}
+pm.test("still APPROVED (status in the body is ignored)", () => pm.expect(pm.response.json().status).to.eql("APPROVED"));"""),
+    req("Invalid listing edit → 400", "PUT", f"{PRODUCTS}/api/products/seller/{{{{sellerId}}}}/product/{{{{productId}}}}", token="sellerToken",
+        body={"price": -5, "stockQuantity": -1}, tests=status(400)),
+    req("Other seller cannot edit the listing → 403 (IDOR)", "PUT", f"{PRODUCTS}/api/products/seller/{{{{sellerId}}}}/product/{{{{productId}}}}", token="buyerToken",
+        body={"name": "Mine"}, tests=status(403)),
+    req("Seller view of unknown product → 404", "GET", f"{PRODUCTS}/api/products/seller/{{{{sellerId}}}}/product/000000000000000000000000", token="sellerToken",
+        tests=f"""{status(404)}
+pm.test("error body", () => pm.expect(pm.response.json()).to.include.keys("status", "error", "message", "path", "timestamp"));"""),
     req("Seller offers local pickup; claimed level is ignored (PLAN 3.5)", "PUT", f"{PRODUCTS}/api/products/seller/{{{{sellerId}}}}/product/{{{{productId}}}}", token="sellerToken",
         body={
             "name": "QA Woven Basket", "description": "Updated description.", "price": 45.0,
@@ -316,6 +365,7 @@ pm.collectionVariables.set("productPrice", body.price);"""),
         tests=f"""{status(200)}
 {JSON_OK}
 pm.test("local pickup → ZERO", () => pm.expect(body.deliveryEmission).to.eql("ZERO"));
+pm.test("delivery-only edit stays live", () => pm.expect(body.status).to.eql("APPROVED"));
 pm.test("localPickup stored", () => pm.expect(body.localPickup).to.be.true);"""),
     req("Catalog: zero-emission only (PLAN 3.5)", "GET", f"{PRODUCTS}/api/products?deliveryEmission=ZERO",
         tests=f"""{status(200)}
@@ -352,6 +402,10 @@ pm.test("alert type", () => pm.expect(pm.response.json().alertType).to.eql("LOW_
 {expect_stock(10)}"""),
     req("Buyer cannot create categories → 403", "POST", f"{PRODUCTS}/api/categories", token="buyerToken",
         body={"name": "Spam", "level": 0}, tests=status(403)),
+    req("Category without a name → 400", "POST", f"{PRODUCTS}/api/categories", token="adminToken",
+        body={"slug": "no-name"}, tests=status(400)),
+    req("Category under an unknown parent → 400", "POST", f"{PRODUCTS}/api/categories", token="adminToken",
+        body={"name": "Orphan", "parentId": "000000000000000000000000"}, tests=status(400)),
 ])
 
 # --------------------------------------------------------------------------- Inventory
@@ -370,6 +424,19 @@ pm.test("has items and counters", () => pm.expect(pm.response.json()).to.include
         tests=NO_TOKEN_REJECTED),
     req("Inventory dashboard without token → 401", "GET", f"{INVENTORY}/api/inventory/seller/{{{{sellerId}}}}/dashboard",
         tests=NO_TOKEN_REJECTED),
+    req("Inventory low-stock alerts use each item's threshold", "GET", f"{INVENTORY}/api/inventory/seller/{{{{sellerId}}}}/low-stock", token="sellerToken",
+        tests=f"""{status(200)}
+{JSON_OK}
+pm.test("alert type", () => pm.expect(body.alertType).to.eql("LOW_STOCK"));
+pm.test("every item is at or below its own threshold", () => body.items.forEach(i => pm.expect(i.stockQuantity).to.be.at.most(i.lowStockThreshold)));"""),
+    req("Inventory dashboard", "GET", f"{INVENTORY}/api/inventory/seller/{{{{sellerId}}}}/dashboard", token="sellerToken",
+        tests=f"""{status(200)}
+pm.test("has summary keys", () => pm.expect(pm.response.json()).to.include.keys("totalProducts", "inStock", "lowStock", "outOfStock", "categoryBreakdown", "lowStockPreview"));"""),
+    req("Inventory item of unknown product → 404", "GET", f"{INVENTORY}/api/inventory/seller/{{{{sellerId}}}}/product/000000000000000000000000", token="sellerToken",
+        tests=f"""{status(404)}
+pm.test("error body, no leaked exception", () => pm.expect(pm.response.json()).to.include.keys("status", "message", "path"));"""),
+    req("Other seller cannot read the inventory dashboard → 403 (IDOR)", "GET", f"{INVENTORY}/api/inventory/seller/{{{{sellerId}}}}/dashboard", token="buyerToken",
+        tests=status(403)),
 ])
 
 
@@ -423,11 +490,13 @@ def order_body_raw(qty):
     return json.dumps({
         "items": [{"productId": "{{productId}}", "quantity": qty}],
         "shippingAddress": "Str. Testului 1, Sibiu",
+        "deliveryOption": "BICYCLE",
     }, indent=2)
 
 TAMPERED_ORDER = json.dumps({
     "buyerId": "{{newUserId}}", "sellerId": "someone", "status": "DELIVERED", "totalAmount": 0.01,
     "items": [{"productId": "{{productId}}", "quantity": 1, "price": 0.01}],
+    "deliveryOption": "CARBON_NEUTRAL_COURIER", "deliveryFee": 0,
     "shippingAddress": "Str. Testului 1, Sibiu",
 }, indent=2)
 
@@ -476,29 +545,35 @@ pm.test("is default", () => pm.expect(pm.response.json().default).to.be.true);""
     req("Other user cannot touch the buyer's address → 404", "PUT", f"{CORE}/api/user/addresses/{{{{addressId}}}}", token="newUserToken",
         body=ADDRESS, tests=status(404)),
     req("Checkout with someone else's address → 404, no stock change", "POST", f"{CORE}/api/orders", token="newUserToken",
-        body={"addressId": "{{addressId}}", "items": [{"productId": "{{productId}}", "quantity": 1}]},
+        body={"deliveryOption": "BICYCLE", "addressId": "{{addressId}}", "items": [{"productId": "{{productId}}", "quantity": 1}]},
         tests=f"""{status(404)}
 {expect_stock(10)}"""),
     req("Checkout with an empty wallet → 409, no stock change (PLAN 3.7)", "POST", f"{CORE}/api/orders", token="newUserToken",
-        body={"shippingAddress": "Str. Lipsei 1, Sibiu", "items": [{"productId": "{{productId}}", "quantity": 1}]},
+        body={"deliveryOption": "BICYCLE", "shippingAddress": "Str. Lipsei 1, Sibiu", "items": [{"productId": "{{productId}}", "quantity": 1}]},
         tests=f"""{status(409)}
 pm.test("explains the balance", () => pm.expect(pm.response.json().message).to.match(/insufficient wallet balance/i));
 {expect_stock(10)}"""),
     req("Checkout without any address → 400, no stock change", "POST", f"{CORE}/api/orders", token="newUserToken",
-        body={"items": [{"productId": "{{productId}}", "quantity": 1}]},
+        body={"deliveryOption": "BICYCLE", "items": [{"productId": "{{productId}}", "quantity": 1}]},
         tests=f"""{status(400)}
 pm.test("asks for an address", () => pm.expect(pm.response.json().message).to.match(/shipping address/i));
 {expect_stock(10)}"""),
     req("Create order A (qty 2, saved address) → stock 10→8", "POST", f"{CORE}/api/orders", token="buyerToken",
-        body={"addressId": "{{addressId}}", "items": [{"productId": "{{productId}}", "quantity": 2}]},
+        body={"deliveryOption": "BICYCLE", "addressId": "{{addressId}}", "items": [{"productId": "{{productId}}", "quantity": 2}]},
         tests=f"""{status(201)}
 {JSON_OK}
 pm.test("ships to the formatted address-book entry", () =>
   pm.expect(body.shippingAddress).to.eql("Ana Pop, Str. Florilor 3, 550000 Sibiu, Romania, tel. +40 712 345 678"));
 pm.sendRequest({{ url: pm.variables.replaceIn("{{{{baseUrlCore}}}}/api/wallet"), method: "GET",
   header: {{ Authorization: "Bearer " + pm.collectionVariables.get("buyerToken") }} }}, (err, res) => {{
-  pm.test("wallet debited by the order total (PLAN 3.7)", () =>
-    pm.expect(res.json().balanceCents).to.eql(Number(pm.collectionVariables.get("walletBefore")) - Math.round(body.totalAmount * 100)));
+  pm.test("wallet debited by exactly the order total in cents (PLAN 3.7, 7.5)", () =>
+    pm.expect(res.json().balanceCents).to.eql(Number(pm.collectionVariables.get("walletBefore")) - body.totalCents));
+}});
+pm.test("totals are exact cents: items + delivery (PLAN 7.5)", () => {{
+  const items = body.items.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
+  pm.expect(body.totalCents).to.eql(items + body.deliveryFeeCents);
+  pm.expect(Math.round(body.totalAmount * 100)).to.eql(body.totalCents);
+  body.items.forEach(i => pm.expect(Math.round(i.price * 100)).to.eql(i.priceCents));
 }});
 pm.test("order is PENDING with an order number", () => {{
   pm.expect(body.status).to.eql("PENDING");
@@ -523,6 +598,13 @@ pm.sendRequest({{ url: pm.variables.replaceIn("{{{{baseUrlCore}}}}/api/user/addr
 pm.test("status CANCELLED with reason", () => {{
   pm.expect(body.status).to.eql("CANCELLED");
   pm.expect(body.cancellationReason).to.eql("Changed my mind");
+}});
+pm.test("timeline: placed, then cancelled by the buyer with the reason (PLAN 7.1)", () => {{
+  const t = body.timeline;
+  pm.expect(t.map(e => e.status)).to.eql(["PENDING", "CANCELLED"]);
+  pm.expect(t[0].from).to.eql(null);
+  pm.expect(t[1]).to.include({{ from: "PENDING", actor: "BUYER", reason: "Changed my mind", inferred: false }});
+  pm.expect(t[1]).to.not.have.property("actorId");
 }});
 {expect_stock(10)}"""),
     req("Cancelling refunded the wallet; ledger shows payment + refund (PLAN 3.7)", "GET", f"{CORE}/api/wallet/transactions?limit=10", token="buyerToken",
@@ -555,15 +637,26 @@ pm.test("explains the transition", () => pm.expect(pm.response.json().message).t
         tests=f"""{status(409)}
 pm.test("explains insufficient stock", () => pm.expect(pm.response.json().message).to.match(/insufficient stock/i));
 {expect_stock(9)}"""),
+    req("Delivery price list is public (PLAN 3.7)", "GET", f"{CORE}/api/public/delivery-options",
+        tests=f"""{status(200)}
+{JSON_OK}
+pm.test("three options with fees in RON and cents", () => {{
+  pm.expect(body.map(o => o.id)).to.eql(["BICYCLE", "ELECTRIC_VAN", "CARBON_NEUTRAL_COURIER"]);
+  body.forEach(o => pm.expect(Math.round(o.fee * 100)).to.eql(o.feeCents));
+}});"""),
+    req("Checkout without a delivery option → 400, no stock change (PLAN 3.7)", "POST", f"{CORE}/api/orders", token="buyerToken",
+        body={"shippingAddress": "Str. Testului 1, Sibiu", "items": [{"productId": "{{productId}}", "quantity": 1}]},
+        tests=status(400)),
     req("Order without token → 401", "POST", f"{CORE}/api/orders",
         body=order_body_raw(1), tests=status(401)),
     req("Tampered price/total/status/buyer are ignored (PLAN 1.5)", "POST", f"{CORE}/api/orders", token="buyerToken",
         body=TAMPERED_ORDER,
         tests=f"""{status(201)}
 {JSON_OK}
-pm.test("server price and total", () => {{
+pm.test("server price and total (items + server delivery fee)", () => {{
   pm.expect(body.items[0].price).to.eql(Number(pm.collectionVariables.get("productPrice")));
-  pm.expect(body.totalAmount).to.eql(Number(pm.collectionVariables.get("productPrice")));
+  pm.expect(body.deliveryFee).to.eql(25);
+  pm.expect(body.totalAmount).to.eql(Number(pm.collectionVariables.get("productPrice")) + 25);
 }});
 pm.test("buyer from token, PENDING, real seller", () => {{
   pm.expect(body.buyerId).to.eql(pm.collectionVariables.get("buyerId"));
@@ -619,7 +712,10 @@ pm.test("address updated", () => pm.expect(pm.response.json().order.shippingAddr
     req("Seller edits items: qty 1→2 → stock 9→8 (PLAN 2.5)", "PUT", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/edit", token="sellerToken",
         body={"items": [{"productId": "{{productId}}", "quantity": 2}]},
         tests=f"""{status(200)}
-pm.test("total recomputed from server price", () => pm.expect(pm.response.json().order.totalAmount).to.eql(2 * Number(pm.collectionVariables.get("productPrice"))));
+pm.test("total recomputed from server price, delivery kept", () => {{
+  const order = pm.response.json().order;
+  pm.expect(order.totalAmount).to.eql(2 * Number(pm.collectionVariables.get("productPrice")) + order.deliveryFee);
+}});
 {expect_stock(8)}"""),
     req("Seller edits items: qty 2→1 → stock 8→9", "PUT", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/edit", token="sellerToken",
         body={"items": [{"productId": "{{productId}}", "quantity": 1}]},
@@ -637,10 +733,10 @@ pm.test("status PROCESSING, ETA 3 days", () => {{
   pm.expect(body.order.status).to.eql("PROCESSING");
   pm.expect(body.order.estimatedDeliveryDays).to.eql(3);
 }});"""),
-    req("Edit locked once PROCESSING → 409", "PUT", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/edit", token="sellerToken",
-        body={"shippingAddress": "Too late"},
-        tests=f"""{status(409)}
-pm.test("explains order is locked", () => pm.expect(pm.response.json().message).to.match(/locked/i));"""),
+    req("Still editable while PROCESSING (README: locks beyond Processing)", "PUT", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/edit", token="sellerToken",
+        body={"shippingAddress": "Str. Nouă 2, Sibiu"},
+        tests=f"""{status(200)}
+pm.test("still editable", () => pm.expect(pm.response.json().order.editable).to.be.true);"""),
     req("Invalid status value → 400", "PATCH", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/status", token="sellerToken",
         body={"status": "TELEPORTED"}, tests=status(400)),
     req("Cannot ship without a label/tracking → 409 (PLAN 3.6)", "PATCH", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/status", token="sellerToken",
@@ -661,6 +757,10 @@ pm.test("carrier and CO2 estimate stored", () => {{
   pm.expect(body.order.shippingDistanceKm).to.be.within(5, 1200);
 }});
 pm.collectionVariables.set("orderBTracking", body.order.trackingNumber);"""),
+    req("Edit locked once a shipping label exists → 409", "PUT", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/edit", token="sellerToken",
+        body={"shippingAddress": "Too late"},
+        tests=f"""{status(409)}
+pm.test("explains the lock", () => pm.expect(pm.response.json().message).to.match(/shipping label/i));"""),
     req("Second label for the same order → 409", "POST", f"{CORE}/api/seller/orders/{{{{orderBId}}}}/eco-label", token="sellerToken",
         tests=status(409)),
     req("Label for a cancelled order → 409", "POST", f"{CORE}/api/seller/orders/{{{{orderAId}}}}/eco-label", token="sellerToken",
@@ -766,6 +866,14 @@ pm.test("SUSPENDED with an end date", () => {{
 pm.test("ACTIVE again", () => pm.expect(pm.response.json().accountStatus).to.eql("ACTIVE"));"""),
     req("Invalid penalty action → 400", "POST", f"{CORE}/api/admin/users/{{{{newUserId}}}}/penalty", token="adminToken",
         body={"action": "EXILE"}, tests=status(400)),
+    req("Suspension without a length → 400 (it would never end)", "POST", f"{CORE}/api/admin/users/{{{{newUserId}}}}/penalty", token="adminToken",
+        body={"action": "STATUS", "newStatus": "SUSPENDED"}, tests=status(400)),
+    req("Suspension longer than 365 days → 400", "POST", f"{CORE}/api/admin/users/{{{{newUserId}}}}/penalty", token="adminToken",
+        body={"action": "STATUS", "newStatus": "SUSPENDED", "suspendDays": 400}, tests=status(400)),
+    req("Seller cannot penalise users → 403", "POST", f"{CORE}/api/admin/users/{{{{newUserId}}}}/penalty", token="sellerToken",
+        body={"action": "STRIKE"}, tests=status(403)),
+    req("Penalty for unknown user → 404", "POST", f"{CORE}/api/admin/users/000000000000000000000000/penalty", token="adminToken",
+        body={"action": "STRIKE"}, tests=status(404)),
     req("List all orders", "GET", f"{CORE}/api/admin/orders", token="adminToken",
         tests=f"""{status(200)}
 pm.test("contains order B", () => pm.expect(pm.response.json().map(o => o.id)).to.include(pm.collectionVariables.get("orderBId")));"""),
@@ -871,8 +979,16 @@ pm.test("one entry per partner incl. seller", () => {{
 
 reviews = folder("Reviews", "Product reviews (products service) and seller reviews (core). "
                  "\"Verified Purchase\" = the author has a DELIVERED/COMPLETED order with the product / seller (PLAN 3.3).", [
+    req("Chat message over 2000 characters → 400", "POST", f"{CORE}/api/chat/send", token="buyerToken",
+        body={"receiverId": "{{sellerId}}", "content": "x" * 2001}, tests=status(400)),
+    req("Chat message without content → 400", "POST", f"{CORE}/api/chat/send", token="buyerToken",
+        body={"receiverId": "{{sellerId}}", "content": "   "}, tests=status(400)),
     req("Anonymous cannot review → 401 (PLAN 1.7)", "POST", f"{PRODUCTS}/api/reviews",
         body={"productId": "{{productId}}", "rating": 1, "comment": "fake"}, tests=status(401)),
+    req("Review without a rating → 400", "POST", f"{PRODUCTS}/api/reviews", token="buyerToken",
+        body={"productId": "{{productId}}", "comment": "No stars"}, tests=status(400)),
+    req("Review with more than 6 photos → 400", "POST", f"{PRODUCTS}/api/reviews", token="buyerToken",
+        body={"productId": "{{productId}}", "rating": 4, "photoUrls": ["https://x.test/p.jpg"] * 7}, tests=status(400)),
     req("Buyer confirms receipt of order B (makes the purchase verifiable)", "POST", f"{CORE}/api/orders/{{{{orderBId}}}}/confirm-receipt", token="buyerToken",
         tests=f"""{status(200)}
 pm.test("DELIVERED", () => pm.expect(pm.response.json().status).to.eql("DELIVERED"));"""),
@@ -913,6 +1029,8 @@ pm.sendRequest({{ url: pm.variables.replaceIn("{{{{baseUrlCore}}}}/api/orders/{{
 }});"""),
     req("Anonymous cannot review seller → 401 (PLAN 1.7)", "POST", f"{CORE}/api/public/users/seller/{{{{sellerId}}}}/reviews",
         body={"overallRating": 1, "communicationRating": 1, "shippingRating": 1, "comment": "fake"}, tests=status(401)),
+    req("Seller review missing a rating → 400", "POST", f"{CORE}/api/public/users/seller/{{{{sellerId}}}}/reviews", token="buyerToken",
+        body={"overallRating": 5, "communicationRating": 5}, tests=status(400)),
     req("Buyer reviews seller", "POST", f"{CORE}/api/public/users/seller/{{{{sellerId}}}}/reviews", token="buyerToken",
         body={"buyerId": "{{buyerId}}", "buyerName": "testuser", "overallRating": 5,
               "communicationRating": 5, "shippingRating": 4, "comment": "Fast replies."},
@@ -934,7 +1052,13 @@ pm.test("at least one review", () => pm.expect(pm.response.json()).to.be.an("arr
 returns = folder("Returns", "Return requests on delivered orders.", [
     req("Order B is already DELIVERED (precondition, confirmed in Reviews)", "GET", f"{CORE}/api/orders/{{{{orderBId}}}}", token="buyerToken",
         tests=f"""{status(200)}
-pm.test("DELIVERED", () => pm.expect(pm.response.json().status).to.eql("DELIVERED"));"""),
+pm.test("DELIVERED", () => pm.expect(pm.response.json().status).to.eql("DELIVERED"));
+pm.test("return window: 30 days from delivery", () => {{
+  const body = pm.response.json();
+  pm.expect(body.deliveredAt).to.be.ok;
+  const days = (new Date(body.returnDeadline) - new Date(body.deliveredAt)) / 86400000;
+  pm.expect(days).to.be.closeTo(30, 0.01);
+}});"""),
     req("Other user cannot open a return on order B → 403 (PLAN 1.4)", "POST", f"{CORE}/api/returns", token="newUserToken",
         body={"orderId": "{{orderBId}}", "items": [{"productId": "{{productId}}"}]}, tests=status(403)),
     req("Return on a cancelled order → 409 (PLAN 2.6)", "POST", f"{CORE}/api/returns", token="buyerToken",
@@ -963,6 +1087,8 @@ pm.test("explains duplicate", () => pm.expect(pm.response.json().message).to.mat
     req("Return for unknown order → 400", "POST", f"{CORE}/api/returns", token="buyerToken",
         body={"orderId": "000000000000000000000000", "items": []},
         tests=status(400)),
+    req("Return without items → 400", "POST", f"{CORE}/api/returns", token="buyerToken",
+        body={"orderId": "{{orderBId}}", "items": [], "reason": "Nothing"}, tests=status(400)),
     req("Buyer return list", "GET", f"{CORE}/api/returns/buyer/{{{{buyerId}}}}", token="buyerToken",
         tests=f"""{status(200)}
 pm.test("contains the return", () => pm.expect(pm.response.json().map(r => r.id)).to.include(pm.collectionVariables.get("returnId")));"""),
@@ -983,6 +1109,17 @@ pm.sendRequest({{ url: pm.variables.replaceIn("{{{{baseUrlCore}}}}/api/orders/{{
   pm.test("order fully refunded", () => {{
     pm.expect(res.json().refundedAmount).to.eql(Number(pm.collectionVariables.get("productPrice")));
     pm.expect(res.json().status).to.eql("REFUNDED");
+  }});
+  pm.test("timeline tells the whole story in order (PLAN 7.1)", () => {{
+    const t = res.json().timeline;
+    pm.expect(t[0]).to.include({{ status: "PENDING", from: null, actor: "BUYER" }});
+    t.slice(1).forEach((e, i) => {{
+      pm.expect(e.from, "step " + (i + 1) + " starts where the previous ended").to.eql(t[i].status);
+      pm.expect(new Date(e.at).getTime()).to.be.at.least(new Date(t[i].at).getTime());
+    }});
+    pm.expect(t.find(e => e.status === "DISPUTED")).to.include({{ actor: "ADMIN" }});
+    pm.expect(t.at(-1)).to.include({{ status: "REFUNDED", actor: "SYSTEM", reason: "All items returned" }});
+    t.forEach(e => pm.expect(e).to.not.have.property("actorId"));
   }});
 }});"""),
     req("Refunded return cannot move again → 409", "PATCH", f"{CORE}/api/returns/{{{{returnId}}}}/status", token="sellerToken",

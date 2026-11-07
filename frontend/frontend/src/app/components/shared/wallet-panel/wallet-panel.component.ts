@@ -8,7 +8,6 @@ import { TRANSACTION_LABELS, WalletTransaction } from '../../../models/wallet.mo
 /** Balance, demo top-up and recent wallet activity (PLAN.md 3.7). */
 @Component({
   selector: 'app-wallet-panel',
-  standalone: true,
   imports: [DatePipe, DecimalPipe, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './wallet-panel.component.html',

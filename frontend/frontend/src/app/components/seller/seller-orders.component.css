@@ -1,28 +1,22 @@
-.seller-orders-container {
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    background-color: #F5E6D6;
-    min-height: 100vh;
-}
+
 
 .orders-table-container {
     background: transparent !important; /* Fixed as requested */
-    border-radius: 16px;
-    overflow: hidden;
+    border-radius: var(--wv-radius-m);
+    overflow-x: auto;
     border: none !important;
 }
 
 .table {
     background: transparent !important;
-    color: #2A4335 !important;
+    color: var(--wv-ink) !important;
     border-collapse: separate;
     border-spacing: 0 0.5rem;
 }
 
 .table tr {
-    background: #FEF9F3;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    background: var(--wv-surface-raised);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--wv-ink) 2%, transparent);
 }
 
 .table th {
@@ -30,7 +24,6 @@
     border: none !important;
     padding: 1rem;
     font-weight: 700;
-    text-transform: uppercase;
     font-size: 0.85rem;
 }
 
@@ -40,24 +33,24 @@
     vertical-align: middle;
 }
 
-.table tr td:first-child { border-radius: 12px 0 0 12px; }
+.table tr td:first-child { border-radius: var(--wv-radius-m); }
 .table tr td:last-child { border-radius: 0 12px 12px 0; }
 
 /* Modal Fixes */
 .modal-backdrop {
-    background: rgba(42, 67, 53, 0.4) !important;
+    background: color-mix(in srgb, var(--wv-ink) 40%, transparent) !important;
 }
 
 .modal-content {
-    background-color: #FEF9F3 !important;
-    border: 1px solid #A68A64 !important;
-    border-radius: 20px !important;
+    background-color: var(--wv-surface-raised) !important;
+    border: 1px solid var(--wv-line-strong) !important;
+    border-radius: var(--wv-radius-m);
     overflow: hidden;
 }
 
 .modal-header {
-    background: #2A4335 !important;
-    color: #F5E6D6 !important;
+    background: var(--wv-primary) !important;
+    color: var(--wv-on-primary) !important;
     padding: 1.25rem 2rem !important;
 }
 
@@ -69,15 +62,15 @@
     width: 64px !important; /* Fixed size */
     height: 64px !important;
     object-fit: cover !important;
-    border-radius: 10px !important;
-    border: 1px solid #A68A64;
+    border-radius: var(--wv-radius-m);
+    border: 1px solid var(--wv-line-strong);
 }
 
 .list-group-item {
-    background-color: #FFFFFF !important;
-    border: 1px solid #A68A64 !important;
+    background-color: var(--wv-surface-raised) !important;
+    border: 1px solid var(--wv-line-strong) !important;
     margin-bottom: 0.75rem !important;
-    border-radius: 12px !important;
+    border-radius: var(--wv-radius-m);
     padding: 1.25rem !important;
 }
 
@@ -87,13 +80,13 @@
 }
 
 .btn-group .btn {
-    border: 1px solid #A68A64 !important;
+    border: 1px solid var(--wv-line-strong) !important;
     margin-right: -1px;
 }
 
 .btn-group .btn:hover {
-    background-color: #2A4335 !important;
-    color: #F5E6D6 !important;
+    background-color: var(--wv-primary) !important;
+    color: var(--wv-on-primary) !important;
     z-index: 2;
 }
 
@@ -107,7 +100,28 @@
     word-break: break-word;
     font-size: 0.85rem;
     border: 1px dashed var(--wv-eco-low-border);
-    border-radius: 8px;
+    border-radius: var(--wv-radius-s);
     background: var(--wv-eco-low-bg);
     color: var(--wv-eco-low-ink);
+}
+
+/* Status timeline (PLAN.md 7.1): a quiet text toggle under the order number, the timeline in its own row. */
+.timeline-toggle {
+  display: block;
+  margin-top: var(--wv-space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wv-primary);
+  font-size: var(--wv-text-xs);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-style: dashed;
+}
+.timeline-toggle:hover { color: var(--wv-primary-hover); text-decoration-style: solid; }
+.timeline-toggle:focus-visible { outline: 2px solid var(--wv-focus); outline-offset: 2px; border-radius: var(--wv-radius-s); }
+.table tr.timeline-row td {
+  padding: var(--wv-space-3) var(--wv-space-5) var(--wv-space-5);
+  background: var(--wv-surface);
+  border-radius: var(--wv-radius-m);
 }

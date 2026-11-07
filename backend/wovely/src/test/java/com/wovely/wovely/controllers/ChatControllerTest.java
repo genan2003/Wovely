@@ -93,4 +93,18 @@ class ChatControllerTest extends SecuredWebMvcTest {
     void chatRequiresAuthentication() throws Exception {
         mvc.perform(get("/api/chat/unread/" + TestTokens.BUYER_ID)).andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void messagesAreValidatedBeforeAnythingIsSaved() throws Exception {
+        String longText = "a".repeat(2001);
+        for (String body : new String[] {
+                "{\"receiverId\":\"" + TestTokens.SELLER_ID + "\",\"content\":\"" + longText + "\"}",
+                "{\"receiverId\":\"" + TestTokens.SELLER_ID + "\",\"content\":\"   \"}",
+                "{\"content\":\"Hi\"}" }) {
+            mvc.perform(post("/api/chat/send").header(AUTH, bearer(TestTokens.buyer()))
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        }
+        org.mockito.Mockito.verify(chatMessageRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
 }

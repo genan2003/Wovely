@@ -1,0 +1,45 @@
+@startuml seller-manual-order
+!include ../_theme.puml
+title Seller records an off-platform sale
+
+' Derived from: frontend seller/manual-order.component.ts; wovely SellerOrderController#createManualOrder,
+' services/OrderService#createManualOrder, clients/InventoryClient; inventory stock/StockLedger
+autonumber
+actor "Seller" as S
+participant "Angular SPA" as Web
+box "core service :8081" #FAF6EF
+  participant "SellerOrderController" as Ctl
+  participant "OrderService" as Svc
+  participant "InventoryClient" as InvC
+end box
+participant "inventory :8083" as Inv
+database "MongoDB\norders" as DB
+
+S -> Web : buyer details, products, quantities
+Web -> Ctl ++ : POST /api/seller/orders/manual
+alt @ownership.sellerOrAdmin(request.sellerId) fails
+  Ctl --> Web : 403
+else fails @Valid
+  Ctl --> Web : 400
+else allowed
+  Ctl -> Svc ++ : createManualOrder(request)
+  Svc -> Svc : orderNumber MAN-..., buyerId = null,\nseller-entered prices, status COMPLETED
+  loop each item
+    Svc -> InvC : reserve(sellerId, productId, quantity)
+    InvC -> Inv : POST /internal/inventory/stock/{id}/reserve
+    alt not enough stock
+      Inv --> InvC : 409
+      Svc -> InvC : release(items already reserved)
+      Svc --> Web : 409 Insufficient stock
+    end
+  end
+  Svc -> DB : save(order)
+  Svc --> Ctl -- : OrderDTO
+  Ctl --> Web -- : 201 message, order, orderNumber
+  Web --> S : sale recorded, inventory reloaded
+end
+
+note over Svc, DB
+  The money changed hands outside Wovely, so the wallet is not touched.
+end note
+@enduml

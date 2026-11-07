@@ -1,50 +1,33 @@
-<div class="admin-container">
-  <div class="admin-header">
-    <h1>Marketplace Moderation Hub</h1>
-    <p>Review and maintain platform quality. Manage pending ads directly from the queue.</p>
-  </div>
+<div class="admin-container wv-page">
+  <header class="wv-page-head">
+    <h1>Moderation</h1>
+    <p>Keep the marketplace trustworthy: approve listings, settle orders and act on reports.</p>
+  </header>
 
-  <div class="admin-tabs">
-    <button class="tab-btn" [class.active]="activeTab() === 'ads'" (click)="switchTab('ads')">
-      Ad Approval Queue
-    </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'users'" (click)="switchTab('users')">
-      User CRM & Penalties
-    </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'orders'" (click)="switchTab('orders')">
-      Order Resolution
-    </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'returns'" (click)="switchTab('returns')">
-      Refund Requests
-    </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'flags'" (click)="switchTab('flags')">
-      Flagged Content
-    </button>
-    <button class="tab-btn" [class.active]="activeTab() === 'audit'" (click)="switchTab('audit')">
-      Audit Trail
-    </button>
-  </div>
+  <nav class="wv-tabs" aria-label="Moderation sections">
+    @for (tab of tabs; track tab.id) {
+      <button type="button" class="wv-tab" [attr.aria-current]="activeTab() === tab.id ? 'page' : null" (click)="switchTab(tab.id)">
+        {{ tab.label }}
+      </button>
+    }
+  </nav>
 
   @if (activeTab() === 'ads') {
     @if (pendingAds().length === 0) {
-      <div class="empty-state">
-        <div class="icon">✨</div>
-        <h3>All caught up!</h3>
-        <p>There are no new product listings waiting for your review.</p>
-      </div>
+      <app-empty-state icon="bi-check2-circle" title="Nothing to approve" message="New listings appear here as sellers submit them." />
     } @else {
       <div class="ads-grid">
         @for (ad of pendingAds(); track ad.id) {
           <div class="ad-card">
             <div class="ad-image-wrapper">
-               <img [src]="ad.imageUrl || 'assets/placeholder.jpg'" alt="Ad Image" class="ad-img"/>
-               <span class="status-badge">PENDING</span>
+               <img [src]="ad.imageUrl || 'placeholder-product.svg'" appFallback alt="" class="ad-img"/>
+               <span class="status-badge">Pending</span>
             </div>
             <div class="ad-content">
                <h3 class="ad-title">{{ ad.name }}</h3>
                <p class="ad-desc">{{ ad.description }}</p>
                <div class="ad-meta">
-                 <span class="price">${{ ad.price }}</span>
+                 <span class="price">{{ ad.price | number: '1.2-2' }} RON</span>
                  <span class="category">{{ ad.category }}</span>
                </div>
 
@@ -53,8 +36,8 @@
                   <button class="btn btn-reject" (click)="ad.id && rejectAd(ad.id)">Reject</button>
                </div>
                <div class="secondary-actions">
-                  <button class="btn btn-outline" (click)="ad.id && requestChanges(ad.id)">Request Changes</button>
-                  <button class="btn btn-edit" (click)="openEditModal(ad)">Edit Listing</button>
+                  <button class="btn btn-outline" (click)="ad.id && requestChanges(ad.id)">Request changes</button>
+                  <button class="btn btn-edit" (click)="openEditModal(ad)">Edit listing</button>
                </div>
             </div>
           </div>
@@ -67,7 +50,7 @@
       <div class="modal-overlay">
         <div class="modal-content glass-panel">
           <div class="modal-header">
-             <h2>Edit Listing Content</h2>
+             <h2>Edit listing Content</h2>
              <button class="close-btn" (click)="closeEditModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -82,7 +65,7 @@
                 </div>
                 <div class="form-row">
                   <div class="form-group half">
-                     <label>Price ($)</label>
+                     <label>Price (RON)</label>
                      <input type="number" [(ngModel)]="editForm().price" name="price" class="form-control"/>
                   </div>
                   <div class="form-group half">

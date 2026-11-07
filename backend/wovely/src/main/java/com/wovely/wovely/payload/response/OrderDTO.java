@@ -12,7 +12,9 @@ public class OrderDTO {
     private String sellerId;
     private String sellerName;
     private List<OrderItemDTO> items;
-    private Double totalAmount;
+    private java.math.BigDecimal totalAmount;
+    /** Items + delivery in cents (PLAN.md 7.5); {@code totalAmount} is the same amount as a decimal. */
+    private Long totalCents;
     private EOrderStatus status;
     private Date createdAt;
     private Date updatedAt;
@@ -26,13 +28,14 @@ public class OrderDTO {
     private String ecoShippingLabel;
     private Integer estimatedDeliveryDays;
     private boolean isReviewed;
-    private Double refundedAmount;
+    private java.math.BigDecimal refundedAmount;
+    private Long refundedCents;
 
     public OrderDTO() {
     }
 
     public OrderDTO(String id, String orderNumber, String buyerId, String buyerName, String sellerId, 
-                    String sellerName, List<OrderItemDTO> items, Double totalAmount, EOrderStatus status,
+                    String sellerName, List<OrderItemDTO> items, Long totalCents, EOrderStatus status,
                     Date createdAt, Date updatedAt, String shippingAddress, String trackingNumber,
                     String refundReason, String cancellationReason, String adminNotes, 
                     Boolean isDisputed, String disputeReason, String ecoShippingLabel, Integer estimatedDeliveryDays, boolean isReviewed) {
@@ -43,7 +46,8 @@ public class OrderDTO {
         this.sellerId = sellerId;
         this.sellerName = sellerName;
         this.items = items;
-        this.totalAmount = totalAmount;
+        this.totalCents = totalCents;
+        this.totalAmount = com.wovely.common.money.Money.toDecimal(totalCents);
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -115,12 +119,12 @@ public class OrderDTO {
         this.items = items;
     }
 
-    public Double getTotalAmount() {
+    public java.math.BigDecimal getTotalAmount() {
         return totalAmount;
     }
 
-    public void setTotalAmount(Double totalAmount) {
-        this.totalAmount = totalAmount;
+    public Long getTotalCents() {
+        return totalCents;
     }
 
     public EOrderStatus getStatus() {
@@ -227,16 +231,17 @@ public class OrderDTO {
         isReviewed = reviewed;
     }
 
-    public Double getRefundedAmount() {
+    public java.math.BigDecimal getRefundedAmount() {
         return refundedAmount;
     }
 
-    public void setRefundedAmount(Double refundedAmount) {
-        this.refundedAmount = refundedAmount;
+    public Long getRefundedCents() {
+        return refundedCents;
     }
 
-    public OrderDTO withRefundedAmount(Double refundedAmount) {
-        this.refundedAmount = refundedAmount;
+    public OrderDTO withRefunded(Long refundedCents) {
+        this.refundedCents = refundedCents;
+        this.refundedAmount = com.wovely.common.money.Money.toDecimal(refundedCents);
         return this;
     }
 
@@ -262,4 +267,53 @@ public class OrderDTO {
     public Integer getShippingDistanceKm() { return shippingDistanceKm; }
     public Double getEstimatedCo2Kg() { return estimatedCo2Kg; }
     public Date getLabelGeneratedAt() { return labelGeneratedAt; }
+
+    /** When the order was delivered; starts the return window. */
+    private Date deliveredAt;
+    /** Last moment a return can be opened (null before delivery), see {@code Order#getReturnDeadline}. */
+    private Date returnDeadline;
+
+    public OrderDTO withReturnWindow(Date deliveredAt, Date returnDeadline) {
+        this.deliveredAt = deliveredAt;
+        this.returnDeadline = returnDeadline;
+        return this;
+    }
+
+    public Date getDeliveredAt() { return deliveredAt; }
+    public Date getReturnDeadline() { return returnDeadline; }
+
+    private com.wovely.wovely.models.EDeliveryOption deliveryOption;
+    private java.math.BigDecimal deliveryFee;
+    private Long deliveryFeeCents;
+
+    public OrderDTO withDelivery(com.wovely.wovely.models.EDeliveryOption option, Long feeCents) {
+        this.deliveryOption = option;
+        this.deliveryFeeCents = feeCents;
+        this.deliveryFee = com.wovely.common.money.Money.toDecimal(feeCents);
+        return this;
+    }
+
+    public com.wovely.wovely.models.EDeliveryOption getDeliveryOption() { return deliveryOption; }
+    public java.math.BigDecimal getDeliveryFee() { return deliveryFee; }
+    public Long getDeliveryFeeCents() { return deliveryFeeCents; }
+
+    /** Whether the seller may still edit items/address (see OrderStatusPolicy#isEditable(Order)). */
+    private boolean editable;
+
+    public OrderDTO withEditable(boolean editable) {
+        this.editable = editable;
+        return this;
+    }
+
+    public boolean isEditable() { return editable; }
+
+    /** Status timeline, oldest first (PLAN.md 7.1). */
+    private List<OrderTimelineEntryDTO> timeline = List.of();
+
+    public OrderDTO withTimeline(List<OrderTimelineEntryDTO> timeline) {
+        this.timeline = timeline == null ? List.of() : List.copyOf(timeline);
+        return this;
+    }
+
+    public List<OrderTimelineEntryDTO> getTimeline() { return timeline; }
 }

@@ -20,8 +20,8 @@ public final class Orders {
         o.setBuyerName("testuser");
         o.setSellerId(sellerId);
         o.setSellerName("seller");
-        o.setItems(new OrderItem[] { new OrderItem("p-1", "Basket", 2, 10.0, "img") });
-        o.setTotalAmount(20.0);
+        o.setItems(new OrderItem[] { new OrderItem("p-1", "Basket", 2, 1000L, "img") });
+        o.setTotalCents(2000L);
         o.setStatus(status);
         o.setCreatedAt(new Date());
         o.setUpdatedAt(new Date());

@@ -19,7 +19,8 @@ public class Product {
 
   private String name;
   private String description;
-  private Double price;
+  /** Price in whole RON cents — the only stored amount (PLAN.md 7.5); {@link #getPrice()} is its decimal view. */
+  private Long priceCents;
   private String sellerId;
   private String imageUrl;
   private String category;
@@ -61,10 +62,10 @@ public class Product {
   public Product() {
   }
 
-  public Product(String name, String description, Double price, String sellerId, String imageUrl, String category, String categoryPath, java.util.List<String> materials, String city, String region, Double latitude, Double longitude, String co2EmissionScore, String shippingMethod, Boolean isHandmade, Integer stockQuantity, Integer lowStockThreshold) {
+  public Product(String name, String description, Long priceCents, String sellerId, String imageUrl, String category, String categoryPath, java.util.List<String> materials, String city, String region, Double latitude, Double longitude, String co2EmissionScore, String shippingMethod, Boolean isHandmade, Integer stockQuantity, Integer lowStockThreshold) {
     this.name = name;
     this.description = description;
-    this.price = price;
+    this.priceCents = priceCents;
     this.sellerId = sellerId;
     this.imageUrl = imageUrl;
     this.category = category;
@@ -106,12 +107,19 @@ public class Product {
     this.description = description;
   }
 
-  public Double getPrice() {
-    return price;
+  public Long getPriceCents() {
+    return priceCents;
   }
 
-  public void setPrice(Double price) {
-    this.price = price;
+  public void setPriceCents(Long priceCents) {
+    this.priceCents = priceCents;
+  }
+
+  /** Decimal price for JSON clients (scale 2, e.g. 42.50); derived, never stored. */
+  @org.springframework.data.annotation.Transient
+  @com.fasterxml.jackson.annotation.JsonProperty(value = "price", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+  public java.math.BigDecimal getPrice() {
+    return com.wovely.common.money.Money.toDecimal(priceCents);
   }
 
   public String getSellerId() {

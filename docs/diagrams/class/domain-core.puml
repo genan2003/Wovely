@@ -1,0 +1,147 @@
+@startuml domain-core
+!include ../_theme.puml
+title Core service domain model
+
+' Derived from: backend/wovely models/. Only the fields that matter to the domain are shown.
+' Money (PLAN 7.5): every amount is stored as whole RON cents (long); DTOs add the decimal form.
+' References between documents are plain ids, except User.roles (@DBRef).
+hide empty methods
+left to right direction
+
+class User {
+  id, username, email, password
+  fullName, city, region
+  makerStory, workshopImageUrl
+  strikes : int
+  accountStatus : EAccountStatus
+  suspendedUntil : Date
+  effectiveStatus(now) : EAccountStatus
+}
+class Role {
+  name : ERole
+}
+class Address <<embedded>> {
+  label, recipientName, street
+  city, postalCode, country
+  isDefault : boolean
+}
+class RefreshToken {
+  tokenHash is unique
+  userId
+  expiresAt, revoked
+}
+class Order {
+  orderNumber, buyerId, sellerId
+  {field} totalCents : long  (total_cents)
+  deliveryOption : EDeliveryOption
+  deliveryFeeCents : long
+  deliveredAt : Date
+  getReturnDeadline() : Date
+  itemsTotalCents() : long
+  recomputeTotal()
+  status : EOrderStatus
+  shippingAddress, trackingNumber
+  isDisputed, disputeReason
+  ecoShippingLabel, carrierName
+  paidCents, walletRefundedCents, payoutCents
+  refundedCents : long
+  statusHistory : List<OrderStatusChange>
+  recordStatusChange(change)
+  timeline() : List<OrderStatusChange>
+}
+class OrderStatusChange <<embedded record>> {
+  {field} from : EOrderStatus (null = created)
+  to : EOrderStatus
+  at : Date
+  actorRole : BUYER | SELLER | ADMIN | SYSTEM
+  {field} actorId (not sent to clients)
+  reason
+}
+note top of Order
+  All amounts are whole RON cents (Money, wovely-common).
+  JSON shows each one twice: totalAmount 37.50 + totalCents 3750.
+end note
+class OrderItem <<embedded>> {
+  productId, productName
+  quantity, priceCents : long
+  lineTotalCents() : long
+  color, size
+  isReturned, isReviewed
+}
+class ReturnRequest {
+  orderId, buyerId, sellerId
+  reason, totalCents : long
+  status : EReturnStatus name
+}
+class Wallet {
+  id = userId
+  balanceCents : long
+}
+class WalletTransaction {
+  userId, orderId
+  type : EWalletTransactionType
+  amountCents, balanceAfterCents
+}
+class ChatMessage {
+  senderId, receiverId
+  productId, content
+  timestamp, isRead
+}
+class Report {
+  reporterId, targetId, reason
+  targetType : PRODUCT or CHAT
+  status : PENDING, RESOLVED, DISMISSED
+  participantIds
+}
+class SellerReview {
+  sellerId, buyerId
+  overallRating, communicationRating
+  shippingRating, verifiedPurchase
+}
+class AuditLog {
+  adminId, adminUsername
+  actionType, targetId, details
+}
+enum EAccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+enum EDeliveryOption {
+  BICYCLE
+  ELECTRIC_VAN
+  CARBON_NEUTRAL_COURIER
+  --
+  feeCents, co2Kg, estimatedDays
+}
+Order --> EDeliveryOption
+
+enum EOrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+  DISPUTED
+}
+
+User "1" *-- "0..*" Address
+User "0..*" --> "1..*" Role : @DBRef
+User "1" --> "1" Wallet : same id
+User "1" -- "0..*" RefreshToken
+User "1" -- "0..*" Order : buyer or seller
+Order "1" *-- "1..*" OrderItem
+Order "1" *-- "0..*" OrderStatusChange : status_history\n(appended by OrderService#transition)
+Order "1" -- "0..*" ReturnRequest
+ReturnRequest "1" *-- "1..*" OrderItem
+Wallet "1" -- "0..*" WalletTransaction
+Order "1" -- "0..*" WalletTransaction
+User "1" -- "0..*" ChatMessage
+User "1" -- "0..*" Report : reporter
+User "1" -- "0..*" SellerReview : seller
+User ..> EAccountStatus
+Order ..> EOrderStatus
+@enduml

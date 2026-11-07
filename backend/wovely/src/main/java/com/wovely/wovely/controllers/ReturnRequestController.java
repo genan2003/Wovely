@@ -32,7 +32,7 @@ public class ReturnRequestController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
-    public ReturnRequest createReturnRequest(@RequestBody ReturnRequest request) {
+    public ReturnRequest createReturnRequest(@jakarta.validation.Valid @RequestBody com.wovely.wovely.payload.request.CreateReturnRequest request) {
         return returnService.create(request);
     }
 

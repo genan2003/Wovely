@@ -1,0 +1,42 @@
+@startuml domain-inventory
+!include ../_theme.puml
+title Inventory service domain model
+
+' Derived from: backend/inventory models/, stock/StockLedger; backend/common events/StockChanged
+hide empty methods
+
+class InventoryItem {
+  id, productId, sellerId
+  productName, imageUrl, category, priceCents
+  stockQuantity, lowStockThreshold
+  isActive : Boolean
+  lastRestockedAt
+  --
+  version : Long
+  outboxPending : Boolean
+}
+class Inventory {
+  id, sellerId, sellerName
+  totalItems, lowStockItems
+}
+class StockLedger <<service>> {
+  init(productId, sellerId, quantity, ...)
+  reserve(productId, sellerId, quantity)
+  release(productId, sellerId, quantity)
+  restock(productId, sellerId, quantity)
+  setLevel(productId, sellerId, quantity)
+  deactivate(productId, sellerId)
+}
+class StockChanged <<event>> {
+  wovely-common
+}
+
+Inventory "1" -- "0..*" InventoryItem : sellerId
+StockLedger --> InventoryItem : only writer
+StockLedger ..> StockChanged : relayed by StockEventRelay
+
+note bottom of StockLedger
+  Each change is one atomic findAndModify:
+  a stock guard, version +1 and outboxPending = true.
+end note
+@enduml

@@ -1,0 +1,58 @@
+@startuml 04-components-products
+!include <C4/C4_Component>
+title Products service — components (C4 level 3)
+
+' Derived from: backend/products controllers/, services/, clients/, messaging/. Repositories are collapsed into MongoDB.
+LAYOUT_WITH_LEGEND()
+
+Container(gateway, "API gateway", "Spring Cloud Gateway")
+Container(core, "Core service", "Spring Boot")
+Container(inventory, "Inventory service", "Spring Boot")
+Container(rabbit, "RabbitMQ", "wovely.inventory")
+ContainerDb(mongo, "MongoDB", "products, categories, reviews")
+
+Container_Boundary(products, "Products service :8082") {
+  Component(productApi, "ProductController", "REST /api/products", "Public catalog and seller listing management")
+  Component(adminApi, "AdminProductController", "REST /api/products/admin", "Approval queue and admin edits")
+  Component(categoryApi, "CategoryController", "REST /api/categories", "Category tree")
+  Component(reviewApi, "ReviewController", "REST /api/reviews", "Reviews, verified flag from core")
+
+  Component(listings, "ListingService", "Service", "Create, seller/admin edits, moderation, archive; review rules")
+  Component(sellerViews, "SellerListingQueries", "Service", "Seller inventory views and dashboard")
+  Component(query, "CatalogQueryService", "Service", "Server-side catalog filters")
+  Component(stock, "StockService", "Facade", "Stock changes go to inventory; read-your-writes")
+  Component(readModel, "StockReadModel", "Service", "Version-guarded copy of stock on products")
+  Component(listener, "StockChangedListener", "AMQP consumer", "Applies StockChanged events")
+
+  Component(invClient, "InventoryClient", "HTTP client", "Register, set level, restock, deactivate")
+  Component(auditClient, "AuditClient", "HTTP client", "POST /internal/audit")
+  Component(verifyClient, "PurchaseVerificationClient", "HTTP client", "GET /internal/orders/verify-purchase")
+}
+
+Rel(gateway, productApi, "/api/products/**")
+Rel(gateway, adminApi, "/api/products/admin/**")
+Rel(gateway, categoryApi, "/api/categories/**")
+Rel(gateway, reviewApi, "/api/reviews/**")
+Rel(core, productApi, "Product snapshot")
+
+Rel(productApi, query, "Uses")
+Rel(productApi, listings, "Writes listings")
+Rel(productApi, sellerViews, "Seller views")
+Rel(productApi, stock, "Stock edits")
+Rel(adminApi, listings, "Moderates, edits")
+Rel(listings, stock, "Register, refresh, set level")
+Rel(listings, auditClient, "Records")
+Rel(listings, mongo, "Saves")
+Rel(sellerViews, mongo, "Reads")
+Rel(reviewApi, verifyClient, "Uses")
+Rel(stock, invClient, "Uses")
+Rel(stock, readModel, "Applies result")
+Rel(listener, readModel, "Applies event")
+
+Rel(rabbit, listener, "StockChanged", "AMQP")
+Rel(invClient, inventory, "/internal/inventory/stock/**", "API key")
+Rel(auditClient, core, "/internal/audit", "API key")
+Rel(verifyClient, core, "/internal/orders/verify-purchase", "API key")
+Rel(query, mongo, "Reads")
+Rel(readModel, mongo, "Guarded update")
+@enduml

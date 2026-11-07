@@ -1,0 +1,35 @@
+@startuml 05-components-inventory
+!include <C4/C4_Component>
+title Inventory service — components (C4 level 3)
+
+' Derived from: backend/inventory controllers/, services/, stock/; ADR 0001. Repositories are collapsed into MongoDB.
+LAYOUT_WITH_LEGEND()
+
+Container(gateway, "API gateway", "Spring Cloud Gateway")
+Container(core, "Core service", "Spring Boot")
+Container(products, "Products service", "Spring Boot")
+Container(rabbit, "RabbitMQ", "wovely.inventory")
+ContainerDb(mongo, "MongoDB", "inventory_items, inventories")
+
+Container_Boundary(inventory, "Inventory service :8083") {
+  Component(publicApi, "InventoryController", "REST /api/inventory", "Seller stock views and updates")
+  Component(internalApi, "InternalStockController", "REST /internal/inventory/stock", "Reserve, release, restock, set level, deactivate")
+  Component(queries, "InventoryService", "Service", "Active-only views; low stock per item threshold")
+  Component(ledger, "StockLedger", "Service", "Only stock writer: atomic findAndModify, version +1, outboxPending")
+  Component(relay, "StockEventRelay", "Scheduled", "Publishes pending changes with publisher confirms")
+  Component(migration, "StockOwnershipMigration", "Startup", "One-off import of stock from products")
+}
+
+Rel(gateway, publicApi, "/api/inventory/**")
+Rel(core, internalApi, "Reserve, release", "API key")
+Rel(products, internalApi, "Register, set, restock, deactivate", "API key")
+
+Rel(publicApi, queries, "Reads")
+Rel(publicApi, ledger, "Writes")
+Rel(internalApi, ledger, "Writes")
+Rel(ledger, mongo, "Atomic update")
+Rel(queries, mongo, "Reads")
+Rel(relay, mongo, "Reads outboxPending, clears it")
+Rel(migration, mongo, "Backfills")
+Rel(relay, rabbit, "StockChanged", "AMQP")
+@enduml

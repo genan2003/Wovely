@@ -1,0 +1,69 @@
+@startuml backend-packages
+!include ../_theme.puml
+title Backend modules and packages
+
+' Derived from: backend/pom.xml, backend/*/pom.xml, package layout under src/main/java; ADR 0003
+skinparam packageStyle rectangle
+
+package "wovely-common\ncom.wovely.common" as Common {
+  rectangle "error" as CErr
+  rectangle "security" as CSec
+  rectangle "web" as CWeb
+  rectangle "events" as CEvt
+  rectangle "money\n(Money, MoneyMigration)" as CMoney
+}
+
+rectangle "gateway\ncom.wovely.gateway" as Gateway
+
+package "wovely (core)\ncom.wovely.wovely" as Core {
+  rectangle "controllers" as WC
+  rectangle "services" as WS
+  rectangle "clients" as WCl
+  rectangle "realtime" as WR
+  rectangle "repository" as WRp
+  rectangle "models, payload" as WM
+  rectangle "security" as WSec
+}
+
+package "products\ncom.wovely.products" as Products {
+  rectangle "controllers" as PC
+  rectangle "services" as PS
+  rectangle "clients" as PCl
+  rectangle "messaging" as PMsg
+  rectangle "repository" as PRp
+  rectangle "models" as PM
+}
+
+package "inventory\ncom.wovely.inventory" as Inventory {
+  rectangle "controllers" as IC
+  rectangle "services" as IS
+  rectangle "stock" as IStock
+  rectangle "repository" as IRp
+  rectangle "models" as IM
+}
+
+WC --> WS
+WC --> WR
+WS --> WCl
+WS --> WRp
+WRp --> WM
+PC --> PS
+PC --> PCl
+PS --> PCl
+PMsg --> PS
+PS --> PRp
+PRp --> PM
+IC --> IS
+IC --> IStock
+IS --> IRp
+IRp --> IM
+IStock --> IM
+
+Core ..> Common
+Products ..> Common
+Inventory ..> Common
+
+note bottom of Gateway
+  Reactive, so it does not use wovely-common.
+end note
+@enduml

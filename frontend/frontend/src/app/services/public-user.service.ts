@@ -21,7 +21,7 @@ export class PublicUserService {
         return this.http.get<SellerReview[]>(`${API_URL}/seller/${id}/reviews`);
     }
 
-    postSellerReview(id: string, review: any): Observable<any> {
-        return this.http.post<any>(`${API_URL}/seller/${id}/reviews`, review);
+    postSellerReview(id: string, review: Partial<SellerReview>): Observable<SellerReview> {
+        return this.http.post<SellerReview>(`${API_URL}/seller/${id}/reviews`, review);
     }
 }

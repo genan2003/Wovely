@@ -1,0 +1,56 @@
+@startuml domain-products
+!include ../_theme.puml
+title Products service domain model
+
+' Derived from: backend/products models/
+hide empty methods
+
+class Product {
+  id, name, description
+  {field} priceCents : long  (JSON: price + priceCents)
+  sellerId
+  imageUrl, materials
+  category, categoryPath
+  city, region, latitude, longitude
+  co2EmissionScore, shippingMethod
+  isHandmade, localPickup
+  deliveryEmission : EDeliveryEmission
+  status : see STATUSES
+  --
+  stock read model
+  stockQuantity, lowStockThreshold
+  stockVersion : Long
+  --
+  refreshDeliveryEmission()
+}
+class Category {
+  id, name, slug
+  parentId
+  level : Integer
+}
+class Review {
+  id, productId, userId, username
+  rating : int
+  comment, photoUrls
+  verifiedPurchase : boolean
+}
+enum EDeliveryEmission {
+  ZERO
+  LOW
+  STANDARD
+  --
+  classify(method, co2, localPickup)
+  atMost(max)
+}
+
+Category "0..1" -- "0..*" Category : parentId
+Product "0..*" --> "1" Category : category, categoryPath
+Product "1" -- "0..*" Review : productId
+Product ..> EDeliveryEmission
+
+note right of Product
+  stockQuantity is a copy. Inventory owns stock;
+  StockReadModel applies an event only if its
+  version is newer than stockVersion (ADR 0001).
+end note
+@enduml

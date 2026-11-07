@@ -26,7 +26,7 @@ class StockReadModelIT extends AbstractMongoIT {
     @Autowired RabbitTemplate rabbit;
 
     private Product product() {
-        Product p = new Product("Basket", "d", 10.0, "seller-it", "", "Home", "Home", List.of(), "Sibiu", "Sibiu",
+        Product p = new Product("Basket", "d", 1000L, "seller-it", "", "Home", "Home", List.of(), "Sibiu", "Sibiu",
                 null, null, "Low", "Courier", true, 0, 1);
         p.setStatus("APPROVED");
         return products.save(p);

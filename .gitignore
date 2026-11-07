@@ -35,3 +35,9 @@ docs/diagrams/rendered/
 .DS_Store
 Thumbs.db
 *.log
+
+# Eclipse / VS Code Java language server metadata
+.project
+.classpath
+.settings/
+.factorypath

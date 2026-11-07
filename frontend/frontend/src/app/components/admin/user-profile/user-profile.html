@@ -1,9 +1,9 @@
 <div class="profile-container">
   <div class="profile-header">
     <button class="btn btn-back" (click)="close.emit()">
-      <span class="icon">&larr;</span> Back to CRM
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to users
     </button>
-    <h2>User Profile: <strong>{{ user.username }}</strong></h2>
+    <h2>User Profile: <strong>{{ user().username }}</strong></h2>
   </div>
 
   <div class="profile-layout">
@@ -14,31 +14,31 @@
         <h3>Account Details</h3>
         <div class="info-row">
           <span class="label">User ID</span>
-          <span class="value">{{ user.id }}</span>
+          <span class="value">{{ user().id }}</span>
         </div>
         <div class="info-row">
           <span class="label">Email</span>
-          <span class="value">{{ user.email }}</span>
+          <span class="value">{{ user().email }}</span>
         </div>
         <div class="info-row">
           <span class="label">Roles</span>
-          <span class="value">{{ user.roles.join(', ') }}</span>
+          <span class="value">{{ user().roles.join(', ') }}</span>
         </div>
         <div class="info-row">
           <span class="label">Status</span>
-          <span class="value status-badge" [ngClass]="user.accountStatus.toLowerCase()">
-            {{ user.accountStatus }}
+          <span [class]="'value status-badge ' + user().accountStatus.toLowerCase()">
+            {{ user().accountStatus }}
           </span>
         </div>
-        @if (user.accountStatus === 'SUSPENDED') {
+        @if (user().accountStatus === 'SUSPENDED') {
           <div class="info-row">
             <span class="label">Suspended Until</span>
-            <span class="value text-warning">{{ user.suspendedUntil | date:'medium' }}</span>
+            <span class="value text-warning">{{ user().suspendedUntil | date:'medium' }}. Lifts on its own then.</span>
           </div>
         }
         <div class="info-row">
           <span class="label">Strikes</span>
-          <span class="value text-danger fw-bold">{{ user.strikes }}</span>
+          <span class="value text-danger fw-bold">{{ user().strikes }}</span>
         </div>
       </div>
 
@@ -49,25 +49,34 @@
         
         <div class="action-buttons">
            <button class="btn btn-warning" (click)="issueStrike()">
-             ⚠️ Issue Strike (+1)
+             Issue a strike
            </button>
            
-           @if (user.accountStatus !== 'SUSPENDED') {
-             <button class="btn btn-suspend" (click)="suspendUser(7)">
-               ⏳ Suspend (7 Days)
-             </button>
+           @if (user().accountStatus !== 'SUSPENDED') {
+             <div class="suspend-group">
+               <label for="suspendDays" class="suspend-label">Suspension length</label>
+               <select id="suspendDays" class="form-select suspend-select"
+                       [value]="suspendDays()" (change)="suspendDays.set(+$any($event.target).value)">
+                 @for (d of suspendOptions; track d) {
+                   <option [value]="d">{{ d }} {{ d === 1 ? 'day' : 'days' }}</option>
+                 }
+               </select>
+               <button class="btn btn-suspend" (click)="suspendUser(suspendDays())">
+                 Suspend for {{ suspendDays() }} {{ suspendDays() === 1 ? 'day' : 'days' }}
+               </button>
+             </div>
            }
            
-           @if (user.accountStatus !== 'BANNED') {
+           @if (user().accountStatus !== 'BANNED') {
              <button class="btn btn-danger" (click)="banUser()">
-               ⛔ Permanently Ban
+               Ban permanently
              </button>
            }
            
-           @if (user.accountStatus !== 'ACTIVE') {
+           @if (user().accountStatus !== 'ACTIVE') {
              <hr class="divider"/>
              <button class="btn btn-success" (click)="restoreUser()">
-               🔄 Restore Account to Active
+               Restore account
              </button>
            }
         </div>
@@ -84,8 +93,7 @@
            <div class="loading">Loading seller history...</div>
         } @else if (userAds().length === 0) {
            <div class="empty-state">
-             <div class="icon">📦</div>
-             <h4>No Ads Found</h4>
+                          <h4>No listings yet</h4>
              <p>This user has not listed any items yet.</p>
            </div>
         } @else {
@@ -93,14 +101,14 @@
              @for (ad of userAds(); track ad.id) {
                <div class="seller-ad-item">
                   <div class="ad-thumbnail">
-                    <img [src]="ad.imageUrl || 'assets/placeholder.jpg'" alt="{{ ad.name }}"/>
+                    <img [src]="ad.imageUrl || 'placeholder-product.svg'" alt=""/>
                   </div>
                   <div class="ad-info">
                     <h4>{{ ad.name }}</h4>
-                    <p class="ad-price">${{ ad.price }}</p>
+                    <p class="ad-price">{{ ad.price | number: '1.2-2' }} RON</p>
                   </div>
                   <div class="ad-status">
-                    <span class="status-badge" [ngClass]="ad.status?.toLowerCase()">{{ ad.status }}</span>
+                    <span [class]="'status-badge ' + (ad.status ?? '').toLowerCase()">{{ ad.status }}</span>
                   </div>
                </div>
              }

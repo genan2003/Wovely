@@ -1,0 +1,74 @@
+@startuml 03-components-core
+!include <C4/C4_Component>
+title Core service — components (C4 level 3)
+
+' Derived from: backend/wovely controllers/, services/, clients/, realtime/ (constructor and @Autowired dependencies).
+' Repositories are collapsed into the MongoDB box.
+LAYOUT_WITH_LEGEND()
+
+Container(gateway, "API gateway", "Spring Cloud Gateway")
+Container(products, "Products service", "Spring Boot")
+Container(inventory, "Inventory service", "Spring Boot")
+ContainerDb(mongo, "MongoDB", "wp2-project")
+
+Container_Boundary(core, "Core service :8081") {
+  Component(auth, "AuthController", "REST /api/auth", "Sign in, refresh, sign out, sign up")
+  Component(orderApi, "Order controllers", "REST", "BuyerOrderController, SellerOrderController, OrderAdminController")
+  Component(returnApi, "ReturnRequestController", "REST /api/returns")
+  Component(walletApi, "WalletController", "REST /api/wallet")
+  Component(chatApi, "ChatController", "REST /api/chat")
+  Component(moderationApi, "Moderation controllers", "REST", "ReportController, AdminUserController")
+  Component(internalApi, "Internal controllers", "REST /internal", "InternalOrderController, InternalAuditController")
+
+  Component(refresh, "RefreshTokenService", "Service", "Hashed, rotating refresh tokens")
+  Component(orders, "OrderService", "Service", "Checkout, transition(), interventions, labels")
+  Component(policy, "OrderStatusPolicy", "Rules", "Who may move an order where")
+  Component(returns, "ReturnService", "Service", "Return lifecycle, restock, refund")
+  Component(wallet, "WalletService", "Service", "The only code that moves money")
+  Component(address, "AddressService", "Service", "Address book, checkout destination")
+  Component(carrier, "EcoCarrierService", "Service", "Picks the lowest-CO2 simulated carrier")
+  Component(audit, "AuditService", "Service", "Writes audit_logs")
+  Component(reports, "ReportService", "Service", "User reports on products and chats")
+  Component(verify, "PurchaseVerificationService", "Service", "Did this buyer receive this item?")
+  Component(notifier, "ChatNotifier", "STOMP", "Pushes to /user/queue/*")
+  Component(catalog, "CatalogClient", "HTTP client", "Product price and status")
+  Component(invClient, "InventoryClient", "HTTP client", "Reserve, release, durable retry queue")
+}
+
+Rel(gateway, auth, "/api/auth/**")
+Rel(gateway, orderApi, "/api/orders, /api/seller, /api/admin/orders")
+Rel(gateway, returnApi, "/api/returns")
+Rel(gateway, walletApi, "/api/wallet")
+Rel(gateway, chatApi, "/api/chat, /ws")
+Rel(gateway, moderationApi, "/api/reports, /api/admin/users")
+Rel(products, internalApi, "Verified purchase, audit", "API key")
+
+Rel(auth, refresh, "Uses")
+Rel(moderationApi, reports, "Uses")
+Rel(moderationApi, refresh, "Revokes on ban")
+Rel(moderationApi, audit, "Records")
+Rel(orderApi, orders, "Uses")
+Rel(returnApi, returns, "Uses")
+Rel(walletApi, wallet, "Uses")
+Rel(chatApi, notifier, "Pushes")
+Rel(internalApi, verify, "Uses")
+Rel(internalApi, audit, "Records")
+
+Rel(orders, policy, "Checks")
+Rel(orders, wallet, "Charge, release, refund")
+Rel(orders, address, "Resolves destination")
+Rel(orders, carrier, "Buys label")
+Rel(orders, audit, "Records")
+Rel(orders, catalog, "Reads")
+Rel(orders, invClient, "Reserves")
+Rel(returns, orders, "transition()")
+Rel(returns, wallet, "Refunds")
+Rel(returns, invClient, "Releases")
+Rel(returns, audit, "Records")
+Rel(reports, audit, "Records")
+Rel(reports, catalog, "Reads")
+
+Rel(catalog, products, "GET /api/products/{id}")
+Rel(invClient, inventory, "/internal/inventory/stock/**", "API key")
+Rel(wallet, mongo, "Atomic $inc")
+@enduml

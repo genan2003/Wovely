@@ -1,0 +1,169 @@
+@startuml mongo-collections
+!include ../_theme.puml
+title MongoDB collections in wp2-project
+
+' Derived from: @Document annotations in backend/{wovely,products,inventory} and wovely clients/InventoryClient.
+' MongoDB enforces none of these links: apart from users.roles (@DBRef) they are plain ids kept by the services.
+hide circle
+left to right direction
+
+package "core service" {
+  entity users {
+    * _id
+    --
+    * username
+    * email
+    roles : @DBRef
+    addresses : embedded
+    accountStatus, strikes
+  }
+  entity roles {
+    * _id
+    --
+    * name
+  }
+  entity refresh_tokens {
+    * _id
+    --
+    * tokenHash <<unique>>
+    * userId <<indexed>>
+  }
+  entity orders {
+    * _id
+    --
+    * orderNumber
+    buyerId
+    * sellerId
+    items : embedded[] {productId, quantity, priceCents, …}
+    * total_cents, deliveryFeeCents, refunded_cents
+    paidCents, walletRefundedCents, payoutCents
+    * status
+    status_history : embedded[]\n{from, to, at, actorRole, actorId, reason}
+  }
+  entity return_requests {
+    * _id
+    --
+    * orderId
+    * buyerId
+    * sellerId
+    items : embedded[] {…, priceCents}
+    totalCents
+  }
+  entity wallets {
+    * _id = userId
+    --
+    * balanceCents
+  }
+  entity wallet_transactions {
+    * _id
+    --
+    * userId
+    orderId
+    * type
+    index (userId, createdAt)
+  }
+  entity chat_messages {
+    * _id
+    --
+    * senderId
+    * receiverId
+    productId
+  }
+  entity reports {
+    * _id
+    --
+    * reporterId
+    * targetType, targetId
+  }
+  entity seller_reviews {
+    * _id
+    --
+    * sellerId
+    * buyerId
+  }
+  entity audit_logs {
+    * _id
+    --
+    * adminId
+    * actionType
+    targetId
+  }
+  entity stock_release_retries {
+    * _id
+    --
+    * productId
+    * sellerId
+    * quantity
+  }
+}
+
+package "products service" {
+  entity products {
+    * _id
+    --
+    * sellerId <<indexed>>
+    * status
+    category
+    * priceCents
+    stockQuantity, stockVersion
+    index (status, category)
+    index (sellerId, status)
+  }
+  entity categories {
+    * _id
+    --
+    parentId
+    * slug
+  }
+  entity reviews {
+    * _id
+    --
+    * productId
+    * userId
+  }
+}
+
+package "inventory service" {
+  entity inventory_items {
+    * _id
+    --
+    * productId
+    * sellerId
+    * stockQuantity
+    priceCents
+    version, outboxPending
+  }
+  entity inventories {
+    * _id
+    --
+    * sellerId
+  }
+}
+
+users }o--|{ roles
+users ||--o{ refresh_tokens
+users ||--|| wallets
+users ||--o{ orders
+orders ||--o{ return_requests
+orders |o--o{ wallet_transactions
+wallets ||--o{ wallet_transactions
+users ||--o{ chat_messages
+users ||--o{ reports
+users ||--o{ seller_reviews
+users ||--o{ products
+products ||--o{ reviews
+products ||--|| inventory_items
+categories |o--o{ categories
+inventories ||--o{ inventory_items
+inventory_items ||--o{ stock_release_retries
+
+legend bottom
+  Lines show ids the services keep in step. MongoDB enforces none of them;
+  only users.roles is a @DBRef. All services share this one database.
+endlegend
+note as MoneyNote
+  Money as cents (PLAN 7.5): every amount is a whole number of RON cents.
+  Doubles saved before 7.5 (price, total_amount, deliveryFee, refunded_amount,
+  totalAmount, items[].price) are converted once at startup by MoneyMigration.
+end note
+@enduml

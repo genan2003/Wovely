@@ -1,0 +1,32 @@
+@startuml account-status
+!include ../_theme.puml
+title Account status (EAccountStatus)
+
+' Derived from: wovely models/EAccountStatus, models/User#effectiveStatus, services/UserPenaltyService,
+' security/services/UserDetailsImpl#isAccountNonLocked, services/RefreshTokenService#revokeAll, services/UserQueryService
+hide empty description
+
+[*] --> ACTIVE : sign-up
+
+ACTIVE --> SUSPENDED : admin penalty\nsuspendDays 1..365 (required)
+ACTIVE --> BANNED : admin penalty
+SUSPENDED --> ACTIVE : admin restores
+SUSPENDED --> ACTIVE : suspendedUntil passes\n(liftExpiredSuspensions, every 5 min)
+SUSPENDED --> BANNED : admin penalty
+BANNED --> ACTIVE : admin restores
+BANNED --> SUSPENDED : admin penalty
+
+ACTIVE : strikes +1 on STRIKE (status unchanged)
+SUSPENDED : on entry: revokeAll(refresh tokens)
+SUSPENDED : locked until suspendedUntil
+BANNED : on entry: revokeAll(refresh tokens)
+BANNED : always locked, no end date
+
+note right of SUSPENDED
+  Between the end date and the next job run,
+  login, the CRM and its status filter already
+  treat the account as ACTIVE (effective status).
+  Legacy records without an end date stay locked
+  until an admin restores them (fail closed).
+end note
+@enduml

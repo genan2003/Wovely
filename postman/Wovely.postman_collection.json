@@ -632,6 +632,133 @@
           ]
         },
         {
+          "name": "Sign up with an unknown role → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signup",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"role_guess\",\n  \"email\": \"role_guess@wovely.test\",\n  \"password\": \"secret123\",\n  \"roles\": [\n    \"moderator\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"names the allowed roles\", () => pm.expect(pm.response.json().message).to.match(/'user' or 'seller'/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign up as a maker (seller)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signup",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newSellerName}}\",\n  \"email\": \"{{newSellerName}}@wovely.test\",\n  \"password\": \"secret123\",\n  \"roles\": [\n    \"seller\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const suffix = Date.now().toString(36);",
+                  "pm.collectionVariables.set(\"newSellerName\", (\"mk_\" + suffix).slice(0, 20));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "New maker signs in with ROLE_SELLER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/auth/signin",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newSellerName}}\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"seller role, no admin\", () => {",
+                  "  const roles = pm.response.json().roles;",
+                  "  pm.expect(roles).to.include(\"ROLE_SELLER\");",
+                  "  pm.expect(roles).to.not.include(\"ROLE_ADMIN\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Sign in with wrong password → 401",
           "request": {
             "method": "POST",
@@ -1381,8 +1508,56 @@
                   "pm.test(\"stock is 5\", () => pm.expect(body.stockQuantity).to.eql(5));",
                   "pm.test(\"new listings await moderation (PENDING)\", () => pm.expect(body.status).to.eql(\"PENDING\"));",
                   "pm.test(\"carbon-neutral courier → LOW delivery emission (PLAN 3.5)\", () => pm.expect(body.deliveryEmission).to.eql(\"LOW\"));",
+                  "pm.test(\"price stored as whole cents, shown as a decimal too (PLAN 7.5)\", () => {",
+                  "  pm.expect(body.priceCents).to.eql(4250);",
+                  "  pm.expect(body.price).to.eql(42.5);",
+                  "});",
                   "pm.collectionVariables.set(\"productId\", body.id);",
                   "pm.collectionVariables.set(\"productPrice\", body.price);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Price with three decimals → 400, never rounded (PLAN 7.5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"QA Rounding Basket\",\n  \"price\": 12.345,\n  \"category\": \"{{rootCategoryName}}\",\n  \"stockQuantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
                 ]
               }
             }
@@ -1569,8 +1744,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is one of [200, 204]\", () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));",
-                  "if (pm.response.code === 200) pm.test(\"is an array\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"is an array, even when empty\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
                 ]
               }
             }
@@ -1882,7 +2057,273 @@
                   "const body = pm.response.json();",
                   "pm.test(\"price updated\", () => pm.expect(body.price).to.eql(45));",
                   "pm.test(\"stock unchanged\", () => pm.expect(body.stockQuantity).to.eql(10));",
+                  "pm.test(\"new description sends the listing back for review\", () => pm.expect(body.status).to.eql(\"PENDING\"));",
+                  "pm.test(\"fields not sent are kept (materials)\", () => pm.expect(body.materials).to.eql([\"willow\"]));",
                   "pm.collectionVariables.set(\"productPrice\", body.price);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resubmitted listing leaves the catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"not listed while awaiting review\", () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resubmitted listing is in the approval queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products/admin/pending",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"queue contains it\", () => pm.expect(pm.response.json().map(p => p.id)).to.include(pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin re-approves the edited listing",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/admin/{{productId}}/status",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"reason\": \"Edit reviewed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"live again\", () => pm.expect(pm.response.json().status).to.eql(\"APPROVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot approve their own listing; price-only edit stays live",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/{{productId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 45.0,\n  \"status\": \"APPROVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"still APPROVED (status in the body is ignored)\", () => pm.expect(pm.response.json().status).to.eql(\"APPROVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid listing edit → 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/{{productId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": -5,\n  \"stockQuantity\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other seller cannot edit the listing → 403 (IDOR)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/{{productId}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mine\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller view of unknown product → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlProducts}}/api/products/seller/{{sellerId}}/product/000000000000000000000000",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"error body\", () => pm.expect(pm.response.json()).to.include.keys(\"status\", \"error\", \"message\", \"path\", \"timestamp\"));"
                 ]
               }
             }
@@ -1929,6 +2370,7 @@
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
                   "const body = pm.response.json();",
                   "pm.test(\"local pickup → ZERO\", () => pm.expect(body.deliveryEmission).to.eql(\"ZERO\"));",
+                  "pm.test(\"delivery-only edit stays live\", () => pm.expect(body.status).to.eql(\"APPROVED\"));",
                   "pm.test(\"localPickup stored\", () => pm.expect(body.localPickup).to.be.true);"
                 ]
               }
@@ -2343,6 +2785,94 @@
               }
             }
           ]
+        },
+        {
+          "name": "Category without a name → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/categories",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"no-name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Category under an unknown parent → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/categories",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Orphan\",\n  \"parentId\": \"000000000000000000000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -2526,6 +3056,131 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory low-stock alerts use each item's threshold",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/low-stock",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"alert type\", () => pm.expect(body.alertType).to.eql(\"LOW_STOCK\"));",
+                  "pm.test(\"every item is at or below its own threshold\", () => body.items.forEach(i => pm.expect(i.stockQuantity).to.be.at.most(i.lowStockThreshold)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/dashboard",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"has summary keys\", () => pm.expect(pm.response.json()).to.include.keys(\"totalProducts\", \"inStock\", \"lowStock\", \"outOfStock\", \"categoryBreakdown\", \"lowStockPreview\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory item of unknown product → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/000000000000000000000000",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"error body, no leaked exception\", () => pm.expect(pm.response.json()).to.include.keys(\"status\", \"message\", \"path\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other seller cannot read the inventory dashboard → 403 (IDOR)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/dashboard",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
                 ]
               }
             }
@@ -2908,7 +3563,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "raw": "{\n  \"deliveryOption\": \"BICYCLE\",\n  \"addressId\": \"{{addressId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2970,7 +3625,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"shippingAddress\": \"Str. Lipsei 1, Sibiu\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "raw": "{\n  \"deliveryOption\": \"BICYCLE\",\n  \"shippingAddress\": \"Str. Lipsei 1, Sibiu\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3033,7 +3688,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "raw": "{\n  \"deliveryOption\": \"BICYCLE\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3096,7 +3751,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"addressId\": \"{{addressId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "raw": "{\n  \"deliveryOption\": \"BICYCLE\",\n  \"addressId\": \"{{addressId}}\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3116,8 +3771,14 @@
                   "  pm.expect(body.shippingAddress).to.eql(\"Ana Pop, Str. Florilor 3, 550000 Sibiu, Romania, tel. +40 712 345 678\"));",
                   "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlCore}}/api/wallet\"), method: \"GET\",",
                   "  header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"buyerToken\") } }, (err, res) => {",
-                  "  pm.test(\"wallet debited by the order total (PLAN 3.7)\", () =>",
-                  "    pm.expect(res.json().balanceCents).to.eql(Number(pm.collectionVariables.get(\"walletBefore\")) - Math.round(body.totalAmount * 100)));",
+                  "  pm.test(\"wallet debited by exactly the order total in cents (PLAN 3.7, 7.5)\", () =>",
+                  "    pm.expect(res.json().balanceCents).to.eql(Number(pm.collectionVariables.get(\"walletBefore\")) - body.totalCents));",
+                  "});",
+                  "pm.test(\"totals are exact cents: items + delivery (PLAN 7.5)\", () => {",
+                  "  const items = body.items.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);",
+                  "  pm.expect(body.totalCents).to.eql(items + body.deliveryFeeCents);",
+                  "  pm.expect(Math.round(body.totalAmount * 100)).to.eql(body.totalCents);",
+                  "  body.items.forEach(i => pm.expect(Math.round(i.price * 100)).to.eql(i.priceCents));",
                   "});",
                   "pm.test(\"order is PENDING with an order number\", () => {",
                   "  pm.expect(body.status).to.eql(\"PENDING\");",
@@ -3228,6 +3889,13 @@
                   "pm.test(\"status CANCELLED with reason\", () => {",
                   "  pm.expect(body.status).to.eql(\"CANCELLED\");",
                   "  pm.expect(body.cancellationReason).to.eql(\"Changed my mind\");",
+                  "});",
+                  "pm.test(\"timeline: placed, then cancelled by the buyer with the reason (PLAN 7.1)\", () => {",
+                  "  const t = body.timeline;",
+                  "  pm.expect(t.map(e => e.status)).to.eql([\"PENDING\", \"CANCELLED\"]);",
+                  "  pm.expect(t[0].from).to.eql(null);",
+                  "  pm.expect(t[1]).to.include({ from: \"PENDING\", actor: \"BUYER\", reason: \"Changed my mind\", inferred: false });",
+                  "  pm.expect(t[1]).to.not.have.property(\"actorId\");",
                   "});",
                   "",
                   "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
@@ -3377,7 +4045,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\",\n  \"deliveryOption\": \"BICYCLE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3473,7 +4141,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 9999\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 9999\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\",\n  \"deliveryOption\": \"BICYCLE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3513,6 +4181,78 @@
           ]
         },
         {
+          "name": "Delivery price list is public (PLAN 3.7)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrlCore}}/api/public/delivery-options",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"three options with fees in RON and cents\", () => {",
+                  "  pm.expect(body.map(o => o.id)).to.eql([\"BICYCLE\", \"ELECTRIC_VAN\", \"CARBON_NEUTRAL_COURIER\"]);",
+                  "  body.forEach(o => pm.expect(Math.round(o.fee * 100)).to.eql(o.feeCents));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Checkout without a delivery option → 400, no stock change (PLAN 3.7)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/orders",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\",\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Order without token → 401",
           "request": {
             "method": "POST",
@@ -3529,7 +4269,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\",\n  \"deliveryOption\": \"BICYCLE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3573,7 +4313,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"buyerId\": \"{{newUserId}}\",\n  \"sellerId\": \"someone\",\n  \"status\": \"DELIVERED\",\n  \"totalAmount\": 0.01,\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1,\n      \"price\": 0.01\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"buyerId\": \"{{newUserId}}\",\n  \"sellerId\": \"someone\",\n  \"status\": \"DELIVERED\",\n  \"totalAmount\": 0.01,\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1,\n      \"price\": 0.01\n    }\n  ],\n  \"deliveryOption\": \"CARBON_NEUTRAL_COURIER\",\n  \"deliveryFee\": 0,\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3589,9 +4329,10 @@
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
                   "const body = pm.response.json();",
-                  "pm.test(\"server price and total\", () => {",
+                  "pm.test(\"server price and total (items + server delivery fee)\", () => {",
                   "  pm.expect(body.items[0].price).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
-                  "  pm.expect(body.totalAmount).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
+                  "  pm.expect(body.deliveryFee).to.eql(25);",
+                  "  pm.expect(body.totalAmount).to.eql(Number(pm.collectionVariables.get(\"productPrice\")) + 25);",
                   "});",
                   "pm.test(\"buyer from token, PENDING, real seller\", () => {",
                   "  pm.expect(body.buyerId).to.eql(pm.collectionVariables.get(\"buyerId\"));",
@@ -4032,7 +4773,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"total recomputed from server price\", () => pm.expect(pm.response.json().order.totalAmount).to.eql(2 * Number(pm.collectionVariables.get(\"productPrice\"))));",
+                  "pm.test(\"total recomputed from server price, delivery kept\", () => {",
+                  "  const order = pm.response.json().order;",
+                  "  pm.expect(order.totalAmount).to.eql(2 * Number(pm.collectionVariables.get(\"productPrice\")) + order.deliveryFee);",
+                  "});",
                   "",
                   "pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrlInventory}}/api/inventory/seller/{{sellerId}}/product/{{productId}}\"),",
                   "  method: \"GET\", header: { Authorization: \"Bearer \" + pm.collectionVariables.get(\"sellerToken\") } }, (err, res) => {",
@@ -4230,7 +4974,7 @@
           ]
         },
         {
-          "name": "Edit locked once PROCESSING → 409",
+          "name": "Still editable while PROCESSING (README: locks beyond Processing)",
           "request": {
             "method": "PUT",
             "header": [
@@ -4253,7 +4997,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"shippingAddress\": \"Too late\"\n}",
+              "raw": "{\n  \"shippingAddress\": \"Str. Nou\\u0103 2, Sibiu\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4267,8 +5011,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
-                  "pm.test(\"explains order is locked\", () => pm.expect(pm.response.json().message).to.match(/locked/i));"
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"still editable\", () => pm.expect(pm.response.json().order.editable).to.be.true);"
                 ]
               }
             }
@@ -4400,6 +5144,51 @@
                   "  pm.expect(body.order.shippingDistanceKm).to.be.within(5, 1200);",
                   "});",
                   "pm.collectionVariables.set(\"orderBTracking\", body.order.trackingNumber);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit locked once a shipping label exists → 409",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/seller/orders/{{orderBId}}/edit",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shippingAddress\": \"Too late\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"explains the lock\", () => pm.expect(pm.response.json().message).to.match(/shipping label/i));"
                 ]
               }
             }
@@ -5457,6 +6246,182 @@
           ]
         },
         {
+          "name": "Suspension without a length → 400 (it would never end)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/users/{{newUserId}}/penalty",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"STATUS\",\n  \"newStatus\": \"SUSPENDED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Suspension longer than 365 days → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/users/{{newUserId}}/penalty",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"STATUS\",\n  \"newStatus\": \"SUSPENDED\",\n  \"suspendDays\": 400\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seller cannot penalise users → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/users/{{newUserId}}/penalty",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"STRIKE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Penalty for unknown user → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/admin/users/000000000000000000000000/penalty",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"STRIKE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "List all orders",
           "request": {
             "method": "GET",
@@ -6250,6 +7215,94 @@
       "description": "Product reviews (products service) and seller reviews (core). \"Verified Purchase\" = the author has a DELIVERED/COMPLETED order with the product / seller (PLAN 3.3).",
       "item": [
         {
+          "name": "Chat message over 2000 characters → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/chat/send",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverId\": \"{{sellerId}}\",\n  \"content\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chat message without content → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/chat/send",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverId\": \"{{sellerId}}\",\n  \"content\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Anonymous cannot review → 401 (PLAN 1.7)",
           "request": {
             "method": "POST",
@@ -6281,6 +7334,94 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review without a rating → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/reviews",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"comment\": \"No stars\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Review with more than 6 photos → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlProducts}}/api/reviews",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"rating\": 4,\n  \"photoUrls\": [\n    \"https://x.test/p.jpg\",\n    \"https://x.test/p.jpg\",\n    \"https://x.test/p.jpg\",\n    \"https://x.test/p.jpg\",\n    \"https://x.test/p.jpg\",\n    \"https://x.test/p.jpg\",\n    \"https://x.test/p.jpg\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
                 ]
               }
             }
@@ -6575,6 +7716,50 @@
           ]
         },
         {
+          "name": "Seller review missing a rating → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/public/users/seller/{{sellerId}}/reviews",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"overallRating\": 5,\n  \"communicationRating\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buyer reviews seller",
           "request": {
             "method": "POST",
@@ -6721,7 +7906,13 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"DELIVERED\", () => pm.expect(pm.response.json().status).to.eql(\"DELIVERED\"));"
+                  "pm.test(\"DELIVERED\", () => pm.expect(pm.response.json().status).to.eql(\"DELIVERED\"));",
+                  "pm.test(\"return window: 30 days from delivery\", () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.deliveredAt).to.be.ok;",
+                  "  const days = (new Date(body.returnDeadline) - new Date(body.deliveredAt)) / 86400000;",
+                  "  pm.expect(days).to.be.closeTo(30, 0.01);",
+                  "});"
                 ]
               }
             }
@@ -6957,6 +8148,50 @@
           ]
         },
         {
+          "name": "Return without items → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrlCore}}/api/returns",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{buyerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderBId}}\",\n  \"items\": [],\n  \"reason\": \"Nothing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Buyer return list",
           "request": {
             "method": "GET",
@@ -7126,6 +8361,17 @@
                   "  pm.test(\"order fully refunded\", () => {",
                   "    pm.expect(res.json().refundedAmount).to.eql(Number(pm.collectionVariables.get(\"productPrice\")));",
                   "    pm.expect(res.json().status).to.eql(\"REFUNDED\");",
+                  "  });",
+                  "  pm.test(\"timeline tells the whole story in order (PLAN 7.1)\", () => {",
+                  "    const t = res.json().timeline;",
+                  "    pm.expect(t[0]).to.include({ status: \"PENDING\", from: null, actor: \"BUYER\" });",
+                  "    t.slice(1).forEach((e, i) => {",
+                  "      pm.expect(e.from, \"step \" + (i + 1) + \" starts where the previous ended\").to.eql(t[i].status);",
+                  "      pm.expect(new Date(e.at).getTime()).to.be.at.least(new Date(t[i].at).getTime());",
+                  "    });",
+                  "    pm.expect(t.find(e => e.status === \"DISPUTED\")).to.include({ actor: \"ADMIN\" });",
+                  "    pm.expect(t.at(-1)).to.include({ status: \"REFUNDED\", actor: \"SYSTEM\", reason: \"All items returned\" });",
+                  "    t.forEach(e => pm.expect(e).to.not.have.property(\"actorId\"));",
                   "  });",
                   "});"
                 ]
@@ -8282,7 +9528,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\"\n}",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippingAddress\": \"Str. Testului 1, Sibiu\",\n  \"deliveryOption\": \"BICYCLE\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

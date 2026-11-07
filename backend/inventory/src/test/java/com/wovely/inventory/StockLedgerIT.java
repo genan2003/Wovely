@@ -22,12 +22,14 @@ import com.wovely.inventory.support.AbstractMongoIT;
 class StockLedgerIT extends AbstractMongoIT {
 
     @Autowired StockLedger ledger;
+    @Autowired org.springframework.data.mongodb.core.MongoTemplate mongo;
+    @Autowired com.wovely.inventory.stock.PriceCentsBackfill priceBackfill;
 
     private final String product = "p-" + UUID.randomUUID();
     private final String seller = "s-" + UUID.randomUUID();
 
     private InventoryItem init(int qty) {
-        return ledger.init(product, seller, qty, 2, new StockLedger.Details("Basket", 10.0, null, "Home", "Low", "Bike", true));
+        return ledger.init(product, seller, qty, 2, new StockLedger.Details("Basket", 1000L, null, "Home", "Low", "Bike", true));
     }
 
     @Test
@@ -92,5 +94,27 @@ class StockLedgerIT extends AbstractMongoIT {
         assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
         assertThat(ok.get()).isEqualTo(5);
         assertThat(ledger.find(product, seller).orElseThrow().getStockQuantity()).isZero();
+    }
+
+    // ---------------------------------------------------------------- PLAN.md 7.5 money as cents
+
+    private org.bson.Document raw(String productId) {
+        return mongo.getCollection("inventory_items").find(new org.bson.Document("productId", productId)).first();
+    }
+
+    @Test
+    void registrationStoresThePriceInCents() {
+        init(1);
+        assertThat(raw(product)).containsEntry("priceCents", 1000L).doesNotContainKey("price");
+    }
+
+    @Test
+    void legacyDoublePricesAreConvertedOnce() {
+        String legacy = "p-legacy-" + UUID.randomUUID();
+        mongo.getCollection("inventory_items").insertOne(new org.bson.Document("productId", legacy)
+                .append("sellerId", seller).append("price", 42.5).append("stockQuantity", 3));
+        assertThat(priceBackfill.backfill()).isGreaterThanOrEqualTo(1);
+        assertThat(raw(legacy)).containsEntry("priceCents", 4250L).doesNotContainKey("price");
+        assertThat(priceBackfill.backfill()).isZero();
     }
 }

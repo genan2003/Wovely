@@ -28,6 +28,7 @@ class AdminUserSearchTest extends SecuredWebMvcTest {
     @MockitoBean UserQueryService userQueryService;
     @MockitoBean AuditService auditService;
     @MockitoBean RefreshTokenService refreshTokenService;
+    @MockitoBean com.wovely.wovely.services.UserPenaltyService penaltyService;
 
     @Test
     void adminSearchPassesQueryAndStatusToService() throws Exception {

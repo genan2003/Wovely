@@ -4,7 +4,9 @@ public class OrderItemDTO {
     private String productId;
     private String productName;
     private Integer quantity;
-    private Double price;
+    private java.math.BigDecimal price;
+    /** Unit price in cents (PLAN.md 7.5); {@code price} is the same amount as a decimal. */
+    private Long priceCents;
     private String imageUrl;
     private boolean isReturned;
     private boolean isReviewed;
@@ -12,19 +14,21 @@ public class OrderItemDTO {
     public OrderItemDTO() {
     }
 
-    public OrderItemDTO(String productId, String productName, Integer quantity, Double price, String imageUrl) {
+    public OrderItemDTO(String productId, String productName, Integer quantity, Long priceCents, String imageUrl) {
         this.productId = productId;
         this.productName = productName;
         this.quantity = quantity;
-        this.price = price;
+        this.priceCents = priceCents;
+        this.price = com.wovely.common.money.Money.toDecimal(priceCents);
         this.imageUrl = imageUrl;
     }
 
-    public OrderItemDTO(String productId, String productName, Integer quantity, Double price, String imageUrl, boolean isReturned, boolean isReviewed) {
+    public OrderItemDTO(String productId, String productName, Integer quantity, Long priceCents, String imageUrl, boolean isReturned, boolean isReviewed) {
         this.productId = productId;
         this.productName = productName;
         this.quantity = quantity;
-        this.price = price;
+        this.priceCents = priceCents;
+        this.price = com.wovely.common.money.Money.toDecimal(priceCents);
         this.imageUrl = imageUrl;
         this.isReturned = isReturned;
         this.isReviewed = isReviewed;
@@ -54,12 +58,12 @@ public class OrderItemDTO {
         this.quantity = quantity;
     }
 
-    public Double getPrice() {
+    public java.math.BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(Double price) {
-        this.price = price;
+    public Long getPriceCents() {
+        return priceCents;
     }
 
     public String getImageUrl() {

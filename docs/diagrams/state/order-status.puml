@@ -32,12 +32,17 @@ CANCELLED --> [*]
 REFUNDED --> [*]
 
 note right of PROCESSING
-  Items/address editable only in
-  PENDING and CONFIRMED (else 409).
   Edits reconcile stock per product.
   "Ship with Wovely" label (CONFIRMED /
   PROCESSING, once; admin may regenerate)
   sets carrier, CO₂ estimate and tracking.
+end note
+
+note top of SHIPPED
+  Seller edits (items, address) are allowed in PENDING,
+  CONFIRMED and PROCESSING until a shipping label or
+  tracking number exists; from SHIPPED on they return 409
+  (OrderStatusPolicy#isEditable, README acceptance criterion).
 end note
 
 note bottom of REFUNDED
@@ -49,5 +54,14 @@ note bottom of REFUNDED
   Wallet escrow: checkout debits the buyer; COMPLETED pays the
   seller; CANCELLED / REFUNDED / returns refund the buyer
   (reversing the payout if the seller was already paid).
+end note
+
+note left of PENDING
+  Timeline (PLAN 7.1): every arrow above appends one
+  OrderStatusChange {from, to, at, actorRole, actorId, reason}
+  to Order.statusHistory in the same save as the status.
+  Rejected transitions append nothing. Orders older than the
+  timeline show steps derived from createdAt / deliveredAt /
+  updatedAt; their first new change stores those steps too.
 end note
 @enduml

@@ -123,7 +123,7 @@ class ReportControllerTest extends SecuredWebMvcTest {
     @Test
     void productReportTakesNameFromCatalog() throws Exception {
         when(catalogClient.getProduct("p-1")).thenReturn(
-            new CatalogClient.ProductSnapshot("p-1", "Willow basket", 10.0, TestTokens.SELLER_ID, "img", "APPROVED", 3));
+            new CatalogClient.ProductSnapshot("p-1", "Willow basket", 1000L, TestTokens.SELLER_ID, "img", "APPROVED", 3));
         report(TestTokens.buyer(), "{\"targetType\":\"PRODUCT\",\"targetId\":\"p-1\",\"targetName\":\"x\",\"reason\":\"counterfeit\"}")
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.targetName").value("Willow basket"))

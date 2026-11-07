@@ -18,7 +18,7 @@ DENIED --> [*]
 
 note right of REFUNDED
   restock returned items
-  order.refundedAmount += amount
+  order.refundedCents += return totalCents
   order → REFUNDED when fully refunded
 end note
 note left of DENIED

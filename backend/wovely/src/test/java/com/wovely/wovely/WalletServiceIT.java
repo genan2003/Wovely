@@ -35,7 +35,7 @@ class WalletServiceIT extends AbstractMongoIT {
 
     private Order order(double total) {
         Order o = Orders.order("o-" + UUID.randomUUID(), buyer, seller, EOrderStatus.PENDING);
-        o.setTotalAmount(total);
+        o.setTotalCents(Math.round(total * 100));
         return o;
     }
 
@@ -109,12 +109,12 @@ class WalletServiceIT extends AbstractMongoIT {
         wallet.chargeOrder(o);
         wallet.releaseToSeller(o);
 
-        wallet.refundReturn(o, 15.0);
+        wallet.refundReturn(o, 1500L);
         assertThat(wallet.balanceCents(buyer)).isEqualTo(1500);
         assertThat(wallet.balanceCents(seller)).isEqualTo(2500);
         assertThat(o.getPayoutCents()).isEqualTo(2500);
 
-        wallet.refundReturn(o, 999.0); // capped at what was paid
+        wallet.refundReturn(o, 99900L); // capped at what was paid
         assertThat(wallet.balanceCents(buyer)).isEqualTo(4000);
         assertThat(wallet.balanceCents(seller)).isZero();
         assertThat(wallet.transactions(seller, 10)).extracting(WalletTransaction::getType)
@@ -126,12 +126,12 @@ class WalletServiceIT extends AbstractMongoIT {
         wallet.topUp(buyer, new BigDecimal("30"));
         Order o = order(20.0);
         wallet.chargeOrder(o);
-        o.setTotalAmount(25.0);
+        o.setTotalCents(2500L);
         wallet.settleEdit(o);
         assertThat(wallet.balanceCents(buyer)).isEqualTo(500);
-        o.setTotalAmount(40.0);
+        o.setTotalCents(4000L);
         assertThatThrownBy(() -> wallet.settleEdit(o)).hasMessageContaining("Insufficient");
-        o.setTotalAmount(10.0);
+        o.setTotalCents(1000L);
         wallet.settleEdit(o);
         assertThat(wallet.balanceCents(buyer)).isEqualTo(2000);
         assertThat(o.getPaidCents()).isEqualTo(1000);

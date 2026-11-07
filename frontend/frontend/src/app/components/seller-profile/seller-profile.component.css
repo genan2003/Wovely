@@ -1,11 +1,10 @@
 .seller-profile-page {
-    background-color: #F5E6D6;
     min-height: 100vh;
 }
 
 .profile-header-card {
-    background-color: #FEF9F3;
-    border-radius: 20px;
+    background-color: var(--wv-surface-raised);
+    border-radius: var(--wv-radius-m);
 }
 
 .italic {
@@ -17,15 +16,15 @@
 }
 
 .progress {
-    background-color: #E9ECEF;
-    border-radius: 10px;
+    background-color: var(--wv-cloth-deep);
+    border-radius: var(--wv-radius-m);
 }
 
 .progress-bar {
-    border-radius: 10px;
+    border-radius: var(--wv-radius-m);
 }
 
 .stat-item span {
     font-size: 0.9rem;
-    color: #344E41;
+    color: var(--wv-ink);
 }

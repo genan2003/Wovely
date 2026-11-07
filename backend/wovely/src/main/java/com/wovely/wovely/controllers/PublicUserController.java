@@ -53,7 +53,8 @@ public class PublicUserController {
      */
     @PostMapping("/seller/{id}/reviews")
     @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> postSellerReview(@PathVariable String id, @RequestBody SellerReview review,
+    public ResponseEntity<?> postSellerReview(@PathVariable String id,
+            @jakarta.validation.Valid @RequestBody com.wovely.wovely.payload.request.SellerReviewRequest review,
             @org.springframework.security.core.annotation.AuthenticationPrincipal
             com.wovely.wovely.security.services.UserDetailsImpl me) {
         if (!userRepository.existsById(id)) {
@@ -62,14 +63,9 @@ public class PublicUserController {
         if (me.getId().equals(id)) {
             throw com.wovely.common.error.ApiException.badRequest("You cannot review yourself");
         }
-        for (int r : new int[] { review.getOverallRating(), review.getCommunicationRating(), review.getShippingRating() }) {
-            if (r < 1 || r > 5) {
-                throw com.wovely.common.error.ApiException.badRequest("ratings must be between 1 and 5");
-            }
-        }
         SellerReview toSave = new SellerReview(id, me.getId(), me.getUsername(),
-                review.getOverallRating(), review.getCommunicationRating(), review.getShippingRating(),
-                review.getComment());
+                review.overallRating(), review.communicationRating(), review.shippingRating(),
+                review.comment());
         // Client-sent verifiedPurchase is ignored — only a received order counts.
         toSave.setVerifiedPurchase(purchaseVerification.hasReceivedFromSeller(me.getId(), id));
         return ResponseEntity.ok(sellerReviewRepository.save(toSave));

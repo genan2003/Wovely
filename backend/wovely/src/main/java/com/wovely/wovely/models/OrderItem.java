@@ -6,7 +6,8 @@ public class OrderItem {
     private String productId;
     private String productName;
     private Integer quantity;
-    private Double price;
+    /** Unit price in RON cents at the time of purchase (PLAN.md 7.5). */
+    private Long priceCents;
     private String imageUrl;
     private String color;
     private String size;
@@ -20,19 +21,19 @@ public class OrderItem {
     public OrderItem() {
     }
 
-    public OrderItem(String productId, String productName, Integer quantity, Double price, String imageUrl) {
+    public OrderItem(String productId, String productName, Integer quantity, Long priceCents, String imageUrl) {
         this.productId = productId;
         this.productName = productName;
         this.quantity = quantity;
-        this.price = price;
+        this.priceCents = priceCents;
         this.imageUrl = imageUrl;
     }
 
-    public OrderItem(String productId, String productName, Integer quantity, Double price, String imageUrl, String color, String size) {
+    public OrderItem(String productId, String productName, Integer quantity, Long priceCents, String imageUrl, String color, String size) {
         this.productId = productId;
         this.productName = productName;
         this.quantity = quantity;
-        this.price = price;
+        this.priceCents = priceCents;
         this.imageUrl = imageUrl;
         this.color = color;
         this.size = size;
@@ -62,12 +63,24 @@ public class OrderItem {
         this.quantity = quantity;
     }
 
-    public Double getPrice() {
-        return price;
+    public Long getPriceCents() {
+        return priceCents;
     }
 
-    public void setPrice(Double price) {
-        this.price = price;
+    public void setPriceCents(Long priceCents) {
+        this.priceCents = priceCents;
+    }
+
+    /** Decimal view for JSON (scale 2); derived, never stored. */
+    @org.springframework.data.annotation.Transient
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "price", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    public java.math.BigDecimal getPrice() {
+        return com.wovely.common.money.Money.toDecimal(priceCents);
+    }
+
+    /** Unit price × quantity in cents. */
+    public long lineTotalCents() {
+        return com.wovely.common.money.Money.times(priceCents == null ? 0 : priceCents, quantity == null ? 0 : quantity);
     }
 
     public String getImageUrl() {

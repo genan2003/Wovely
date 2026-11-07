@@ -73,7 +73,7 @@ class ReturnAndReportControllerTest extends SecuredWebMvcTest {
         verify(returnRequestRepository).save(saved.capture());
         assertThat(saved.getValue().getBuyerId()).isEqualTo(TestTokens.BUYER_ID);
         assertThat(saved.getValue().getSellerId()).isEqualTo(TestTokens.SELLER_ID);
-        assertThat(saved.getValue().getItems()).singleElement().satisfies(i -> assertThat(i.getPrice()).isEqualTo(10.0));
+        assertThat(saved.getValue().getItems()).singleElement().satisfies(i -> assertThat(i.getPriceCents()).isEqualTo(1000L));
     }
 
     @Test
@@ -136,5 +136,15 @@ class ReturnAndReportControllerTest extends SecuredWebMvcTest {
     void reportQueueIsAdminOnly() throws Exception {
         mvc.perform(get("/api/reports/all").header(AUTH, bearer(TestTokens.buyer()))).andExpect(status().isForbidden());
         mvc.perform(get("/api/reports/all").header(AUTH, bearer(TestTokens.admin()))).andExpect(status().isOk());
+    }
+
+    @Test
+    void returnRequestsAreValidated() throws Exception {
+        for (String body : new String[] { "{\"orderId\":\"o-1\",\"items\":[]}", "{\"items\":[{\"productId\":\"p-1\"}]}",
+                "{\"orderId\":\"o-1\",\"items\":[{\"productId\":\"\"}]}" }) {
+            mvc.perform(post("/api/returns").header(AUTH, bearer(TestTokens.buyer()))
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        }
     }
 }

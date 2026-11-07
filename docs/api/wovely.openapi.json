@@ -148,6 +148,14 @@
                         "minLength": 0,
                         "type": "string"
                     },
+                    "deliveryOption": {
+                        "enum": [
+                            "BICYCLE",
+                            "ELECTRIC_VAN",
+                            "CARBON_NEUTRAL_COURIER"
+                        ],
+                        "type": "string"
+                    },
                     "items": {
                         "items": {
                             "$ref": "#/components/schemas/Item"
@@ -162,6 +170,7 @@
                     }
                 },
                 "required": [
+                    "deliveryOption",
                     "items"
                 ],
                 "type": "object"
@@ -191,6 +200,59 @@
                     "targetId",
                     "targetType"
                 ],
+                "type": "object"
+            },
+            "CreateReturnRequest": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/Item"
+                        },
+                        "maxItems": 50,
+                        "minItems": 0,
+                        "type": "array"
+                    },
+                    "orderId": {
+                        "maxLength": 64,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "reason": {
+                        "maxLength": 1000,
+                        "minLength": 0,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "items",
+                    "orderId"
+                ],
+                "type": "object"
+            },
+            "DeliveryOptionView": {
+                "properties": {
+                    "co2Kg": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "estimatedDays": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "fee": {
+                        "type": "number"
+                    },
+                    "feeCents": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
                 "type": "object"
             },
             "Item": {
@@ -239,7 +301,6 @@
                         "type": "string"
                     },
                     "price": {
-                        "format": "double",
                         "type": "number"
                     },
                     "productId": {
@@ -337,11 +398,33 @@
                         "format": "date-time",
                         "type": "string"
                     },
+                    "deliveredAt": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "deliveryFee": {
+                        "type": "number"
+                    },
+                    "deliveryFeeCents": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "deliveryOption": {
+                        "enum": [
+                            "BICYCLE",
+                            "ELECTRIC_VAN",
+                            "CARBON_NEUTRAL_COURIER"
+                        ],
+                        "type": "string"
+                    },
                     "disputeReason": {
                         "type": "string"
                     },
                     "ecoShippingLabel": {
                         "type": "string"
+                    },
+                    "editable": {
+                        "type": "boolean"
                     },
                     "estimatedCo2Kg": {
                         "format": "double",
@@ -374,8 +457,15 @@
                         "type": "string"
                     },
                     "refundedAmount": {
-                        "format": "double",
                         "type": "number"
+                    },
+                    "refundedCents": {
+                        "format": "int64",
+                        "type": "integer"
+                    },
+                    "returnDeadline": {
+                        "format": "date-time",
+                        "type": "string"
                     },
                     "reviewed": {
                         "type": "boolean"
@@ -407,9 +497,18 @@
                         ],
                         "type": "string"
                     },
+                    "timeline": {
+                        "items": {
+                            "$ref": "#/components/schemas/OrderTimelineEntryDTO"
+                        },
+                        "type": "array"
+                    },
                     "totalAmount": {
-                        "format": "double",
                         "type": "number"
+                    },
+                    "totalCents": {
+                        "format": "int64",
+                        "type": "integer"
                     },
                     "trackingNumber": {
                         "type": "string"
@@ -461,8 +560,12 @@
                         "type": "string"
                     },
                     "price": {
-                        "format": "double",
+                        "readOnly": true,
                         "type": "number"
+                    },
+                    "priceCents": {
+                        "format": "int64",
+                        "type": "integer"
                     },
                     "productId": {
                         "type": "string"
@@ -492,8 +595,11 @@
                         "type": "string"
                     },
                     "price": {
-                        "format": "double",
                         "type": "number"
+                    },
+                    "priceCents": {
+                        "format": "int64",
+                        "type": "integer"
                     },
                     "productId": {
                         "type": "string"
@@ -510,6 +616,52 @@
                     },
                     "reviewed": {
                         "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderTimelineEntryDTO": {
+                "properties": {
+                    "actor": {
+                        "type": "string"
+                    },
+                    "at": {
+                        "format": "date-time",
+                        "type": "string"
+                    },
+                    "from": {
+                        "enum": [
+                            "PENDING",
+                            "CONFIRMED",
+                            "PROCESSING",
+                            "SHIPPED",
+                            "DELIVERED",
+                            "COMPLETED",
+                            "CANCELLED",
+                            "REFUNDED",
+                            "DISPUTED"
+                        ],
+                        "type": "string"
+                    },
+                    "inferred": {
+                        "type": "boolean"
+                    },
+                    "reason": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "enum": [
+                            "PENDING",
+                            "CONFIRMED",
+                            "PROCESSING",
+                            "SHIPPED",
+                            "DELIVERED",
+                            "COMPLETED",
+                            "CANCELLED",
+                            "REFUNDED",
+                            "DISPUTED"
+                        ],
+                        "type": "string"
                     }
                 },
                 "type": "object"
@@ -610,8 +762,12 @@
                         "type": "string"
                     },
                     "totalAmount": {
-                        "format": "double",
+                        "readOnly": true,
                         "type": "number"
+                    },
+                    "totalCents": {
+                        "format": "int64",
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -653,6 +809,68 @@
                         "type": "boolean"
                     }
                 },
+                "type": "object"
+            },
+            "SellerReviewRequest": {
+                "properties": {
+                    "comment": {
+                        "maxLength": 2000,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "communicationRating": {
+                        "format": "int32",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "overallRating": {
+                        "format": "int32",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "shippingRating": {
+                        "format": "int32",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "communicationRating",
+                    "overallRating",
+                    "shippingRating"
+                ],
+                "type": "object"
+            },
+            "SendMessageRequest": {
+                "properties": {
+                    "content": {
+                        "maxLength": 2000,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "productId": {
+                        "maxLength": 64,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "productThumbnail": {
+                        "maxLength": 2048,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "receiverId": {
+                        "maxLength": 64,
+                        "minLength": 0,
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "content",
+                    "receiverId"
+                ],
                 "type": "object"
             },
             "SignupRequest": {
@@ -1254,15 +1472,14 @@
                                 "$ref": "#/components/schemas/PenaltyRequest"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/UserCrmDTO"
                                 }
                             }
                         },
@@ -1480,7 +1697,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/ChatMessage"
+                                "$ref": "#/components/schemas/SendMessageRequest"
                             }
                         }
                     },
@@ -1777,6 +1994,29 @@
                 ]
             }
         },
+        "/api/public/delivery-options": {
+            "get": {
+                "operationId": "list_1",
+                "responses": {
+                    "200": {
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/DeliveryOptionView"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "description": "OK"
+                    }
+                },
+                "tags": [
+                    "delivery-option-controller"
+                ]
+            }
+        },
         "/api/public/users/seller/{id}": {
             "get": {
                 "operationId": "getSellerProfile",
@@ -1855,7 +2095,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SellerReview"
+                                "$ref": "#/components/schemas/SellerReviewRequest"
                             }
                         }
                     },
@@ -2014,7 +2254,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/ReturnRequest"
+                                "$ref": "#/components/schemas/CreateReturnRequest"
                             }
                         }
                     },

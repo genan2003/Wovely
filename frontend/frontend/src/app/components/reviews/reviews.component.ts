@@ -1,19 +1,19 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OrderService } from '../../services/order.service';
 import { StorageService } from '../../services/storage.service';
 import { ReviewService } from '../../services/review.service';
-import { Order, OrderStatus } from '../../models/order.model';
+import { Order, OrderItem, OrderStatus } from '../../models/order.model';
 import { Review } from '../../models/review.model';
 import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-reviews',
-  standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, DatePipe],
   templateUrl: './reviews.component.html',
-  styleUrl: './reviews.component.css'
+  styleUrl: './reviews.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReviewsComponent implements OnInit {
   private orderService = inject(OrderService);
@@ -25,7 +25,7 @@ export class ReviewsComponent implements OnInit {
   activeTab = signal<'to-review' | 'reviewed'>('to-review');
 
   // Review Modal State
-  selectedProduct = signal<any>(null);
+  selectedProduct = signal<OrderItem | null>(null);
   rating = signal<number>(5);
   comment = signal<string>('');
 
@@ -37,9 +37,9 @@ export class ReviewsComponent implements OnInit {
   loadOrders(): void {
     const user = this.storageService.getUser();
     if (user && user.id) {
-      this.orderService.getOrdersByBuyer(user.id).subscribe(orders => {
+      this.orderService.getOrdersByBuyer(user.id).subscribe((orders) => {
         // Filter delivered orders that could be reviewed
-        const toReview = orders.filter(o => o.status === OrderStatus.DELIVERED);
+        const toReview = orders.filter((o) => o.status === OrderStatus.DELIVERED);
         this.ordersToReview.set(toReview);
       });
     }
@@ -54,23 +54,23 @@ export class ReviewsComponent implements OnInit {
     this.activeTab.set(tab);
   }
 
-  openReviewModal(product: any): void {
+  openReviewModal(product: OrderItem): void {
     this.selectedProduct.set(product);
     this.rating.set(5);
     this.comment.set('');
-    // Open bootstrap modal if using one, or just show a section
   }
 
   submitReview(): void {
     const user = this.storageService.getUser();
-    if (!user || !this.selectedProduct()) return;
+    const product = this.selectedProduct();
+    if (!user || !product) return;
 
     const review: Review = {
-      productId: this.selectedProduct().productId,
+      productId: product.productId,
       userId: user.id,
       username: user.username,
       rating: this.rating(),
-      comment: this.comment()
+      comment: this.comment(),
     };
 
     this.reviewService.createReview(review).subscribe(() => {

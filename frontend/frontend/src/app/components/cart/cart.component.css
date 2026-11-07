@@ -1,60 +1,30 @@
 .buyer-dashboard {
-    background-color: #F5E6D6;
     min-height: 100vh;
-    color: #344E41;
+    color: var(--wv-ink);
 }
 
 .orders-title, .cart-title {
     font-weight: 700;
-    color: #344E41;
+    color: var(--wv-ink);
     margin-bottom: 1.5rem;
 }
 
 /* Ribbon Icons */
-.ribbon-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 3rem;
-}
 
-.ribbon-item {
-    background: #FEF9F3;
-    border: 1px solid rgba(52, 78, 65, 0.15);
-    border-radius: 0.75rem;
-    flex: 1;
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-decoration: none;
-    color: #344E41;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
 
-.ribbon-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(52, 78, 65, 0.1);
-    border-color: #344E41;
-}
 
-.ribbon-item i {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
 
-.ribbon-item span {
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: capitalize;
-}
+
+
+
+
+
 
 /* Shop Card */
 .shop-card {
-    background: #FEF9F3;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(52, 78, 65, 0.1);
+    background: var(--wv-surface-raised);
+    border-radius: var(--wv-radius-m);
+    border: 1px solid color-mix(in srgb, var(--wv-ink) 10%, transparent);
     padding: 2rem;
     margin-bottom: 2rem;
 }
@@ -90,8 +60,8 @@
 .item-thumb {
     width: 100px;
     height: 100px;
-    background: #eee;
-    border-radius: 0.5rem;
+    background: var(--wv-cloth-deep);
+    border-radius: var(--wv-radius-s);
     object-fit: cover;
 }
 
@@ -102,7 +72,7 @@
 }
 
 .item-details .short-desc {
-    color: #6c757d;
+    color: var(--wv-ink-soft);
     font-size: 0.9rem;
 }
 
@@ -125,10 +95,10 @@
 }
 
 .qty-input {
-    background: #3e4a3d;
-    color: white;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
     padding: 0.2rem 0.2rem 0.2rem 0.6rem;
-    border-radius: 0.4rem;
+    border-radius: var(--wv-radius-s);
     width: 60px;
     border: none;
     font-weight: 700;
@@ -137,7 +107,7 @@
 
 .qty-input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(62, 74, 61, 0.3);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--wv-ink) 30%, transparent);
 }
 
 .item-details a {
@@ -149,30 +119,26 @@
     opacity: 0.8;
 }
 
-.ribbon-item.active-ribbon {
-    background: #344E41;
-    color: #FEF9F3;
-    border-color: #344E41;
-}
+
 
 /* History & Shipped Specifics */
 .item-thumb-sm {
     width: 60px;
     height: 60px;
-    border-radius: 0.5rem;
+    border-radius: var(--wv-radius-s);
     object-fit: cover;
 }
 
 .delivery-status-box {
-    background-color: #f0f2f0;
-    border: 1px solid rgba(52, 78, 65, 0.1);
+    background-color: var(--wv-cloth-deep);
+    border: 1px solid color-mix(in srgb, var(--wv-ink) 10%, transparent);
 }
 
 .status-icon-circle {
     width: 40px;
     height: 40px;
-    background: #344E41;
-    color: white;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -183,8 +149,8 @@
 .truck-icon {
     width: 50px;
     height: 50px;
-    background: #344E41;
-    color: white;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -202,46 +168,28 @@
 
 .delivery-cost {
     font-weight: 600;
-    color: #344E41;
+    color: var(--wv-ink);
     font-size: 0.95rem;
 }
 
 /* Delivery Selection Styles */
-.delivery-selection {
-    background-color: rgba(62, 74, 61, 0.03);
-    border: 1px solid rgba(62, 74, 61, 0.1);
-}
 
-.delivery-option {
-    background: #fff;
-    border: 2px solid #eee;
-    border-radius: 1rem;
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    height: 100%;
-}
 
-.delivery-option:hover {
-    border-color: #3e4a3d;
-    transform: translateY(-2px);
-}
 
-.delivery-option.active {
-    border-color: #3e4a3d;
-    background-color: #f0fdf4;
-    box-shadow: 0 4px 12px rgba(62, 74, 61, 0.1);
-}
+
+
+
+
 
 /* Delivery Section */
 .delivery-divider {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--wv-line);
     margin: 1.5rem 0;
 }
 
 .delivery-info h6 {
     font-size: 0.9rem;
-    color: #6c757d;
+    color: var(--wv-ink-soft);
     margin-bottom: 1rem;
 }
 
@@ -257,7 +205,7 @@
 
 .total-label {
     font-size: 0.9rem;
-    color: #6c757d;
+    color: var(--wv-ink-soft);
 }
 
 .total-price {
@@ -267,10 +215,10 @@
 }
 
 .checkout-btn {
-    background: #3e4a3d;
-    color: white;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
     border: none;
-    border-radius: 0.75rem;
+    border-radius: var(--wv-radius-m);
     padding: 0.75rem 2.5rem;
     font-weight: 700;
     font-size: 1.25rem;
@@ -278,7 +226,7 @@
 
 .secure-badge {
     font-size: 0.75rem;
-    color: #a5a5a5;
+    color: var(--wv-ink-soft);
     margin-top: 0.5rem;
     display: flex;
     align-items: center;
@@ -292,15 +240,15 @@
 
 /* Favorites Tab Styles */
 .fav-card {
-    background-color: #FEF9F3 !important;
+    background-color: var(--wv-surface-raised) !important;
     border: none;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: var(--wv-radius-m);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--wv-ink) 5%, transparent);
     margin-bottom: 20px;
 }
 
 .fav-item {
-    border-top: 1px solid rgba(166, 138, 100, 0.2) !important;
+    border-top: 1px solid color-mix(in srgb, var(--wv-ink) 20%, transparent) !important;
 }
 
 .fav-item:first-of-type {
@@ -320,15 +268,15 @@
 
 /* Returns Tab Styles */
 .return-card {
-    background-color: #FEF9F3 !important;
+    background-color: var(--wv-surface-raised) !important;
     border: none;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: var(--wv-radius-m);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--wv-ink) 5%, transparent);
     margin-bottom: 20px;
 }
 
 .return-item {
-    border-bottom: 1px solid rgba(166, 138, 100, 0.1);
+    border-bottom: 1px solid color-mix(in srgb, var(--wv-ink) 10%, transparent);
 }
 
 .return-item:last-child {
@@ -350,7 +298,7 @@
     top: 15px;
     bottom: 15px;
     width: 2px;
-    background-color: #A68A64;
+    background-color: var(--wv-line);
     opacity: 0.3;
 }
 
@@ -358,11 +306,11 @@
     position: relative;
     display: flex;
     align-items: center;
-    color: #6c757d;
+    color: var(--wv-ink-soft);
 }
 
 .timeline-step.completed {
-    color: #2D3A30;
+    color: var(--wv-ink);
     font-weight: 600;
 }
 
@@ -372,8 +320,8 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background-color: #FEF9F3;
-    border: 2px solid #A68A64;
+    background-color: var(--wv-surface-raised);
+    border: 2px solid var(--wv-line-strong);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -382,9 +330,9 @@
 }
 
 .timeline-step.completed .step-circle {
-    background-color: #3E4A3D;
-    border-color: #3E4A3D;
-    color: white;
+    background-color: var(--wv-primary);
+    border-color: var(--wv-line-strong);
+    color: var(--wv-on-primary);
 }
 
 .step-circle i {
@@ -397,8 +345,8 @@
 }
 
 .active-item {
-    background-color: rgba(62, 74, 61, 0.05) !important;
-    border-color: #3E4A3D !important;
+    background-color: color-mix(in srgb, var(--wv-ink) 5%, transparent) !important;
+    border-color: var(--wv-line-strong) !important;
 }
 
 .animate-fade-in {
@@ -416,4 +364,70 @@
 .ship-to-option { margin-bottom: 0.5rem; }
 
 /* Wallet at checkout (PLAN.md 3.7) */
-.wallet-short { color: #8a3b1d; font-weight: 600; }
+.wallet-short { color: var(--wv-danger); font-weight: 600; }
+
+.orders-title { margin-bottom: var(--wv-space-4); }
+
+.delivery-selection { border: 0; padding: 0; margin: 0 0 var(--wv-space-5); min-width: 0; }
+.delivery-selection legend { font-size: var(--wv-text-md); font-weight: 650; margin-bottom: var(--wv-space-2); }
+.delivery-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--wv-space-2); }
+.delivery-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 var(--wv-space-3);
+  padding: var(--wv-space-3);
+  border: 1px solid var(--wv-line-strong);
+  border-radius: var(--wv-radius-s);
+  cursor: pointer;
+}
+.delivery-option:hover { background: var(--wv-cloth-deep); }
+.delivery-option.active { border-color: var(--wv-eco); box-shadow: inset 0 0 0 1px var(--wv-eco); background: var(--wv-eco-bg); }
+.delivery-option:focus-within { outline: 2px solid var(--wv-focus); outline-offset: 2px; }
+.delivery-option__name { font-weight: 600; }
+.delivery-option__price { font-weight: 600; font-variant-numeric: tabular-nums; }
+.delivery-option__co2 { grid-column: 1 / -1; font-size: var(--wv-text-sm); color: var(--wv-ink-soft); }
+
+@media (max-width: 40rem) {
+  .shop-card { padding: var(--wv-space-4); }
+  .item-row { flex-wrap: wrap; gap: var(--wv-space-3); }
+  .item-details { flex: 1 1 60%; min-width: 0; }
+  .item-price-col { flex: 1 1 100%; margin-left: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--wv-space-2); text-align: start; }
+  .item-price { font-size: var(--wv-text-lg); }
+  .checkout-btn { width: 100%; padding-inline: var(--wv-space-4); font-size: var(--wv-text-md); }
+}
+
+/* checkout breakdown: what the server will charge */
+.order-sum {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--wv-space-1) var(--wv-space-4);
+  margin: 0 0 var(--wv-space-3);
+  font-variant-numeric: tabular-nums;
+}
+.order-sum dt { font-weight: 400; color: var(--wv-ink-soft); }
+.order-sum dd { margin: 0; text-align: right; }
+.order-sum__total {
+  padding-top: var(--wv-space-2);
+  border-top: 1px dashed var(--wv-line-strong);
+  font-family: var(--wv-font-display);
+  font-size: var(--wv-text-lg);
+  color: var(--wv-ink);
+}
+.delivery-error { color: var(--wv-danger); font-size: var(--wv-text-sm); margin-bottom: var(--wv-space-2); }
+
+/* Order progress (PLAN.md 7.1): closed by default so the card stays about the parcel. */
+.order-progress {
+  margin-top: var(--wv-space-4);
+}
+.order-progress > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--wv-primary);
+  font-size: var(--wv-text-sm);
+  font-weight: 600;
+  border-radius: var(--wv-radius-s);
+}
+.order-progress > summary:hover { color: var(--wv-primary-hover); }
+.order-progress > summary:focus-visible { outline: 2px solid var(--wv-focus); outline-offset: 3px; }
+.order-progress[open] > summary { margin-bottom: var(--wv-space-3); }
+.order-progress app-order-timeline { padding-left: var(--wv-space-2); }

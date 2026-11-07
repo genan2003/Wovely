@@ -76,6 +76,23 @@ class AuthControllerTest extends SecuredWebMvcTest {
     }
 
     @Test
+    void unknownRolesAreRejectedNotSilentlyDowngraded() throws Exception {
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(signup("[\"moderator\"]")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Error: Unknown role 'moderator'. Use 'user' or 'seller'."));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void roleNamesAreCaseInsensitive() throws Exception {
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(signup("[\"Seller\"]")))
+            .andExpect(status().isOk());
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().getRoles()).extracting(Role::getName).containsExactly(ERole.ROLE_SELLER);
+    }
+
+    @Test
     void signupWithoutRolesGrantsUserRole() throws Exception {
         mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(signup(null)))
             .andExpect(status().isOk());

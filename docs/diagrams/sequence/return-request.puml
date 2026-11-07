@@ -43,7 +43,7 @@ opt status == REFUNDED
   loop each returned item
     Svc -> Prod : POST /internal/products/.../restock (X-Internal-Api-Key)
   end
-  Svc -> DB : order.refundedAmount += amount\n(order → REFUNDED if fully refunded)
+  Svc -> DB : order.refundedCents += totalCents\n(order → REFUNDED if fully refunded)
 end
 Svc -> DB : save return status
 Svc -> Audit : RETURN_STATUS_UPDATE (from → to)

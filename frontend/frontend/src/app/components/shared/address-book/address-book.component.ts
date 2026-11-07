@@ -7,7 +7,6 @@ import { AddressService } from '../../../services/address.service';
 /** Manage the signed-in user's shipping addresses (used at checkout). */
 @Component({
   selector: 'app-address-book',
-  standalone: true,
   imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './address-book.component.html',

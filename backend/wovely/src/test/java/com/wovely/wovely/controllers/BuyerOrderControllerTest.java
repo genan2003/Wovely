@@ -39,7 +39,7 @@ import com.wovely.wovely.support.SecuredWebMvcTest;
 import com.wovely.wovely.support.TestTokens;
 
 /** PLAN.md 1.4 (ownership) and 1.5 (server-side pricing) for buyer order endpoints. */
-@WebMvcTest(BuyerOrderController.class)
+@WebMvcTest({ BuyerOrderController.class, DeliveryOptionController.class })
 @Import({ OrderService.class, AuditService.class, com.wovely.wovely.services.AddressService.class })
 class BuyerOrderControllerTest extends SecuredWebMvcTest {
 
@@ -50,8 +50,8 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     @MockitoBean com.wovely.wovely.services.WalletService walletService;
     @MockitoBean EcoCarrierService ecoCarrierService;
 
-    static final ProductSnapshot BASKET = new ProductSnapshot("p-1", "Basket", 10.0, TestTokens.SELLER_ID, "img", "APPROVED", 5);
-    static final ProductSnapshot MUG = new ProductSnapshot("p-2", "Mug", 7.5, TestTokens.SELLER_ID, "img2", "APPROVED", 5);
+    static final ProductSnapshot BASKET = new ProductSnapshot("p-1", "Basket", 1000L, TestTokens.SELLER_ID, "img", "APPROVED", 5);
+    static final ProductSnapshot MUG = new ProductSnapshot("p-2", "Mug", 750L, TestTokens.SELLER_ID, "img2", "APPROVED", 5);
 
     @BeforeEach
     void stubs() {
@@ -68,7 +68,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
 
     /** Legacy clients still send price/total/status/buyerId — all must be ignored. */
     static final String TAMPERED = """
-        {"buyerId":"buyer-2","sellerId":"seller-2","status":"DELIVERED","totalAmount":0.01,
+        {"deliveryOption":"BICYCLE","buyerId":"buyer-2","sellerId":"seller-2","status":"DELIVERED","totalAmount":0.01,
          "shippingAddress":"Str. Test 1",
          "items":[{"productId":"p-1","quantity":2,"price":0.01},{"productId":"p-2","quantity":1,"price":0.01}]}""";
 
@@ -77,12 +77,17 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
                 .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.totalAmount").value(27.5))
+            .andExpect(jsonPath("$.totalAmount").value(37.5)) // 27.50 items + 10.00 bicycle delivery
+            .andExpect(jsonPath("$.deliveryOption").value("BICYCLE"))
+            .andExpect(jsonPath("$.deliveryFee").value(10.0))
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.buyerId").value(TestTokens.BUYER_ID))
             .andExpect(jsonPath("$.sellerId").value(TestTokens.SELLER_ID))
             .andExpect(jsonPath("$.sellerName").value("seller"))
-            .andExpect(jsonPath("$.items[0].price").value(10.0));
+            .andExpect(jsonPath("$.items[0].price").value(10.0))
+            .andExpect(jsonPath("$.totalCents").value(3750)) // PLAN 7.5: exact cents next to the decimals
+            .andExpect(jsonPath("$.deliveryFeeCents").value(1000))
+            .andExpect(jsonPath("$.items[1].priceCents").value(750));
         verify(inventoryClient).reserve(TestTokens.SELLER_ID, "p-1", 2);
         verify(inventoryClient).reserve(TestTokens.SELLER_ID, "p-2", 1);
     }
@@ -108,7 +113,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     @Test
     void itemsFromDifferentSellersAreRejected() throws Exception {
         when(catalogClient.getProduct("p-2"))
-            .thenReturn(new ProductSnapshot("p-2", "Mug", 7.5, TestTokens.OTHER_SELLER_ID, "", "APPROVED", 5));
+            .thenReturn(new ProductSnapshot("p-2", "Mug", 750L, TestTokens.OTHER_SELLER_ID, "", "APPROVED", 5));
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
                 .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
             .andExpect(status().isBadRequest());
@@ -118,7 +123,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     @Test
     void unapprovedProductCannotBeOrdered() throws Exception {
         when(catalogClient.getProduct("p-1"))
-            .thenReturn(new ProductSnapshot("p-1", "Basket", 10.0, TestTokens.SELLER_ID, "", "PENDING", 5));
+            .thenReturn(new ProductSnapshot("p-1", "Basket", 1000L, TestTokens.SELLER_ID, "", "PENDING", 5));
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
                 .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
             .andExpect(status().isBadRequest());
@@ -127,21 +132,21 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     @Test
     void zeroQuantityIsBadRequest() throws Exception {
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"items\":[{\"productId\":\"p-1\",\"quantity\":0}]}"))
+                .content("{\"deliveryOption\":\"BICYCLE\",\"items\":[{\"productId\":\"p-1\",\"quantity\":0}]}"))
             .andExpect(status().isBadRequest());
     }
 
     @Test
     void emptyOrderIsBadRequest() throws Exception {
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"items\":[]}"))
+                .content("{\"deliveryOption\":\"BICYCLE\",\"items\":[]}"))
             .andExpect(status().isBadRequest());
     }
 
     @Test
     void sellerCannotBuyOwnProduct() throws Exception {
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.seller())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+                .content("{\"deliveryOption\":\"BICYCLE\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
             .andExpect(status().isBadRequest());
     }
 
@@ -222,10 +227,53 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
         verify(inventoryClient, never()).reserve(anyString(), eq("p-1"), anyInt());
     }
 
+    // ---------------------------------------------------------------- status timeline (PLAN 7.1)
+
+    @Test
+    void checkoutStartsTheTimelineWithTheBuyer() throws Exception {
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content(TAMPERED))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.timeline.length()").value(1))
+            .andExpect(jsonPath("$.timeline[0].status").value("PENDING"))
+            .andExpect(jsonPath("$.timeline[0].from").doesNotExist())
+            .andExpect(jsonPath("$.timeline[0].actor").value("BUYER"))
+            .andExpect(jsonPath("$.timeline[0].inferred").value(false))
+            .andExpect(jsonPath("$.timeline[0].actorId").doesNotExist());
+    }
+
+    @Test
+    void cancellingAppendsATimelineEntryWithTheReason() throws Exception {
+        Order o = Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.PENDING);
+        o.recordStatusChange(new com.wovely.wovely.models.OrderStatusChange(null, EOrderStatus.PENDING,
+                o.getCreatedAt(), "BUYER", TestTokens.BUYER_ID, null));
+        when(orderRepository.findById("o-1")).thenReturn(Optional.of(o));
+        mvc.perform(post("/api/orders/o-1/cancel").header(AUTH, bearer(TestTokens.buyer()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"changed my mind\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.timeline.length()").value(2))
+            .andExpect(jsonPath("$.timeline[1].from").value("PENDING"))
+            .andExpect(jsonPath("$.timeline[1].status").value("CANCELLED"))
+            .andExpect(jsonPath("$.timeline[1].actor").value("BUYER"))
+            .andExpect(jsonPath("$.timeline[1].reason").value("changed my mind"));
+    }
+
+    @Test
+    void legacyOrderShowsAnInferredTimeline() throws Exception {
+        Order o = Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.SHIPPED);
+        when(orderRepository.findById("o-1")).thenReturn(Optional.of(o));
+        mvc.perform(get("/api/orders/o-1").header(AUTH, bearer(TestTokens.buyer())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.timeline[*].status").value(org.hamcrest.Matchers.contains("PENDING", "SHIPPED")))
+            .andExpect(jsonPath("$.timeline[*].inferred").value(org.hamcrest.Matchers.contains(true, true)));
+        mvc.perform(get("/api/orders/o-1").header(AUTH, bearer(TestTokens.otherBuyer())))
+            .andExpect(status().isForbidden());
+    }
+
     // ---------------------------------------------------------------- checkout address (PLAN 3, address book)
 
     static final String ITEMS_ONLY = """
-        {"items":[{"productId":"p-1","quantity":1}]}""";
+        {"deliveryOption":"BICYCLE","items":[{"productId":"p-1","quantity":1}]}""";
 
     private com.wovely.wovely.models.Address saveAddress(String userKey, String id, boolean isDefault) {
         var a = new com.wovely.wovely.models.Address();
@@ -244,7 +292,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     void checkoutWithAddressIdUsesTheFormattedBookEntry() throws Exception {
         saveAddress("testuser", "home", false);
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressId\":\"home\",\"shippingAddress\":\"ignored\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+                .content("{\"deliveryOption\":\"BICYCLE\",\"addressId\":\"home\",\"shippingAddress\":\"ignored\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.shippingAddress").value("Ana Pop, Str. Florilor 3, 550000 Sibiu, Romania"));
     }
@@ -263,7 +311,7 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     void someoneElsesAddressIs404AndNoStockIsTouched() throws Exception {
         saveAddress("buyer2", "theirs", true);
         mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressId\":\"theirs\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+                .content("{\"deliveryOption\":\"BICYCLE\",\"addressId\":\"theirs\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
             .andExpect(status().isNotFound());
         verify(inventoryClient, never()).reserve(any(), any(), org.mockito.ArgumentMatchers.anyInt());
     }
@@ -278,6 +326,37 @@ class BuyerOrderControllerTest extends SecuredWebMvcTest {
     }
 
     // ---------------------------------------------------------------- 3.7 wallet at checkout
+
+    @Test
+    void checkoutWithoutADeliveryOptionIs400BeforeAnyStockChange() throws Exception {
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"deliveryOption\":\"TELEPORT\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+            .andExpect(status().isBadRequest());
+        verify(inventoryClient, never()).reserve(any(), any(), anyInt());
+        verify(walletService, never()).chargeOrder(any(Order.class));
+    }
+
+    @Test
+    void theClientCannotSetTheDeliveryFee() throws Exception {
+        mvc.perform(post("/api/orders").header(AUTH, bearer(TestTokens.buyer())).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"deliveryOption\":\"CARBON_NEUTRAL_COURIER\",\"deliveryFee\":0,\"shippingAddress\":\"Str. Lunga 1, Sibiu\",\"items\":[{\"productId\":\"p-1\",\"quantity\":1}]}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.deliveryFee").value(25.0))
+            .andExpect(jsonPath("$.estimatedDeliveryDays").value(2));
+    }
+
+    @Test
+    void deliveryPriceListIsPublic() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/public/delivery-options"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$[0].id").value("BICYCLE"))
+            .andExpect(jsonPath("$[0].fee").value(10.0))
+            .andExpect(jsonPath("$[0].feeCents").value(1000));
+    }
 
     @Test
     void checkoutChargesTheWallet() throws Exception {

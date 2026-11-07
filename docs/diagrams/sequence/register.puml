@@ -1,0 +1,44 @@
+@startuml register
+!include ../_theme.puml
+title Register a new account
+
+' Derived from: frontend register.component.ts, services/auth.service.ts; gateway application.yml;
+' wovely AuthController#registerUser, payload/request/SignupRequest
+autonumber
+actor "Visitor" as U
+participant "Angular SPA" as Web
+participant "Gateway" as GW
+box "core service :8081" #FAF6EF
+  participant "AuthController" as Auth
+  participant "PasswordEncoder" as Enc
+end box
+database "MongoDB\nusers, roles" as DB
+
+U -> Web : username, email, password
+Web -> Web : reactive form validators
+Web -> GW : POST /api/auth/signup
+GW -> GW : rate limit (auth route)
+GW -> Auth ++ : forward
+
+alt fails @Valid on SignupRequest
+  Auth --> Web : 400
+else username or email already used
+  Auth -> DB : existsByUsername, existsByEmail
+  Auth --> Web : 400 MessageResponse
+else roles contains "admin"
+  Auth --> Web : 400 cannot be self-assigned
+else roles contains anything but "user" / "seller"
+  Auth --> Web : 400 unknown role
+else new account
+  Auth -> Enc : encode(password)
+  Auth -> DB : findByName(ROLE_USER or ROLE_SELLER)
+  Auth -> DB : save(user)
+  Auth --> Web -- : 200 User registered successfully!
+  Web --> U : link to log in
+end
+
+note over Web, Auth
+  The form asks "How will you use Wovely?": Shop sends roles ["user"],
+  "Shop and sell my work" sends ["seller"]. Sellers can also buy.
+end note
+@enduml

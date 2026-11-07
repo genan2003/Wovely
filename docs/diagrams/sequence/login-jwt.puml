@@ -3,7 +3,8 @@
 title Sign-in and JWT use across services
 
 ' Derived from: wovely AuthController, security/jwt/JwtUtils, security/jwt/AuthTokenFilter,
-' products|inventory security/{AuthTokenFilter,JwtUtils,OwnershipGuard}
+' products|inventory security/{AuthTokenFilter,JwtUtils,OwnershipGuard};
+' frontend guards/auth.guard (roleGuard), interceptors/auth.interceptor, services/{auth,toast}.service
 autonumber
 actor "Seller" as U
 participant "Angular SPA" as Web
@@ -18,6 +19,8 @@ box "products :8082 / inventory :8083" #E8F1E4
   participant "Seller controller" as Ctl
 end box
 
+U -> Web : opens /seller/inventory
+Web -> Web : roleGuard('ROLE_SELLER'): no session\nredirect /login?returnUrl=/seller/inventory
 U -> Web : username + password
 Web -> Auth ++ : POST /api/auth/signin
 Auth -> DB : findByUsername
@@ -26,16 +29,21 @@ alt credentials valid and account ACTIVE
   Auth -> CoreJwt : generateJwtToken()
   CoreJwt --> Auth : HS256 JWT\nsub=username, **uid=userId**, roles[]
   Auth --> Web -- : 200 {accessToken, id, roles}
-  Web -> Web : sessionStorage.auth-token
+  Web -> Web : AuthService.user signal + sessionStorage\nnavigate to returnUrl (same-site paths only)
 else wrong password / BANNED / SUSPENDED
   Auth --> Web : 401 {status, error, message}
 end
 
-== Later: seller opens own inventory ==
+== Later: seller opens own inventory (roleGuard passes) ==
 Web -> Filter ++ : GET /api/products/seller/{sellerId}\nAuthorization: Bearer <jwt>
 Filter -> Filter : verify signature with JWT_SECRET\nbuild JwtPrincipal(uid, username, roles)
 alt token invalid or expired
   Filter --> Web : 401 (treated as anonymous)
+  Web -> Auth : authInterceptor: POST /api/auth/refresh, retry once
+  note right of Web
+    Refresh fails or no refresh token:
+    clear session, notice, /login?returnUrl=…
+  end note
 else token valid
   Filter -> Guard : sellerOrAdmin(sellerId)
   alt uid == sellerId (ROLE_SELLER) or ROLE_ADMIN
@@ -45,6 +53,7 @@ else token valid
   else someone else's sellerId
     Guard --> Filter : false
     Filter --> Web -- : 403 Access denied
+    Web -> Web : authInterceptor: one toast\n(server message, shown once)
   end
 end
 

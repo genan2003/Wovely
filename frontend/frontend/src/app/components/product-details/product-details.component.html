@@ -1,137 +1,115 @@
-<div class="product-page py-5">
-    <div class="container">
-        @if (loading()) {
-            <div class="text-center py-5">
-                <div class="spinner-border text-success" role="status"></div>
-            </div>
-        } @else if (product(); as p) {
-            <div class="row g-4">
-                <!-- Left Card: Product Details -->
-                <div class="col-lg-8">
-                    <div class="card product-card p-4 h-100">
-                        <!-- Image Gallery Grid -->
-                        <div class="gallery-grid mb-4">
-                            <div class="main-image">
-                                <img [src]="p.imageUrl" [alt]="p.name" class="img-fluid rounded-4">
-                            </div>
-                            <div class="side-images">
-                                <img [src]="p.imageUrl" [alt]="p.name" class="img-fluid rounded-4 mb-2">
-                                <img [src]="p.imageUrl" [alt]="p.name" class="img-fluid rounded-4">
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h1 class="product-title fw-bold mb-0">{{ p.name }}</h1>
-                                <div class="d-flex gap-2 mb-2">
-                                    <app-emission-badge [level]="emissionLevel()" />
-                                    @if (p.localPickup) {
-                                        <span class="small text-muted align-self-center"><i class="bi bi-shop me-1" aria-hidden="true"></i>Local pickup available</span>
-                                    }
-                                    @if (p.handmade || p.isHandmade) {
-                                        <span class="badge rounded-pill handmade-badge shadow-sm" title="Handcrafted" style="background-color: #FDEBD0; color: #D35400;">
-                                            Handcrafted
-                                        </span>
-                                    }
-                                </div>
-                                <h2 class="product-price fw-bold mb-3">{{ p.price | number:'1.0-0' }} RON</h2>
-                            </div>
-                            <div class="text-end">
-                                <div class="rating-stars h4 mb-0">
-                                    @for (i of [1,2,3,4,5]; track i) {
-                                        <i class="bi" [class.bi-star-fill]="i <= (averageRating() || 0)" [class.bi-star]="i > (averageRating() || 0)"></i>
-                                    }
-                                </div>
-                                <div class="d-flex align-items-center gap-3">
-                                    <a href="#reviews" class="text-decoration-none text-dark small" (click)="scrollToReviews($event)">See all {{ reviews().length }} reviews <i class="bi bi-arrow-right-circle"></i></a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p class="product-description text-muted mb-4">{{ p.description }}</p>
-
-                        <div class="mt-auto d-flex justify-content-end align-items-center gap-3">
-                            <button class="btn btn-fav-main" (click)="toggleFavorite()" [title]="favoriteService.isFavorite(safeProduct().id || '') ? 'Remove from Favorites' : 'Add to Favorites'">
-                                <i class="bi" [class.bi-heart-fill]="favoriteService.isFavorite(safeProduct().id || '')" [class.bi-heart]="!favoriteService.isFavorite(safeProduct().id || '')"></i>
-                            </button>
-                            <button class="btn btn-dark add-to-cart-btn px-4 py-2" (click)="addToCart()">
-                                Add to cart <i class="bi bi-cart"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Card: About Seller -->
-                <div class="col-lg-4">
-                    <div class="card seller-card p-4 h-100">
-                        <h3 class="fw-bold mb-4">About seller</h3>
-                        
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="seller-avatar">
-                                <img [src]="sellerProfile()?.workshopImageUrl || 'icons/user.png'" 
-                                     class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
-                            </div>
-                            <div>
-                                <div class="rating-stars h5 mb-0">
-                                    @for (i of [1,2,3,4,5]; track i) {
-                                        <i class="bi" [class.bi-star-fill]="i <= (averageRating() || 0)" [class.bi-star]="i > (averageRating() || 0)"></i>
-                                    }
-                                </div>
-                                <a [routerLink]="['/seller-profile', p.sellerId]" class="text-decoration-none text-dark small">See seller reviews <i class="bi bi-arrow-right-circle"></i></a>
-                            </div>
-                        </div>
-
-                        <h4 class="fw-bold mb-3">{{ sellerProfile()?.fullName || sellerProfile()?.username || 'Seller #' + p.sellerId.substring(0, 6) }}</h4>
-                        <p class="seller-bio text-muted italic mb-4">
-                            {{ sellerProfile()?.makerStory || 'The artisan hasn\'t shared their story yet, but their work speaks for itself!' }}
-                        </p>
-
-                        <button class="btn btn-outline-dark w-100 rounded-pill py-2 fw-bold mb-2" (click)="toggleChat()">
-                            <i class="bi bi-chat-dots me-2"></i> Ask the Artisan
-                        </button>
-                        <button class="btn btn-link text-muted w-100 small p-0" (click)="reportProduct()">
-                            <i class="bi bi-flag-fill me-1"></i> Report this listing
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reviews Section -->
-            <div class="mt-5" id="reviews">
-                <h2 class="fw-bold mb-4">Reviews</h2>
-                <div class="reviews-list">
-                    @for (review of reviews(); track review.id) {
-                        <div class="review-item p-4 rounded-4 bg-white border mb-3 shadow-sm">
-                            <div class="d-flex justify-content-between mb-2">
-                                <div>
-                                    <span class="fw-bold">{{ review.username }}</span>
-                                    @if (review.verifiedPurchase) {
-                                        <app-verified-badge class="ms-2" kind="product" />
-                                    }
-                                </div>
-                                <div class="text-warning">
-                                    @for (i of [1,2,3,4,5]; track i) {
-                                        <i class="bi" [class.bi-star-fill]="i <= review.rating" [class.bi-star]="i > review.rating"></i>
-                                    }
-                                </div>
-                            </div>
-                            <p class="text-muted mb-0">{{ review.comment }}</p>
-                        </div>
-                    } @empty {
-                        <p class="text-muted">No reviews yet for this masterpiece.</p>
-                    }
-                </div>
-            </div>
-
-            <!-- Chat Overlay -->
-            @if (showChat()) {
-                <div class="chat-position">
-                    <app-chat [receiverId]="p.sellerId" 
-                             [receiverName]="sellerProfile()?.username || 'Artisan'" 
-                             [product]="p"
-                             (closeChat)="showChat.set(false)"></app-chat>
-                </div>
-            }
-        }
+<div class="wv-page product-page">
+  @if (loading()) {
+    <div class="layout" aria-hidden="true">
+      <span class="wv-skeleton skeleton-media"></span>
+      <div>
+        <span class="wv-skeleton skeleton-title"></span>
+        <span class="wv-skeleton skeleton-line"></span>
+      </div>
     </div>
+    <span class="visually-hidden" role="status">Loading product</span>
+  } @else if (notFound()) {
+    <app-empty-state icon="bi-basket" title="This product isn’t available"
+                     message="It may have sold out for good or been taken down by the maker.">
+      <a class="btn btn-primary" routerLink="/products">Browse products</a>
+    </app-empty-state>
+  } @else if (loadFailed()) {
+    <app-empty-state icon="bi-wifi-off" title="This product didn’t load" message="Check your connection and try again.">
+      <button type="button" class="btn btn-primary" (click)="ngOnInit()">Try again</button>
+    </app-empty-state>
+  } @else if (product(); as p) {
+    <article class="layout">
+      <div class="media">
+        <img [src]="p.imageUrl || 'placeholder-product.svg'" appFallback [alt]="p.name" width="800" height="1000">
+      </div>
+
+      <div class="buy">
+        <p class="buy__maker">
+          <a [routerLink]="['/seller-profile', p.sellerId]">{{ p.sellerName || 'Independent maker' }}</a>
+          @if (p.city) { <span> in {{ p.city }}</span> }
+        </p>
+        <h1 class="product-title">{{ p.name }}</h1>
+
+        @if (reviews().length > 0) {
+          <a href="#reviews" class="buy__rating" (click)="scrollToReviews($event)">
+            <app-rating [value]="averageRating()" />
+            <span>{{ reviews().length }} {{ reviews().length === 1 ? 'review' : 'reviews' }}</span>
+          </a>
+        }
+
+        <p class="product-price">{{ p.price | number: '1.2-2' }} RON</p>
+
+        <ul class="buy__facts">
+          @if (emissionLevel() === 'ZERO' || emissionLevel() === 'LOW') {
+            <li><app-emission-badge [level]="emissionLevel()" /></li>
+          }
+          @if (p.handmade || p.isHandmade) {
+            <li><span class="wv-tag handmade-badge">Handcrafted</span></li>
+          }
+          @if (p.localPickup) {
+            <li><span class="wv-tag"><i class="bi bi-shop" aria-hidden="true"></i> Local pickup available</span></li>
+          }
+        </ul>
+
+        @if (p.stockQuantity === 0) {
+          <p class="buy__soldout" role="status">Sold out for now.</p>
+        }
+
+        <div class="buy__actions">
+          <button type="button" class="btn btn-primary add-to-cart-btn" [disabled]="p.stockQuantity === 0" (click)="addToCart()">Add to cart</button>
+          <button type="button" class="btn btn-outline-primary" [disabled]="p.stockQuantity === 0" (click)="buyNow()">Buy now</button>
+          <button type="button" class="btn btn-outline-primary btn-fav-main" (click)="toggleFavorite()"
+                  [attr.aria-pressed]="favoriteService.isFavorite(p.id!)" aria-label="Favourite this product">
+            <i class="bi" [class]="favoriteService.isFavorite(p.id!) ? 'bi-heart-fill' : 'bi-heart'" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <p class="product-description">{{ p.description }}</p>
+
+        <hr class="wv-stitch" />
+
+        <section class="maker" aria-labelledby="maker-title">
+          <img [src]="sellerProfile()?.workshopImageUrl || 'avatar.svg'" appFallback="avatar.svg" alt="" width="64" height="64">
+          <div>
+            <h2 id="maker-title">{{ sellerProfile()?.fullName || sellerProfile()?.username || 'About the maker' }}</h2>
+            @if (sellerProfile()?.makerStory; as story) {
+              <p>{{ story }}</p>
+            }
+            <div class="maker__links">
+              <a [routerLink]="['/seller-profile', p.sellerId]">See maker’s reviews</a>
+              <button type="button" class="btn btn-link p-0" (click)="toggleChat()">Message the maker</button>
+              <button type="button" class="btn btn-link p-0 report" (click)="reportProduct()">Report this listing</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </article>
+
+    <section class="reviews" id="reviews" aria-labelledby="reviews-title">
+      <h2 id="reviews-title">Reviews</h2>
+      @for (review of reviews(); track review.id) {
+        <div class="review-item">
+          <div class="review-item__head">
+            <strong>{{ review.username }}</strong>
+            @if (review.verifiedPurchase) {
+              <app-verified-badge kind="product" />
+            }
+            <app-rating [value]="review.rating" />
+          </div>
+          <p>{{ review.comment }}</p>
+        </div>
+      } @empty {
+        <p class="reviews__empty">No reviews yet. Buyers can review this after their order arrives.</p>
+      }
+    </section>
+
+    @if (showChat()) {
+      <div class="chat-position">
+        <app-chat [receiverId]="p.sellerId"
+                  [receiverName]="sellerProfile()?.username || 'the maker'"
+                  [product]="p"
+                  (closeChat)="showChat.set(false)"></app-chat>
+      </div>
+    }
+  }
 </div>

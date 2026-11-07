@@ -1,0 +1,25 @@
+@startuml 01-context
+!include <C4/C4_Context>
+title Wovely — system context (C4 level 1)
+
+' Derived from: README.md, .env.example, wovely services/{WalletService,EcoCarrierService}, products models/Product
+LAYOUT_WITH_LEGEND()
+
+Person(buyer, "Buyer", "ROLE_USER. Browses, pays from a wallet, reviews, chats, returns")
+Person(seller, "Seller", "ROLE_SELLER. Lists products, manages stock, ships orders")
+Person(admin, "Admin", "ROLE_ADMIN. Approves listings, moderates users, resolves orders")
+
+System(wovely, "Wovely", "Marketplace for handmade goods with low-emission delivery")
+System_Ext(images, "Image hosts", "Any URL a seller enters; the browser loads product and workshop photos from it")
+
+Rel(buyer, wovely, "Shops and messages makers", "HTTPS, WebSocket")
+Rel(seller, wovely, "Sells and fulfils orders", "HTTPS, WebSocket")
+Rel(admin, wovely, "Moderates the marketplace", "HTTPS")
+Rel(buyer, images, "Loads product photos", "HTTPS")
+
+note right of wovely
+  No external payment or carrier yet: the wallet
+  (WalletService) and the shipping labels
+  (EcoCarrierService) are simulated in the core service.
+end note
+@enduml

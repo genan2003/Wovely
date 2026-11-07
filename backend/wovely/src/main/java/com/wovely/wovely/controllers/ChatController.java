@@ -61,23 +61,20 @@ public class ChatController {
 
     /** Send a message as the authenticated user ({@code senderId} in the body is ignored). */
     @PostMapping("/send")
-    public ResponseEntity<ChatMessage> sendMessage(@RequestBody ChatMessage message,
+    public ResponseEntity<ChatMessage> sendMessage(@jakarta.validation.Valid @RequestBody com.wovely.wovely.payload.request.SendMessageRequest message,
             @AuthenticationPrincipal UserDetailsImpl me) {
-        if (message.getReceiverId() == null || message.getContent() == null || message.getContent().isBlank()) {
-            throw ApiException.badRequest("receiverId and content are required");
-        }
-        if (message.getReceiverId().equals(me.getId())) {
+        if (message.receiverId().equals(me.getId())) {
             throw ApiException.badRequest("You cannot message yourself");
         }
-        if (!userRepository.existsById(message.getReceiverId())) {
+        if (!userRepository.existsById(message.receiverId())) {
             throw ApiException.badRequest("Receiver not found");
         }
         ChatMessage saved = chatMessageRepository.save(new ChatMessage(
             me.getId(),
-            message.getReceiverId(),
-            message.getProductId(),
-            message.getProductThumbnail(),
-            message.getContent()));
+            message.receiverId(),
+            message.productId(),
+            message.productThumbnail(),
+            message.content().strip()));
         chatNotifier.messageSent(saved);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }

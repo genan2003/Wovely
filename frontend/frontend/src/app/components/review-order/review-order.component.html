@@ -10,35 +10,14 @@
             <div class="card review-card p-4">
                 <!-- Shop Feedback -->
                 <div class="shop-header d-flex align-items-center mb-4">
-                    <img src="assets/icons/user.png" class="rounded-circle me-2" style="width: 32px; height: 32px;">
+                    <img ngSrc="avatar.svg" width="32" height="32" class="rounded-circle me-2" alt="">
                     <h4 class="fw-bold mb-0">{{ order.sellerName || 'Shop name' }}</h4>
                 </div>
 
                 <div class="shop-ratings mb-5">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>How was your overall experience with the seller?</span>
-                        <div class="stars">
-                            @for (i of [1,2,3,4,5]; track i) {
-                                <i class="bi" [class.bi-star-fill]="i <= sellerReview.overall" [class.bi-star]="i > sellerReview.overall" (click)="setRating('overall', i)"></i>
-                            }
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>How was the communication with the seller?</span>
-                        <div class="stars">
-                            @for (i of [1,2,3,4,5]; track i) {
-                                <i class="bi" [class.bi-star-fill]="i <= sellerReview.communication" [class.bi-star]="i > sellerReview.communication" (click)="setRating('communication', i)"></i>
-                            }
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>Was the order shipped in a the promised timeframe?</span>
-                        <div class="stars">
-                            @for (i of [1,2,3,4,5]; track i) {
-                                <i class="bi" [class.bi-star-fill]="i <= sellerReview.shipping" [class.bi-star]="i > sellerReview.shipping" (click)="setRating('shipping', i)"></i>
-                            }
-                        </div>
-                    </div>
+                    <app-star-input class="mb-2" label="How was your overall experience with the seller?" [(value)]="overall" />
+                    <app-star-input class="mb-2" label="How was the communication with the seller?" [(value)]="communication" />
+                    <app-star-input class="mb-2" label="Did the order arrive in the promised time?" [(value)]="shipping" />
                 </div>
 
                 <hr class="mb-5">
@@ -48,24 +27,25 @@
                     <div class="item-review mb-5 pb-5 border-bottom">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div class="d-flex align-items-center">
-                                <img [src]="ir.imageUrl" class="rounded-3 me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                <img [src]="ir.imageUrl || 'placeholder-product.svg'" [alt]="ir.productName" class="rounded-3 me-3" style="width: 60px; height: 60px; object-fit: cover;">
                                 <div>
                                     <h5 class="fw-bold mb-0">{{ ir.productName }}</h5>
                                     <p class="text-muted small mb-0">Tell us about this item!</p>
                                 </div>
                             </div>
-                            <div class="stars">
-                                @for (i of [1,2,3,4,5]; track i) {
-                                    <i class="bi" [class.bi-star-fill]="i <= ir.rating" [class.bi-star]="i > ir.rating" (click)="setItemRating(idx, i)"></i>
-                                }
-                            </div>
+                            <app-star-input [label]="'Rating for ' + ir.productName" [hideLabel]="true"
+                                            [value]="ir.rating" (valueChange)="setItemRating(idx, $event)" />
                         </div>
                         <textarea class="form-control rounded-4 p-3" rows="3" [(ngModel)]="ir.comment" placeholder="Your experience with this item..."></textarea>
                     </div>
                 }
 
                 <div class="text-end">
-                    <button class="btn btn-dark post-btn px-5 py-2" [disabled]="submitting()" (click)="postReviews()">
+                    @if (!allRated()) {
+                        <p class="text-muted small mb-2" id="rate-hint">Rate the seller and every item to post your review.</p>
+                    }
+                    <button class="btn btn-dark post-btn px-5 py-2" [disabled]="submitting() || !allRated()"
+                            [attr.aria-describedby]="allRated() ? null : 'rate-hint'" (click)="postReviews()">
                         {{ submitting() ? 'Posting...' : 'Post review' }}
                     </button>
                 </div>

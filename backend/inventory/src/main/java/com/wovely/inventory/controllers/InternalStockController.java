@@ -31,7 +31,7 @@ import jakarta.validation.constraints.NotNull;
 public class InternalStockController {
 
     public record InitRequest(@NotBlank String sellerId, @NotNull @Min(0) Integer initialQuantity,
-            @Min(0) Integer lowStockThreshold, String productName, Double price, String imageUrl, String category,
+            @Min(0) Integer lowStockThreshold, String productName, @Min(0) Long priceCents, String imageUrl, String category,
             String co2EmissionScore, String shippingMethod, Boolean isHandmade) {
     }
 
@@ -47,7 +47,7 @@ public class InternalStockController {
     @PutMapping
     public Map<String, Object> init(@PathVariable String productId, @Valid @RequestBody InitRequest r) {
         return view(ledger.init(productId, r.sellerId(), r.initialQuantity(), r.lowStockThreshold(),
-                new StockLedger.Details(r.productName(), r.price(), r.imageUrl(), r.category(), r.co2EmissionScore(),
+                new StockLedger.Details(r.productName(), r.priceCents(), r.imageUrl(), r.category(), r.co2EmissionScore(),
                         r.shippingMethod(), r.isHandmade())));
     }
 

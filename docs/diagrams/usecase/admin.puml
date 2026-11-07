@@ -1,0 +1,45 @@
+@startuml admin
+!include ../_theme.puml
+title Admin use cases
+
+' Derived from: README.md Story 1; products AdminProductController; wovely AdminUserController, OrderAdminController,
+' ReportController, ReturnRequestController
+left to right direction
+actor "Admin\nROLE_ADMIN" as Admin
+
+rectangle "Wovely" {
+  usecase "Review pending listings" as Queue
+  usecase "Approve, reject or\nrequest changes" as Decide
+  usecase "Edit a listing" as EditAd
+  usecase "Search users" as Search
+  usecase "Issue a strike" as Strike
+  usecase "Suspend or ban a user" as Ban
+  usecase "Restore an account" as Restore
+  usecase "Find any order" as FindOrder
+  usecase "Intervene on an order" as Intervene
+  usecase "Regenerate shipping label" as Label
+  usecase "Handle refund requests" as Refunds
+  usecase "Review reported content" as Reports
+  usecase "Read a reported chat log" as ChatLog
+  usecase "Read the audit trail" as Audit
+  usecase "Record in audit trail" as Record
+}
+
+Admin --> Queue
+Admin --> Search
+Admin --> FindOrder
+Admin --> Refunds
+Admin --> Reports
+Admin --> Audit
+Decide .> Queue : <<extend>>
+EditAd .> Queue : <<extend>>
+Strike .> Search : <<extend>>
+Ban .> Search : <<extend>>
+Restore .> Search : <<extend>>
+Intervene .> FindOrder : <<extend>>
+Label .> FindOrder : <<extend>>
+ChatLog .> Reports : <<extend>>
+Decide .> Record : <<include>>
+Ban .> Record : <<include>>
+Intervene .> Record : <<include>>
+@enduml

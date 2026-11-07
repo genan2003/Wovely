@@ -29,7 +29,8 @@ public class InventoryItem {
 
     private String imageUrl;
     private String category;
-    private Double price;
+    /** Listing price in RON cents, copied from products for the seller views (PLAN.md 7.5). */
+    private Long priceCents;
 
     @NotNull(message = "Stock quantity is required")
     @Min(value = 0, message = "Stock quantity cannot be negative")
@@ -61,14 +62,14 @@ public class InventoryItem {
     }
 
     public InventoryItem(String productId, String sellerId, String productName, String imageUrl, 
-                         String category, Double price, Integer stockQuantity) {
+                         String category, Long priceCents, Integer stockQuantity) {
         this();
         this.productId = productId;
         this.sellerId = sellerId;
         this.productName = productName;
         this.imageUrl = imageUrl;
         this.category = category;
-        this.price = price;
+        this.priceCents = priceCents;
         this.stockQuantity = stockQuantity;
     }
 
@@ -91,8 +92,13 @@ public class InventoryItem {
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    public Long getPriceCents() { return priceCents; }
+    public void setPriceCents(Long priceCents) { this.priceCents = priceCents; }
+
+    /** Decimal view for JSON (scale 2); derived, never stored. */
+    @org.springframework.data.annotation.Transient
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "price", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    public java.math.BigDecimal getPrice() { return com.wovely.common.money.Money.toDecimal(priceCents); }
 
     public Integer getStockQuantity() { return stockQuantity; }
     public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }

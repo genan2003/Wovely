@@ -1,0 +1,76 @@
+@startuml checkout
+!include ../_theme.puml
+title Checkout
+
+' Derived from: frontend cart.component.ts (checkout, placeOrders), services/cart.service.ts (pruneUnavailable);
+' services/delivery-option.service.ts; wovely services/OrderService#createOrder, AddressService#resolveForCheckout,
+' WalletService#chargeOrder, models/EDeliveryOption, controllers/DeliveryOptionController
+|Buyer|
+start
+:Open cart and choose a seller's items;
+|SPA|
+:Load the delivery price list\n(GET /api/public/delivery-options);
+:Preselect the lowest-CO₂ delivery;
+|Buyer|
+:Keep it or pick another delivery;
+|SPA|
+if (Logged in?) then (no)
+  :Go to /login with returnUrl=/cart;
+  stop
+else (yes)
+endif
+if (Prices loaded, address chosen, wallet covers\nitems + delivery fee?) then (no)
+  :Keep checkout disabled and say what's missing;
+  stop
+else (yes)
+endif
+:Drop items no longer available (pruneUnavailable);
+:POST /api/orders with item ids, quantities,\naddressId, deliveryOption;
+|Core service|
+if (deliveryOption valid?) then (no)
+  :400;
+  stop
+else (yes)
+endif
+:Resolve the address;
+if (Address found?) then (no)
+  :400;
+  stop
+else (yes)
+endif
+repeat
+  :Read product from products service;
+  if (APPROVED, valid price, same seller, not own product?) then (no)
+    :400;
+    stop
+  else (yes)
+  endif
+repeat while (More items?) is (yes) not (no)
+:Build order from server prices;\ntotal = items + delivery fee (server price list), status PENDING;
+|Inventory service|
+repeat
+  :Reserve stock atomically;
+  if (Enough stock?) then (no)
+    |Core service|
+    :Release lines already reserved;
+    :409 Insufficient stock;
+    stop
+  else (yes)
+  endif
+repeat while (More items?) is (yes) not (no)
+|Core service|
+:Save order;
+:Charge wallet (guarded $inc);
+if (Enough balance?) then (no)
+  :Delete order and release stock;
+  :Payment error;
+  stop
+else (yes)
+endif
+:Return order;
+|SPA|
+:Remove seller's items from cart;
+:Show toast and the On the way tab;
+|Buyer|
+stop
+@enduml

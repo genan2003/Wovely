@@ -1,0 +1,53 @@
+@startuml admin-order-intervention-audit
+!include ../_theme.puml
+title Admin order intervention with audit trail
+
+' Derived from: wovely OrderAdminController, services/OrderService#applyIntervention and #transition,
+' services/OrderStatusPolicy, services/WalletService, services/AuditService; frontend order-resolution.component.ts
+autonumber
+actor "Admin" as A
+participant "Angular SPA" as Web
+box "core service :8081" #FAF6EF
+  participant "OrderAdminController" as Ctl
+  participant "OrderService" as Svc
+  participant "OrderStatusPolicy" as Policy
+  participant "WalletService" as Wal
+  participant "AuditService" as Audit
+end box
+participant "InventoryClient" as Inv
+database "MongoDB" as DB
+
+A -> Web : choose action, reason, notes
+Web -> Ctl ++ : POST /api/admin/orders/{id}/intervene
+note right of Ctl : @PreAuthorize hasRole('ADMIN')\nanyone else gets 403
+Ctl -> Svc ++ : applyIntervention(id, request)
+Svc -> DB : requireOrder(id)
+
+alt UPDATE_STATUS, FORCE_REFUND, CANCEL_ORDER, MARK_DISPUTED, RESOLVE_DISPUTE
+  Svc -> Policy : isAllowed(from, to, ADMIN)
+  alt from is CANCELLED or REFUNDED, or to == from
+    Policy --> Svc : false
+    Svc --> Web : 409 Cannot change order status
+  else allowed
+    opt restocksOn(from, to): goods not shipped yet
+      Svc -> Inv : release(each item)
+    end
+    alt to is CANCELLED or REFUNDED
+      Svc -> Wal : refundRemaining(order)
+    else to is COMPLETED
+      Svc -> Wal : releaseToSeller(order)
+    end
+  end
+else UPDATE_TRACKING
+  Svc -> Svc : set trackingNumber
+else missing field or unknown action
+  Svc --> Web : 400
+end
+
+Svc -> DB : save(order)
+Svc -> Audit : record("ORDER_INTERVENTION", id,\naction, before -> after, reason)
+Audit -> DB : audit_logs (actor from security context)
+Svc --> Ctl -- : OrderDTO
+Ctl --> Web -- : 200
+Web --> A : toast, reload orders
+@enduml

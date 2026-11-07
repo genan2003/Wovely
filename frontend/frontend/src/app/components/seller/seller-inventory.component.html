@@ -1,40 +1,27 @@
-<div class="seller-inventory-container">
-    <!-- Header -->
-    <div class="inventory-header">
-        <h1>Visual inventory</h1>
-        <p class="subtitle">Manage your products</p>
-    </div>
+<div class="seller-inventory-container wv-page">
+    <header class="inventory-header">
+        <div>
+            <h1>Inventory</h1>
+            <p class="subtitle">Everything you have listed, and what’s running low.</p>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="openAddDialog()">Add product</button>
+    </header>
 
-    <!-- Stats Dashboard -->
-    <div class="stats-dashboard">
-        <div class="stat-card">
-            <span class="stat-value">{{ stats().total }}</span>
-            <span class="stat-label">Total products</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value">{{ stats().inStock }}</span>
-            <span class="stat-label">In Stock</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value">{{ stats().lowStock }}</span>
-            <span class="stat-label">Low Stock</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value">{{ stats().outOfStock }}</span>
-            <span class="stat-label">Out of stock</span>
-        </div>
-    </div>
-
-    <!-- Horizontal Divider -->
-    <div class="inventory-divider"></div>
+    <dl class="stock-strip">
+        <div><dt>Products</dt><dd>{{ stats().total }}</dd></div>
+        <div><dt>In stock</dt><dd>{{ stats().inStock }}</dd></div>
+        <div [class.stock-strip__warn]="stats().lowStock > 0"><dt>Low stock</dt><dd>{{ stats().lowStock }}</dd></div>
+        <div [class.stock-strip__alert]="stats().outOfStock > 0"><dt>Sold out</dt><dd>{{ stats().outOfStock }}</dd></div>
+    </dl>
 
     <!-- Filters & Search -->
     <div class="inventory-filters">
         <div class="search-box">
             <i class="bi bi-search"></i>
             <input 
-                type="text" 
-                placeholder="Search products..." 
+                type="search" 
+                aria-label="Search your products"
+                placeholder="Search products"
                 (input)="search($event)"
             />
         </div>
@@ -45,13 +32,13 @@
                     [class.active]="selectedCategory() === cat"
                     (click)="filterByCategory(cat)"
                 >
-                    {{ cat === 'all' ? 'All Categories' : cat }}
+                    {{ cat === 'all' ? 'All categories' : cat }}
                 </button>
             }
         </div>
         <div class="header-actions">
-            <button class="btn btn-icon" (click)="toggleView()" title="Toggle View">
-                <i class="bi" [class.bi-grid]="viewMode() === 'list'" [class.bi-list]="viewMode() === 'grid'"></i>
+            <button class="btn btn-icon" (click)="toggleView()" [attr.aria-label]="viewMode() === 'grid' ? 'Show as list' : 'Show as grid'">
+                <i class="bi" [class.bi-grid]="viewMode() === 'list'" [class.bi-list]="viewMode() === 'grid'" aria-hidden="true"></i>
             </button>
         </div>
     </div>
@@ -89,7 +76,7 @@
                     @for (item of filteredItems(); track item.productId) {
                         <div class="inventory-card">
                             <div class="card-image">
-                                <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                                <img [src]="item.imageUrl || 'placeholder-product.svg'" [alt]="item.productName" />
                                 <div class="stock-pill overlay-pill">
                                     Stock: {{ item.stockQuantity }}
                                 </div>
@@ -97,23 +84,24 @@
                             <div class="card-body">
                                 <div class="product-info-row">
                                     <h4 class="product-name text-truncate">{{ item.productName }}</h4>
-                                    <span class="price">{{ item.price | number:'1.0-0' }} RON</span>
+                                    <span class="price">{{ item.price | number: '1.2-2' }} RON</span>
                                 </div>
+                                <app-listing-status class="card-status" [status]="item.status" />
                                 <p class="product-description">{{ item.description || 'No description provided.' }}</p>
                                 
                                 <div class="card-footer">
                                     <div class="card-actions">
-                                        <button class="btn-icon" title="Full Edit" (click)="openEditStockDialog(item)">
-                                            <i class="bi bi-pencil-square"></i>
+                                        <button class="btn-icon" [title]="item.status === 'REJECTED' ? 'Rejected listings can’t be edited' : 'Full Edit'" [attr.aria-label]="'Edit ' + item.productName" [disabled]="item.status === 'REJECTED'" (click)="openEditStockDialog(item)">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                         </button>
-                                        <button class="btn-icon" title="Restock" (click)="openRestockDialog(item)">
-                                            <i class="bi bi-plus-lg"></i>
+                                        <button class="btn-icon" title="Restock" [attr.aria-label]="'Restock ' + item.productName" (click)="openRestockDialog(item)">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
-                                        <button class="btn-icon" title="View Details" (click)="viewDetails(item)">
-                                            <i class="bi bi-info-circle"></i>
+                                        <button class="btn-icon" title="View Details" [attr.aria-label]="'View Details ' + item.productName" (click)="viewDetails(item)">
+                                            <i class="bi bi-info-circle" aria-hidden="true"></i>
                                         </button>
-                                        <button class="btn-icon text-danger" title="Delete Product" (click)="deleteProduct(item)">
-                                            <i class="bi bi-trash"></i>
+                                        <button class="btn-icon text-danger" title="Delete Product" [attr.aria-label]="'Delete Product ' + item.productName" (click)="deleteProduct(item)">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -123,8 +111,8 @@
                 </div>
             } @else {
                 <!-- List View (Theme-consistent) -->
-                <div class="inventory-list bg-white rounded-4 overflow-hidden border" style="border-color: #A68A64 !important;">
-                    <div class="list-header p-3 border-bottom d-flex align-items-center gap-3 fw-bold" style="background: rgba(166, 138, 100, 0.1); border-color: #A68A64 !important;">
+                <div class="inventory-list bg-white rounded-4 overflow-hidden border" style="border-color: var(--wv-line-strong) !important;">
+                    <div class="list-header p-3 border-bottom d-flex align-items-center gap-3 fw-bold" style="background: color-mix(in srgb, var(--wv-ink) 10%, transparent); border-color: var(--wv-line-strong) !important;">
                         <div style="width: 50px;"></div>
                         <div class="flex-grow-1">Product Details</div>
                         <div style="width: 100px;">Price</div>
@@ -132,19 +120,20 @@
                         <div style="width: 120px; text-align: right;">Actions</div>
                     </div>
                     @for (item of filteredItems(); track item.productId) {
-                        <div class="list-row p-3 border-bottom d-flex align-items-center gap-3" style="border-color: rgba(166, 138, 100, 0.2) !important;">
-                            <img class="rounded-3" [src]="item.imageUrl || 'assets/placeholder-product.png'" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #A68A64;" />
+                        <div class="list-row p-3 border-bottom d-flex align-items-center gap-3" style="border-color: color-mix(in srgb, var(--wv-ink) 20%, transparent) !important;">
+                            <img class="rounded-3" [src]="item.imageUrl || 'placeholder-product.svg'" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid var(--wv-line-strong);" />
                             <div class="flex-grow-1">
                                 <div class="fw-bold">{{ item.productName }}</div>
                                 <div class="small text-muted">{{ item.category }}</div>
+                                <app-listing-status [status]="item.status" />
                             </div>
-                            <div class="fw-bold">{{ item.price | number:'1.0-0' }} RON</div>
+                            <div class="fw-bold">{{ item.price | number: '1.2-2' }} RON</div>
                             <div class="stock-pill">Stock: {{ item.stockQuantity }}</div>
                             <div class="d-flex gap-2 justify-content-end" style="width: 150px;">
-                                <button class="btn-icon" (click)="openEditStockDialog(item)" title="Full Edit"><i class="bi bi-pencil-square"></i></button>
-                                <button class="btn-icon" (click)="openRestockDialog(item)" title="Restock"><i class="bi bi-plus-lg"></i></button>
-                                <button class="btn-icon" (click)="viewDetails(item)" title="View Details"><i class="bi bi-info-circle"></i></button>
-                                <button class="btn-icon text-danger" (click)="deleteProduct(item)" title="Delete Product"><i class="bi bi-trash"></i></button>
+                                <button class="btn-icon" (click)="openEditStockDialog(item)" [title]="item.status === 'REJECTED' ? 'Rejected listings can’t be edited' : 'Full Edit'" [attr.aria-label]="'Edit ' + item.productName" [disabled]="item.status === 'REJECTED'"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
+                                <button class="btn-icon" (click)="openRestockDialog(item)" title="Restock" [attr.aria-label]="'Restock ' + item.productName"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                                <button class="btn-icon" (click)="viewDetails(item)" title="View Details" [attr.aria-label]="'View Details ' + item.productName"><i class="bi bi-info-circle" aria-hidden="true"></i></button>
+                                <button class="btn-icon text-danger" (click)="deleteProduct(item)" title="Delete Product" [attr.aria-label]="'Delete Product ' + item.productName"><i class="bi bi-trash" aria-hidden="true"></i></button>
                             </div>
                         </div>
                     }
@@ -154,11 +143,6 @@
     }
 
     <!-- Floating Action Button -->
-    <div class="fab-container">
-        <button class="fab-btn" (click)="openAddDialog()" title="Add Product">
-            <i class="bi bi-plus-lg"></i>
-        </button>
-    </div>
 </div>
 
 <!-- Details Modal -->
@@ -173,7 +157,7 @@
                 @if (selectedDetailItem(); as item) {
                     <div class="details-layout">
                         <div class="details-image">
-                            <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                            <img [src]="item.imageUrl || 'placeholder-product.svg'" [alt]="item.productName" />
                         </div>
                         <div class="details-info">
                             <div class="details-header-row">
@@ -183,6 +167,7 @@
                                 </span>
                             </div>
                             <p class="details-category">{{ item.category }}</p>
+                            <app-listing-status class="details-status" [status]="item.status" [always]="true" />
                             
                             <div class="details-description mb-4">
                                 <h5>Description</h5>
@@ -192,7 +177,7 @@
                                 <div class="details-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">Price: </span>
-                                        <span class="detail-value text-primary font-bold">{{ item.price | number:'1.0-0' }} RON</span>
+                                        <span class="detail-value text-primary font-bold">{{ item.price | number: '1.2-2' }} RON</span>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Current Stock: </span>
@@ -250,7 +235,7 @@
             <div class="modal-body">
                 @if (selectedItem(); as item) {
                     <div class="product-preview mb-4">
-                        <img [src]="item.imageUrl || 'assets/placeholder-product.png'" [alt]="item.productName" />
+                        <img [src]="item.imageUrl || 'placeholder-product.svg'" [alt]="item.productName" />
                         <div class="product-preview-info">
                             <h4>{{ item.productName }}</h4>
                             <p class="mb-0">Current Stock: <strong>{{ item.stockQuantity }} units</strong></p>
@@ -271,7 +256,7 @@
                     <div class="form-row mb-3">
                         <div class="form-group col">
                             <label for="editPrice">Price (RON)</label>
-                            <input type="number" id="editPrice" class="form-control" [(ngModel)]="editPrice" name="editPrice" />
+                            <input type="number" id="editPrice" class="form-control" [(ngModel)]="editPrice" name="editPrice" step="0.01" min="0.01" inputmode="decimal" />
                         </div>
                         <div class="form-group col">
                             <label for="editThreshold">Low Stock Threshold</label>
@@ -359,10 +344,10 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="addPrice">Price ($) *</label>
+                                <label for="addPrice">Price (RON) *</label>
                                 <input type="number" id="addPrice" class="form-control" 
                                     [(ngModel)]="formPrice" name="formPrice" 
-                                    step="0.01" min="0.01" required />
+                                    step="0.01" min="0.01" inputmode="decimal" required />
                             </div>
                         </div>
                         <div class="form-group">

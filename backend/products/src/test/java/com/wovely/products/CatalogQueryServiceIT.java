@@ -23,7 +23,7 @@ class CatalogQueryServiceIT extends AbstractMongoIT {
     static final String CAT = "IT-Cat-" + System.nanoTime();
 
     private void save(String name, String status, double price, String co2, String city, boolean handmade) {
-        Product p = new Product(name, "", price, "s", "", CAT, CAT + " > Sub", List.of(), city, "R", null, null, co2,
+        Product p = new Product(name, "", Math.round(price * 100), "s", "", CAT, CAT + " > Sub", List.of(), city, "R", null, null, co2,
                 "Courier", handmade, 1, 1);
         p.setStatus(status);
         repository.save(p.refreshDeliveryEmission());
@@ -52,7 +52,7 @@ class CatalogQueryServiceIT extends AbstractMongoIT {
 
     @Test
     void ecoFilterIsCaseInsensitiveAndPriceRangeApplies() {
-        assertThat(names(new Filter(CAT, null, true, null, null, null, null, null, null, 30.0))).containsExactly("A basket", "B mug");
+        assertThat(names(new Filter(CAT, null, true, null, null, null, null, null, null, new java.math.BigDecimal("30.0")))).containsExactly("A basket", "B mug");
     }
 
     @Test
@@ -82,7 +82,7 @@ class CatalogQueryServiceIT extends AbstractMongoIT {
     @Autowired org.springframework.data.mongodb.core.MongoTemplate mongo;
 
     private Product eco(String name, String shipping, String co2, Boolean pickup) {
-        Product p = new Product(name, "", 5.0, "s", "", ECO_CAT, ECO_CAT, List.of(), "Iasi", "R", null, null, co2,
+        Product p = new Product(name, "", 500L, "s", "", ECO_CAT, ECO_CAT, List.of(), "Iasi", "R", null, null, co2,
                 shipping, true, 1, 1);
         p.setStatus("APPROVED");
         p.setLocalPickup(pickup);
@@ -114,7 +114,7 @@ class CatalogQueryServiceIT extends AbstractMongoIT {
 
     @Test
     void backfillDerivesMissingLevelsOnce() {
-        Product legacy = new Product("Legacy", "", 1.0, "s", "", "IT-Legacy", "IT-Legacy", List.of(), "c", "r", null, null,
+        Product legacy = new Product("Legacy", "", 100L, "s", "", "IT-Legacy", "IT-Legacy", List.of(), "c", "r", null, null,
                 "Low", "Standard", true, 1, 1);
         legacy = repository.save(legacy);
         mongo.updateFirst(new org.springframework.data.mongodb.core.query.Query(

@@ -1,0 +1,36 @@
+@startuml frontend-structure
+!include ../_theme.puml
+title Angular frontend structure
+
+' Derived from: frontend/frontend/src/app (app.ts, app.routes.ts, app.config.ts, guards/, interceptors/,
+' services/, components/, directives/, models/) and src/styles.css
+skinparam rectangle {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+}
+skinparam cloud {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+}
+
+rectangle "**Shell**\napp.ts: nav, menus, skip link\napp.routes.ts: lazy routes" as Shell
+rectangle "**guards/**\nauthGuard\nroleGuard(...roles)" as Guards
+rectangle "**components/** (pages)\ncatalog, product, cart and checkout\nseller/*, admin/*, messages, settings" as Pages
+rectangle "**components/shared/**, **directives/**\ntoast-outlet, confirm-dialog, empty-state, rating\nbadges, wallet, addresses, image fallback" as Shared
+rectangle "**services/**\nAuthService (user signal, the source of who is signed in)\nCartService, FavoriteService (storage follows the user)\nToastService, DialogService, RealtimeService (STOMP)\ndomain API services" as Services
+rectangle "**interceptors/**\nauthInterceptor: token, refresh once on 401,\nend session, announce 403" as Interceptors
+rectangle "**styles.css**\ndesign tokens, light and dark" as Tokens
+cloud "gateway\n/api, /ws" as Gateway
+
+Shell --> Guards : protects routes
+Shell --> Pages : routes to
+Pages --> Shared : compose
+Guards --> Services : read user
+Pages --> Services
+Shared --> Services
+Services --> Interceptors : HTTP
+Interceptors --> Gateway
+Services --> Gateway : STOMP
+Pages ..> Tokens : consume
+Shared ..> Tokens : consume
+@enduml

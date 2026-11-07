@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -22,11 +23,13 @@ import com.wovely.wovely.support.TestTokens;
 
 /** PLAN.md 2.7 (penalties audited, moderation audit endpoint) and 2.9 (ban revokes refresh tokens). */
 @WebMvcTest({ AdminUserController.class, InternalAuditController.class })
+@org.springframework.context.annotation.Import(com.wovely.wovely.services.UserPenaltyService.class)
 class AdminAndInternalAuditTest extends SecuredWebMvcTest {
 
     @MockitoBean AuditService auditService;
     @MockitoBean RefreshTokenService refreshTokenService;
     @MockitoBean com.wovely.wovely.services.UserQueryService userQueryService;
+    @MockitoBean org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     @Test
     void banRevokesRefreshTokensAndIsAudited() throws Exception {
@@ -53,6 +56,42 @@ class AdminAndInternalAuditTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/admin/users/" + TestTokens.OTHER_BUYER_ID + "/penalty").header(AUTH, bearer(TestTokens.admin()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"STATUS\"}"))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void suspensionNeedsALengthOfOneTo365Days() throws Exception {
+        for (String days : new String[] { "", ",\"suspendDays\":0", ",\"suspendDays\":366", ",\"suspendDays\":-3" }) {
+            mvc.perform(post("/api/admin/users/" + TestTokens.OTHER_BUYER_ID + "/penalty").header(AUTH, bearer(TestTokens.admin()))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"STATUS\",\"newStatus\":\"SUSPENDED\"" + days + "}"))
+                .andExpect(status().isBadRequest());
+        }
+        verify(userRepository, never()).save(any(User.class));
+        verify(refreshTokenService, never()).revokeAll(any());
+    }
+
+    @Test
+    void suspensionHasAnEndAndSignsTheUserOut() throws Exception {
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        mvc.perform(post("/api/admin/users/" + TestTokens.OTHER_BUYER_ID + "/penalty").header(AUTH, bearer(TestTokens.admin()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"STATUS\",\"newStatus\":\"SUSPENDED\",\"suspendDays\":14}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accountStatus").value("SUSPENDED"))
+            .andExpect(jsonPath("$.suspendedUntil").exists());
+        verify(refreshTokenService).revokeAll(TestTokens.OTHER_BUYER_ID);
+        verify(auditService).record(eq("USER_PENALTY"), eq(TestTokens.OTHER_BUYER_ID), contains("until"));
+    }
+
+    @Test
+    void unknownActionAndUnknownUser() throws Exception {
+        mvc.perform(post("/api/admin/users/" + TestTokens.OTHER_BUYER_ID + "/penalty").header(AUTH, bearer(TestTokens.admin()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"SMITE\"}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/admin/users/nobody/penalty").header(AUTH, bearer(TestTokens.admin()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"STRIKE\"}"))
+            .andExpect(status().isNotFound());
+        mvc.perform(post("/api/admin/users/" + TestTokens.OTHER_BUYER_ID + "/penalty").header(AUTH, bearer(TestTokens.seller()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"STRIKE\"}"))
+            .andExpect(status().isForbidden());
     }
 
     static final String EVENT = "{\"actorId\":\"admin-1\",\"actorUsername\":\"admin\",\"actionType\":\"PRODUCT_STATUS\",\"targetId\":\"p-1\",\"details\":\"PENDING -> APPROVED\"}";

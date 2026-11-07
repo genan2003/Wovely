@@ -1,74 +1,29 @@
-.seller-inventory-container {
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-    background-color: #F5E6D6; /* Obligatory background color */
-    min-height: 100vh;
-    color: #2A4335;
-    font-family: 'Inter', sans-serif;
-}
+
 
 /* Header */
-.inventory-header {
-    margin-bottom: 2.5rem;
-}
 
-.inventory-header h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: #2A4335;
-    margin-bottom: 0.25rem;
-}
+
+
 
 .subtitle {
     font-size: 1.1rem;
-    color: #2A4335;
+    color: var(--wv-ink);
     opacity: 0.8;
 }
 
 /* Stats Dashboard */
-.stats-dashboard {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Fixed 4 columns to match design */
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
-}
 
-.stat-card {
-    background-color: #FEF9F3 !important; /* Specific card color */
-    border: 1px solid #A68A64 !important; /* Specific border color */
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s;
-}
 
-.stat-card:hover {
-    transform: translateY(-4px);
-}
 
-.stat-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: #2A4335;
-    display: block;
-    margin-bottom: 0.5rem;
-}
 
-.stat-label {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #2A4335;
-}
+
+
+
+
+
 
 /* Divider */
-.inventory-divider {
-    height: 2px;
-    background: #A68A64;
-    opacity: 0.3;
-    margin-bottom: 2.5rem;
-}
+
 
 /* Filters & Search */
 .inventory-filters {
@@ -90,17 +45,17 @@
     left: 1.25rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #2A4335;
+    color: var(--wv-ink);
     opacity: 0.5;
 }
 
 .search-box input {
     width: 100%;
     padding: 0.8rem 1rem 0.8rem 3rem;
-    border-radius: 12px; /* Matching card feel */
-    border: 1px solid #A68A64 !important;
-    background: #FFFFFF !important; /* Textboxes stay white */
-    color: #2A4335;
+    border-radius: var(--wv-radius-m); /* Matching card feel */
+    border: 1px solid var(--wv-line-strong) !important;
+    background: var(--wv-surface-raised) !important; /* Textboxes stay white */
+    color: var(--wv-ink);
     font-size: 0.95rem;
 }
 
@@ -111,19 +66,19 @@
 
 .filter-chip {
     padding: 0.6rem 1.2rem;
-    border-radius: 10px;
-    border: 1px solid #A68A64;
-    background: #FEF9F3;
-    color: #2A4335;
+    border-radius: var(--wv-radius-m);
+    border: 1px solid var(--wv-line-strong);
+    background: var(--wv-surface-raised);
+    color: var(--wv-ink);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .filter-chip.active {
-    background: #2A4335;
-    color: #F5E6D6;
-    border-color: #2A4335;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
+    border-color: var(--wv-line-strong);
 }
 
 /* Inventory Grid - Exactly matched to Stats Dashboard */
@@ -134,25 +89,24 @@
 }
 
 .inventory-card {
-    background-color: #FEF9F3 !important;
-    border: 1px solid #A68A64 !important;
-    border-radius: 20px;
+    background-color: var(--wv-surface-raised) !important;
+    border: 1px solid var(--wv-line-strong) !important;
+    border-radius: var(--wv-radius-m);
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--wv-ink) 5%, transparent);
     transition: transform 0.3s ease;
     display: flex;
     flex-direction: column;
 }
 
 .inventory-card:hover {
-    transform: translateY(-8px);
 }
 
 .card-image {
     position: relative;
     padding-top: 80%;
-    background: #FFFFFF;
-    border-bottom: 1px solid #A68A64;
+    background: var(--wv-surface-raised);
+    border-bottom: 1px solid var(--wv-line-strong);
 }
 
 .card-image img {
@@ -181,7 +135,7 @@
 .product-name {
     font-size: 1.2rem;
     font-weight: 800;
-    color: #2A4335 !important; /* Force visibility */
+    color: var(--wv-ink) !important; /* Force visibility */
     margin: 0;
     flex: 1;
     padding-right: 1rem;
@@ -192,13 +146,13 @@
 .price {
     font-size: 1.1rem;
     font-weight: 800;
-    color: #2A4335;
+    color: var(--wv-ink);
     white-space: nowrap;
 }
 
 .product-description {
     font-size: 0.9rem;
-    color: #2A4335;
+    color: var(--wv-ink);
     opacity: 0.7;
     margin-bottom: 2rem;
     line-height: 1.5;
@@ -226,25 +180,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    background: #FFFFFF;
-    color: #2A4335;
-    border: 1px solid #A68A64;
+    border-radius: var(--wv-radius-m);
+    background: var(--wv-surface-raised);
+    color: var(--wv-ink);
+    border: 1px solid var(--wv-line-strong);
     transition: all 0.2s;
     font-size: 1.1rem;
 }
 
 .btn-icon:hover {
-    background: #2A4335;
-    color: #F5E6D6;
-    border-color: #2A4335;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
+    border-color: var(--wv-line-strong);
 }
 
 .stock-pill {
-    background: #2A4335;
-    color: #F5E6D6;
+    background: var(--wv-primary);
+    color: var(--wv-on-primary);
     padding: 0.4rem 1rem;
-    border-radius: 12px;
+    border-radius: var(--wv-radius-m);
     font-size: 0.9rem;
     font-weight: 700;
 }
@@ -254,8 +208,8 @@
     bottom: 1rem;
     right: 1rem;
     z-index: 10;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(245, 230, 214, 0.2);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--wv-ink) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--wv-ink) 20%, transparent);
 }
 
 /* Modal Layout Fixes - Centered as Cards */
@@ -265,7 +219,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(42, 67, 53, 0.4) !important;
+    background: color-mix(in srgb, var(--wv-ink) 40%, transparent) !important;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -274,14 +228,14 @@
 }
 
 .modal-content {
-    background-color: #FEF9F3 !important;
-    border: 1px solid #A68A64 !important;
-    border-radius: 24px !important;
+    background-color: var(--wv-surface-raised) !important;
+    border: 1px solid var(--wv-line-strong) !important;
+    border-radius: var(--wv-radius-m);
     max-width: 600px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 20px 60px color-mix(in srgb, var(--wv-ink) 10%, transparent) !important;
 }
 
 /* Specific size for details modal */
@@ -291,8 +245,8 @@
 
 .modal-header {
     background: transparent !important; /* Removed ugly green band */
-    color: #2A4335 !important;
-    border-bottom: 1px solid rgba(166, 138, 100, 0.2) !important;
+    color: var(--wv-ink) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--wv-ink) 20%, transparent) !important;
     padding: 1.5rem 2.5rem !important;
     display: flex;
     justify-content: space-between;
@@ -319,16 +273,16 @@
     width: 100%;
     height: 350px;
     object-fit: cover;
-    border-radius: 20px;
-    border: 1px solid #A68A64;
+    border-radius: var(--wv-radius-m);
+    border: 1px solid var(--wv-line-strong);
 }
 
 .product-preview img {
     width: 80px;
     height: 80px;
     object-fit: cover;
-    border-radius: 12px;
-    border: 1px solid #A68A64;
+    border-radius: var(--wv-radius-m);
+    border: 1px solid var(--wv-line-strong);
 }
 
 .details-grid {
@@ -342,23 +296,19 @@
 }
 
 .form-section {
-    background: rgba(166, 138, 100, 0.05);
+    background: color-mix(in srgb, var(--wv-ink) 5%, transparent);
     padding: 1.5rem;
-    border-radius: 16px;
-    border: 1px solid rgba(166, 138, 100, 0.2);
+    border-radius: var(--wv-radius-m);
+    border: 1px solid color-mix(in srgb, var(--wv-ink) 20%, transparent);
     margin-bottom: 2rem;
 }
 
 @media (max-width: 1200px) {
-    .stats-dashboard, .inventory-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
+    
 }
 
 @media (max-width: 992px) {
-    .stats-dashboard, .inventory-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+    
 }
 
 @media (max-width: 768px) {
@@ -370,37 +320,47 @@
         height: 200px;
     }
 
-    .stats-dashboard, .inventory-grid {
-        grid-template-columns: 1fr;
-    }
+    
 }
 
 /* FAB */
-.fab-container {
-    position: fixed;
-    bottom: 3rem;
-    right: 3rem;
-}
 
-.fab-btn {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    background-color: #2A4335 !important;
-    color: #F5E6D6 !important;
-    border: 2px solid #A68A64 !important;
-    box-shadow: 0 4px 20px rgba(42, 67, 53, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
 
-.fab-btn:hover {
-    transform: scale(1.1) rotate(90deg);
-}
+
+
+
 
 /* Delivery emission preview (PLAN.md 3.5) */
 .delivery-preview { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0 0; font-size: 0.875rem; }
+
+.inventory-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--wv-space-3); margin-bottom: var(--wv-space-5); }
+.inventory-header h1 { margin-bottom: var(--wv-space-1); }
+.subtitle { margin: 0; color: var(--wv-ink-soft); }
+
+.stock-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wv-space-2) var(--wv-space-6);
+  margin: 0 0 var(--wv-space-5);
+  padding-block: var(--wv-space-3);
+  border-block: 2px dashed var(--wv-line-strong);
+}
+.stock-strip div { display: flex; align-items: baseline; gap: var(--wv-space-2); }
+.stock-strip dt { font-weight: 400; color: var(--wv-ink-soft); }
+.stock-strip dd { margin: 0; font-family: var(--wv-font-display); font-size: var(--wv-text-lg); }
+.stock-strip__warn dd { color: var(--wv-warning); }
+.stock-strip__alert dd { color: var(--wv-danger); }
+
+.card-actions { flex-wrap: wrap; gap: var(--wv-space-2); }
+
+@media (max-width: 40rem) {
+  .inventory-filters { flex-wrap: wrap; }
+  .search-box { flex: 1 1 100%; min-width: 0; }
+}
+
+.product-name { min-width: 0; }
+
+/* listing review state (only shown when the listing isn't live) */
+.card-status { margin-block: calc(var(--wv-space-1) * -1) var(--wv-space-2); }
+.details-status { margin-block-end: var(--wv-space-4); }
+.btn-icon:disabled { opacity: 0.45; cursor: not-allowed; }

@@ -1,203 +1,368 @@
-<div class="seller-orders-container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Manage Orders & Returns</h2>
-        <div class="btn-group shadow-sm">
-            <button class="btn btn-outline-success" [class.active]="view() === 'orders'" (click)="view.set('orders')">Orders</button>
-            <button class="btn btn-outline-success" [class.active]="view() === 'returns'" (click)="view.set('returns')">Returns</button>
-        </div>
-        <button class="btn btn-outline-primary btn-sm" (click)="loadOrders()" [disabled]="loading()">
-            <span *ngIf="loading()">Refreshing...</span>
-            <span *ngIf="!loading()">Refresh</span>
-        </button>
+<div class="seller-orders-container wv-page">
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
+    <h1>Orders and returns</h1>
+    <div class="btn-group shadow-sm">
+      <button
+        class="btn btn-outline-primary"
+        [class.active]="view() === 'orders'"
+        [attr.aria-pressed]="view() === 'orders'"
+        (click)="view.set('orders')"
+      >
+        Orders
+      </button>
+      <button
+        class="btn btn-outline-primary"
+        [class.active]="view() === 'returns'"
+        [attr.aria-pressed]="view() === 'returns'"
+        (click)="view.set('returns')"
+      >
+        Returns
+      </button>
     </div>
+    <button class="btn btn-outline-primary btn-sm" (click)="loadOrders()" [disabled]="loading()">
+      @if (loading()) {
+        <span>Refreshing...</span>
+      }
+      @if (!loading()) {
+        <span>Refresh</span>
+      }
+    </button>
+  </div>
 
-    <div *ngIf="error()" class="alert alert-danger">{{ error() }}</div>
+  @if (error()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  }
 
-    <!-- Orders View -->
-    <div *ngIf="view() === 'orders'">
-        <div *ngIf="loading() && orders().length === 0" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2 text-muted">Loading your orders...</p>
+  <!-- Orders View -->
+  @if (view() === 'orders') {
+    <div>
+      @if (loading() && orders().length === 0) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted">Loading your orders...</p>
         </div>
-
-        <div *ngIf="!loading() && orders().length === 0" class="empty-state text-center py-5">
-            <div class="empty-icon">📦</div>
-            <h3>No orders yet</h3>
-            <p class="text-muted">When you receive orders, they will appear here for management.</p>
+      }
+      @if (!loading() && orders().length === 0) {
+        <div class="empty-state text-center py-5">
+          <div class="empty-icon">📦</div>
+          <h3>No orders yet</h3>
+          <p class="text-muted">When you receive orders, they will appear here for management.</p>
         </div>
-
-        <div *ngIf="orders().length > 0" class="orders-table-container">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Order #</th>
-                        <th>Buyer</th>
-                        <th>Date</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let order of orders()">
-                        <td>
-                            <strong>{{ order.orderNumber }}</strong>
-                            <div *ngIf="order.trackingNumber" class="small text-muted">
-                                Tracking: {{ order.trackingNumber }}
-                            </div>
-                            <div *ngIf="order.carrierName" class="small shipping-summary">
-                                <span>{{ order.carrierName }}, ~{{ order.estimatedCo2Kg }} kg CO₂</span>
-                                <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline" (click)="viewLabel(order)">View label</button>
-                            </div>
-                            <div *ngIf="order.estimatedDeliveryDays" class="small text-success">
-                                <i class="bi bi-clock-history"></i> Delivery in {{ order.estimatedDeliveryDays }} days
-                            </div>
-                        </td>
-                        <td>{{ order.buyerName }}</td>
-                        <td>{{ order.createdAt | date:'shortDate' }}</td>
-                        <td>{{ order.totalAmount | currency }}</td>
-                        <td>
-                            <span class="badge" [ngClass]="getStatusClass(order.status)">
-                                {{ order.status }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-info" (click)="openEditDialog(order)" [disabled]="!canEdit(order)">
-                                    Edit
-                                </button>
-                                <button class="btn btn-sm btn-outline-success" (click)="updateStatus(order, 'PROCESSING')" *ngIf="order.status === 'CONFIRMED' || order.status === 'PENDING'">
-                                    Start Processing
-                                </button>
-                                <button class="btn btn-sm btn-success" (click)="generateEcoLabel(order)" *ngIf="canBuyLabel(order)" [disabled]="generatingLabel()">
-                                    Ship with Wovely
-                                </button>
-                                <button class="btn btn-sm btn-outline-primary" (click)="updateStatus(order, 'SHIPPED')" *ngIf="order.status === 'PROCESSING' && order.trackingNumber">
-                                    Mark Shipped
-                                </button>
-                                <button class="btn btn-sm btn-outline-dark" (click)="updateStatus(order, 'DELIVERED')" *ngIf="order.status === 'SHIPPED'">
-                                    Mark Delivered
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" (click)="cancelOrder(order)" *ngIf="canEdit(order)">
-                                    Cancel
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Returns View -->
-    <div *ngIf="view() === 'returns'">
-        <div *ngIf="returns().length === 0" class="empty-state text-center py-5">
-            <div class="empty-icon">🔄</div>
-            <h3>No return requests</h3>
-            <p class="text-muted">Return requests from your customers will appear here.</p>
-        </div>
-
-        <div *ngIf="returns().length > 0" class="returns-table-container">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Order #</th>
-                        <th>Amount</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (ret of returns(); track ret.id) {
-                        <tr>
-                            <td>{{ ret.orderNumber }}</td>
-                            <td>{{ ret.totalAmount | currency }}</td>
-                            <td>{{ ret.reason }}</td>
-                            <td>
-                                <span class="badge bg-warning text-dark" *ngIf="ret.status === 'PICKED_UP'">Picked Up</span>
-                                <span class="badge bg-info text-dark" *ngIf="ret.status === 'ARRIVED'">Arrived</span>
-                                <span class="badge bg-primary" *ngIf="ret.status === 'INSPECTION'">In Inspection</span>
-                                <span class="badge bg-success" *ngIf="ret.status === 'REFUNDED'">Refunded</span>
-                            </td>
-                            <td>
-                                <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-primary" (click)="returnService.updateStatus(ret.id!, 'ARRIVED').subscribe(() => loadOrders())" [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'">Arrived</button>
-                                    <button class="btn btn-sm btn-outline-success" (click)="returnService.updateStatus(ret.id!, 'REFUNDED').subscribe(() => loadOrders())" [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'">Refund</button>
-                                    <button class="btn btn-sm btn-outline-danger" (click)="returnService.updateStatus(ret.id!, 'DENIED').subscribe(() => loadOrders())" [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'">Deny</button>
-                                </div>
-                            </td>
-                        </tr>
+      }
+      @if (orders().length > 0) {
+        <div tabindex="0" role="region" aria-label="Orders table" class="orders-table-container">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Order #</th>
+                <th>Buyer</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (order of orders(); track order.id) {
+                <tr [class.has-timeline]="isExpanded(order.id)">
+                  <td>
+                    <strong>{{ order.orderNumber }}</strong>
+                    <button
+                      type="button"
+                      class="timeline-toggle"
+                      [attr.aria-expanded]="isExpanded(order.id)"
+                      [attr.aria-controls]="'timeline-' + order.id"
+                      (click)="toggleTimeline(order.id)"
+                    >
+                      {{ isExpanded(order.id) ? 'Hide timeline' : 'Show timeline' }}
+                    </button>
+                    @if (order.trackingNumber) {
+                      <div class="small text-muted">Tracking: {{ order.trackingNumber }}</div>
                     }
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Edit Order Dialog (same as before) -->
-    <div class="modal-backdrop" *ngIf="showEditDialog()">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Edit Order: {{ selectedOrder()?.orderNumber }}</h5>
-                    <button type="button" class="btn-close btn-close-white" (click)="closeEditDialog()"></button>
-                </div>
-                <div class="modal-body">
-                    <div *ngIf="editError()" class="alert alert-danger">{{ editError() }}</div>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Shipping Address</label>
-                            <textarea class="form-control" rows="3" [(ngModel)]="editShippingAddress"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Order Items (Variations)</label>
-                            <div class="list-group">
-                                <div *ngFor="let item of editItems(); let i = index" class="list-group-item d-flex align-items-center">
-                                    <img [src]="item.imageUrl" alt="" class="item-img-sm me-3" style="width:50px;height:50px;object-fit:cover;">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">{{ item.productName }}</h6>
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="item.color" placeholder="Color">
-                                            </div>
-                                            <div class="col-6">
-                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="item.size" placeholder="Size">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="ms-3 text-end">
-                                        <div class="fw-bold">{{ item.price | currency }}</div>
-                                        <div class="small">Qty: {{ item.quantity }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    @if (order.carrierName) {
+                      <div class="small shipping-summary">
+                        <span>{{ order.carrierName }}, ~{{ order.estimatedCo2Kg }} kg CO₂</span>
+                        <button
+                          type="button"
+                          class="btn btn-link btn-sm p-0 ms-1 align-baseline"
+                          (click)="viewLabel(order)"
+                        >
+                          View label
+                        </button>
+                      </div>
+                    }
+                    @if (order.estimatedDeliveryDays) {
+                      <div class="small text-success">
+                        <i class="bi bi-clock-history"></i> Delivery in
+                        {{ order.estimatedDeliveryDays }} days
+                      </div>
+                    }
+                  </td>
+                  <td>{{ order.buyerName }}</td>
+                  <td>{{ order.createdAt | date: 'shortDate' }}</td>
+                  <td>{{ order.totalAmount | number: '1.2-2' }} RON</td>
+                  <td>
+                    <span [class]="'badge ' + getStatusClass(order.status)">
+                      {{ order.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <button
+                        class="btn btn-sm btn-outline-info"
+                        (click)="openEditDialog(order)"
+                        [disabled]="!canEdit(order)"
+                        [attr.title]="canEdit(order) ? null : 'Locked: the order has shipped or has a shipping label'"
+                      >
+                        Edit
+                      </button>
+                      @if (order.status === 'CONFIRMED' || order.status === 'PENDING') {
+                        <button
+                          class="btn btn-sm btn-outline-success"
+                          (click)="updateStatus(order, 'PROCESSING')"
+                        >
+                          Start Processing
+                        </button>
+                      }
+                      @if (canBuyLabel(order)) {
+                        <button
+                          class="btn btn-sm btn-success"
+                          (click)="generateEcoLabel(order)"
+                          [disabled]="generatingLabel()"
+                        >
+                          Ship with Wovely
+                        </button>
+                      }
+                      @if (order.status === 'PROCESSING' && order.trackingNumber) {
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="updateStatus(order, 'SHIPPED')"
+                        >
+                          Mark Shipped
+                        </button>
+                      }
+                      @if (order.status === 'SHIPPED') {
+                        <button
+                          class="btn btn-sm btn-outline-dark"
+                          (click)="updateStatus(order, 'DELIVERED')"
+                        >
+                          Mark Delivered
+                        </button>
+                      }
+                      @if (canCancel(order)) {
+                        <button class="btn btn-sm btn-outline-danger" (click)="cancelOrder(order)">
+                          Cancel
+                        </button>
+                      }
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" (click)="closeEditDialog()">Cancel</button>
-                    <button type="button" class="btn btn-primary px-4" (click)="saveOrderChanges()" [disabled]="editLoading()">Save Changes</button>
-                </div>
-            </div>
+                  </td>
+                </tr>
+                @if (isExpanded(order.id)) {
+                  <tr class="timeline-row" [id]="'timeline-' + order.id">
+                    <td colspan="6">
+                      <app-order-timeline
+                        [timeline]="order.timeline"
+                        [status]="order.status"
+                        [label]="'Progress of order ' + order.orderNumber"
+                      />
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
         </div>
+      }
     </div>
+  }
+
+  <!-- Returns View -->
+  @if (view() === 'returns') {
+    <div>
+      @if (returns().length === 0) {
+        <div class="empty-state text-center py-5">
+          <div class="empty-icon">🔄</div>
+          <h3>No return requests</h3>
+          <p class="text-muted">Return requests from your customers will appear here.</p>
+        </div>
+      }
+      @if (returns().length > 0) {
+        <div class="returns-table-container">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Order #</th>
+                <th>Amount</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ret of returns(); track ret.id) {
+                <tr>
+                  <td>{{ ret.orderNumber }}</td>
+                  <td>{{ ret.totalAmount | number: '1.2-2' }} RON</td>
+                  <td>{{ ret.reason }}</td>
+                  <td>
+                    @if (ret.status === 'PICKED_UP') {
+                      <span class="badge bg-warning text-dark">Picked Up</span>
+                    }
+                    @if (ret.status === 'ARRIVED') {
+                      <span class="badge bg-info text-dark">Arrived</span>
+                    }
+                    @if (ret.status === 'INSPECTION') {
+                      <span class="badge bg-primary">In Inspection</span>
+                    }
+                    @if (ret.status === 'REFUNDED') {
+                      <span class="badge bg-success">Refunded</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="btn-group">
+                      <button
+                        class="btn btn-sm btn-outline-primary"
+                        (click)="returnService.updateStatus(ret.id!, 'ARRIVED').subscribe(() => loadOrders())"
+                        [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'"
+                      >
+                        Arrived
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-success"
+                        (click)="returnService.updateStatus(ret.id!, 'REFUNDED').subscribe(() => loadOrders())"
+                        [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'"
+                      >
+                        Refund
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-danger"
+                        (click)="returnService.updateStatus(ret.id!, 'DENIED').subscribe(() => loadOrders())"
+                        [disabled]="ret.status === 'REFUNDED' || ret.status === 'DENIED'"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Edit Order Dialog (same as before) -->
+  @if (showEditDialog()) {
+    <div class="modal-backdrop">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+          <div class="modal-header bg-primary">
+            <h5 class="modal-title">Edit Order: {{ selectedOrder()?.orderNumber }}</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              (click)="closeEditDialog()"
+            ></button>
+          </div>
+          <div class="modal-body">
+            @if (editError()) {
+              <div class="alert alert-danger">{{ editError() }}</div>
+            }
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-bold">Shipping Address</label>
+                <textarea
+                  class="form-control"
+                  rows="3"
+                  [(ngModel)]="editShippingAddress"
+                ></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-bold">Order Items (Variations)</label>
+                <div class="list-group">
+                  @for (item of editItems(); track item; let i = $index) {
+                    <div class="list-group-item d-flex align-items-center">
+                      <img
+                        [src]="item.imageUrl || 'placeholder-product.svg'"
+                        alt=""
+                        class="item-img-sm me-3"
+                        style="width: 50px; height: 50px; object-fit: cover"
+                      />
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ item.productName }}</h6>
+                        <div class="row g-2">
+                          <div class="col-6">
+                            <input
+                              type="text"
+                              class="form-control form-control-sm"
+                              [(ngModel)]="item.color"
+                              placeholder="Color"
+                            />
+                          </div>
+                          <div class="col-6">
+                            <input
+                              type="text"
+                              class="form-control form-control-sm"
+                              [(ngModel)]="item.size"
+                              placeholder="Size"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="ms-3 text-end">
+                        <div class="fw-bold">{{ item.price | number: '1.2-2' }} RON</div>
+                        <div class="small">Qty: {{ item.quantity }}</div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" (click)="closeEditDialog()">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary px-4"
+              (click)="saveOrderChanges()"
+              [disabled]="editLoading()"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 </div>
 
 <!-- Shipping label (PLAN.md 3.6) -->
-<div class="modal-backdrop" *ngIf="showLabelDialog()">
+@if (showLabelDialog()) {
+  <div class="modal-backdrop">
     <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="labelDialogTitle">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header">
-                <h5 class="modal-title" id="labelDialogTitle">Prepaid shipping label</h5>
-                <button type="button" class="btn-close" aria-label="Close" (click)="closeLabelDialog()"></button>
-            </div>
-            <div class="modal-body">
-                <pre class="shipping-label">{{ selectedLabel() }}</pre>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" (click)="closeLabelDialog()">Close</button>
-                <button type="button" class="btn btn-success" (click)="printLabel()">Print label</button>
-            </div>
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header">
+          <h5 class="modal-title" id="labelDialogTitle">Prepaid shipping label</h5>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close"
+            (click)="closeLabelDialog()"
+          ></button>
         </div>
+        <div class="modal-body">
+          <pre class="shipping-label">{{ selectedLabel() }}</pre>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeLabelDialog()">
+            Close
+          </button>
+          <button type="button" class="btn btn-success" (click)="printLabel()">Print label</button>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
+}

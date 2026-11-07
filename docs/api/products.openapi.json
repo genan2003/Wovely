@@ -22,6 +22,120 @@
                 },
                 "type": "object"
             },
+            "CreateCategoryRequest": {
+                "properties": {
+                    "name": {
+                        "maxLength": 80,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "parentId": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "maxLength": 80,
+                        "minLength": 0,
+                        "pattern": "[a-z0-9]+(-[a-z0-9]+)*",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "type": "object"
+            },
+            "ListingRequest": {
+                "properties": {
+                    "category": {
+                        "maxLength": 120,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "categoryPath": {
+                        "maxLength": 500,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "city": {
+                        "maxLength": 120,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "co2EmissionScore": {
+                        "maxLength": 40,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "description": {
+                        "maxLength": 5000,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "imageUrl": {
+                        "maxLength": 2048,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "isHandmade": {
+                        "type": "boolean"
+                    },
+                    "latitude": {
+                        "format": "double",
+                        "maximum": 90,
+                        "minimum": -90,
+                        "type": "number"
+                    },
+                    "localPickup": {
+                        "type": "boolean"
+                    },
+                    "longitude": {
+                        "format": "double",
+                        "maximum": 180,
+                        "minimum": -180,
+                        "type": "number"
+                    },
+                    "lowStockThreshold": {
+                        "format": "int32",
+                        "type": "integer"
+                    },
+                    "materials": {
+                        "items": {
+                            "maxLength": 80,
+                            "minLength": 0,
+                            "type": "string"
+                        },
+                        "maxItems": 20,
+                        "minItems": 0,
+                        "type": "array"
+                    },
+                    "name": {
+                        "maxLength": 200,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "price": {
+                        "type": "number"
+                    },
+                    "region": {
+                        "maxLength": 120,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "sellerId": {
+                        "type": "string"
+                    },
+                    "shippingMethod": {
+                        "maxLength": 80,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "stockQuantity": {
+                        "format": "int32",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "Product": {
                 "properties": {
                     "category": {
@@ -88,8 +202,12 @@
                         "type": "boolean"
                     },
                     "price": {
-                        "format": "double",
+                        "readOnly": true,
                         "type": "number"
+                    },
+                    "priceCents": {
+                        "format": "int64",
+                        "type": "integer"
                     },
                     "region": {
                         "type": "string"
@@ -146,6 +264,41 @@
                     }
                 },
                 "type": "object"
+            },
+            "ReviewRequest": {
+                "properties": {
+                    "comment": {
+                        "maxLength": 2000,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "photoUrls": {
+                        "items": {
+                            "maxLength": 2048,
+                            "minLength": 0,
+                            "type": "string"
+                        },
+                        "maxItems": 6,
+                        "minItems": 0,
+                        "type": "array"
+                    },
+                    "productId": {
+                        "maxLength": 64,
+                        "minLength": 0,
+                        "type": "string"
+                    },
+                    "rating": {
+                        "format": "int32",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "productId",
+                    "rating"
+                ],
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -198,14 +351,14 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Category"
+                                "$ref": "#/components/schemas/CreateCategoryRequest"
                             }
                         }
                     },
                     "required": true
                 },
                 "responses": {
-                    "200": {
+                    "201": {
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -213,7 +366,7 @@
                                 }
                             }
                         },
-                        "description": "OK"
+                        "description": "Created"
                     }
                 },
                 "tags": [
@@ -355,7 +508,6 @@
                         "name": "minPrice",
                         "required": false,
                         "schema": {
-                            "format": "double",
                             "type": "number"
                         }
                     },
@@ -364,7 +516,6 @@
                         "name": "maxPrice",
                         "required": false,
                         "schema": {
-                            "format": "double",
                             "type": "number"
                         }
                     },
@@ -412,7 +563,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Product"
+                                "$ref": "#/components/schemas/ListingRequest"
                             }
                         }
                     },
@@ -508,7 +659,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Product"
+                                "$ref": "#/components/schemas/ListingRequest"
                             }
                         }
                     },
@@ -554,8 +705,7 @@
                                 "type": "object"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
@@ -592,6 +742,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -630,6 +781,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -660,6 +812,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -690,6 +843,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -720,6 +874,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -758,6 +913,9 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {
+                                        "type": "string"
+                                    },
                                     "type": "object"
                                 }
                             }
@@ -794,6 +952,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -829,7 +988,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Product"
+                                "$ref": "#/components/schemas/ListingRequest"
                             }
                         }
                     },
@@ -840,6 +999,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -884,14 +1044,14 @@
                                 "type": "object"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -936,14 +1096,14 @@
                                 "type": "object"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -993,7 +1153,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Review"
+                                "$ref": "#/components/schemas/ReviewRequest"
                             }
                         }
                     },

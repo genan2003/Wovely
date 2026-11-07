@@ -1,0 +1,88 @@
+@startuml product-approval
+!include ../_theme.puml
+title Listing a product and approving it
+
+' Derived from: products ProductController#createProduct, #updateProduct, AdminProductController, services/ListingService,
+' services/StockService,
+' clients/{InventoryClient,AuditClient}, services/CatalogQueryService; inventory InternalStockController, stock/StockLedger;
+' wovely InternalAuditController
+autonumber
+actor "Seller" as S
+actor "Admin" as A
+participant "Angular SPA" as Web
+box "products :8082" #E8F1E4
+  participant "ProductController" as PC
+  participant "AdminProductController" as AC
+  participant "ListingService" as LS
+  participant "StockService" as Stock
+  participant "AuditClient" as AuditC
+end box
+participant "inventory :8083" as Inv
+participant "core :8081" as Core
+database "MongoDB" as DB
+
+== Seller lists a product ==
+S -> Web : fill in product
+Web -> PC ++ : POST /api/products (ListingRequest)
+note right of PC : hasAnyRole SELLER, ADMIN.\nSeller id comes from the token.
+PC -> LS ++ : create(request, caller)
+LS -> DB : save(status = PENDING)
+LS -> Stock ++ : register(product, initialStock)
+Stock -> Inv : PUT /internal/inventory/stock/{id}
+alt inventory refuses or is down
+  Stock --> LS : error
+  LS -> DB : delete(product)
+  LS --> PC : error
+  PC --> Web : error, listing not created
+else stock record created
+  Stock --> LS -- : product
+  LS --> PC -- : product
+  PC --> Web -- : 201 product
+end
+
+== Admin decides ==
+A -> Web : open approval queue
+Web -> AC ++ : GET /api/products/admin/pending
+AC -> DB : findByStatus(PENDING)
+AC --> Web -- : 200 listings ([] when empty)
+A -> Web : approve, reject or request changes
+Web -> AC ++ : PUT /api/products/admin/{id}/status
+AC -> LS ++ : moderate(id, status, reason)
+alt status not in Product.STATUSES
+  LS --> AC : 400
+  AC --> Web : 400
+else valid
+  LS -> DB : save(status)
+  LS -> Stock : afterListingSaved(product)
+  LS -> AuditC ++ : record("PRODUCT_STATUS", id, before -> after)
+  AuditC -> Core -- : POST /internal/audit
+  LS --> AC -- : product
+  AC --> Web -- : 200 product
+end
+
+== Seller edits the listing ==
+S -> Web : edit and save
+Web -> PC ++ : PUT /api/products/seller/{sellerId}/product/{id}
+note right of PC : @ownership.sellerOrAdmin(#sellerId)
+PC -> LS ++ : updateBySeller(sellerId, id, request)
+alt ARCHIVED or not the seller's
+  LS --> PC : 404
+else REJECTED
+  LS --> PC : 409
+else editable
+  LS -> LS : apply fields that were sent
+  opt NEEDS_CHANGES, or APPROVED with a content change
+    LS -> LS : status = PENDING
+    LS -> AuditC : record("PRODUCT_RESUBMITTED", id, before -> PENDING)
+  end
+  LS -> DB : save
+  LS -> Stock : afterListingSaved; setLevel if stock was sent
+  LS --> PC -- : product
+end
+PC --> Web -- : 200 listing view with status
+Web -> S : toast: hidden from buyers until approved again
+
+note over Web, PC
+  Only APPROVED listings reach GET /api/products (CatalogQueryService).
+end note
+@enduml

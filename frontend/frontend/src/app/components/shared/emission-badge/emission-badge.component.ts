@@ -4,7 +4,6 @@ import { DeliveryEmission } from '../../../models/delivery-emission';
 /** Delivery CO₂ badge (PLAN.md 3.5). Renders nothing for STANDARD delivery. */
 @Component({
   selector: 'app-emission-badge',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (label(); as text) {

@@ -6,7 +6,7 @@ test.describe('smoke', () => {
     await mockBackend(page);
     await page.goto('/');
     await expect(page).toHaveURL(/\/products$/);
-    await expect(page.locator('.navbar-brand')).toHaveText('Wovely');
+    await expect(page.locator('.wv-brand')).toHaveText('Wovely');
   });
 
   test('catalog renders products returned by the API', async ({ page }) => {
@@ -18,6 +18,6 @@ test.describe('smoke', () => {
   test('protected route redirects anonymous users to login', async ({ page }) => {
     await mockBackend(page);
     await page.goto('/settings');
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login\?returnUrl=%2Fsettings$/);
   });
 });

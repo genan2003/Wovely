@@ -40,6 +40,16 @@ public class StockOwnershipMigration implements ApplicationRunner {
         migrate();
     }
 
+    /** Listings carry {@code priceCents} since PLAN.md 7.5; older ones still have a double {@code price}. */
+    static Long priceCents(Document p) {
+        Number cents = p.get("priceCents", Number.class);
+        if (cents != null) {
+            return cents.longValue();
+        }
+        Number legacy = p.get("price", Number.class);
+        return legacy == null ? null : com.wovely.common.money.Money.legacyCents(legacy);
+    }
+
     public int migrate() {
         if (mongo.exists(new Query(Criteria.where("_id").is(MARKER)), "migrations")) {
             return 0;
@@ -57,7 +67,7 @@ public class StockOwnershipMigration implements ApplicationRunner {
                     .set("stockQuantity", stock == null ? 0 : Math.max(0, stock.intValue()))
                     .set("lowStockThreshold", threshold == null ? 5 : threshold.intValue())
                     .set("productName", p.getString("name"))
-                    .set("price", p.get("price", Number.class) == null ? null : p.get("price", Number.class).doubleValue())
+                    .set("priceCents", priceCents(p))
                     .set("imageUrl", p.getString("imageUrl"))
                     .set("category", p.getString("category"))
                     .set("isActive", !"ARCHIVED".equals(p.getString("status")))

@@ -1,10 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E tests for critical user flows. `npm run e2e` starts `ng serve -c e2e` on :4300: a client-only
- * build (no SSR), so every backend call goes through the browser and is mocked per test with
- * `page.route`. A dedicated port keeps it from reusing the docker frontend on :4200, and without SSR
- * a running backend can't leak real data in through Angular's HTTP transfer cache.
+ * E2E tests for critical user flows. `npm run e2e` starts `ng serve -c e2e` on :4300. Every backend
+ * call is mocked per test with `page.route`; the dedicated port keeps it from reusing the docker
+ * frontend on :4200.
  */
 export default defineConfig({
   testDir: './e2e',

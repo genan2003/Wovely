@@ -39,6 +39,7 @@ import com.wovely.products.support.TestTokens;
 
 /** PLAN.md 1.2 (product creation), 1.4 (seller ownership), 4.2 (stock is owned by inventory). */
 @WebMvcTest({ ProductController.class, AdminProductController.class, CategoryController.class })
+@org.springframework.context.annotation.Import({ com.wovely.products.services.ListingService.class, com.wovely.products.services.SellerListingQueries.class })
 class ProductSecurityTest extends SecuredWebMvcTest {
 
     @MockitoBean ProductRepository productRepository;
@@ -51,7 +52,7 @@ class ProductSecurityTest extends SecuredWebMvcTest {
 
     @BeforeEach
     void stubs() {
-        basket = new Product("Basket", "d", 10.0, TestTokens.SELLER_ID, "img", "Home", "Home", List.of(), "Sibiu",
+        basket = new Product("Basket", "d", 1000L, TestTokens.SELLER_ID, "img", "Home", "Home", List.of(), "Sibiu",
                 "Sibiu", null, null, "Low", "Courier", true, 3, 1);
         basket.setId("p-1");
         basket.setStatus("APPROVED");

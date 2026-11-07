@@ -172,4 +172,16 @@ public class User {
     }
 
     public void setAddresses(java.util.List<Address> addresses) { this.addresses = addresses; }
+
+    /**
+     * Status as it applies at {@code now}: a suspension whose end has passed counts as ACTIVE even
+     * before {@code UserPenaltyService#liftExpiredSuspensions} has written that back. A suspension
+     * without an end date (legacy data) stays SUSPENDED.
+     */
+    public EAccountStatus effectiveStatus(java.util.Date now) {
+        if (accountStatus == EAccountStatus.SUSPENDED && suspendedUntil != null && !suspendedUntil.after(now)) {
+            return EAccountStatus.ACTIVE;
+        }
+        return accountStatus == null ? EAccountStatus.ACTIVE : accountStatus;
+    }
 }

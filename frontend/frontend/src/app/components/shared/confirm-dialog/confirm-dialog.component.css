@@ -1,0 +1,19 @@
+.wv-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  padding: var(--wv-space-5);
+  background: var(--wv-surface-raised);
+  color: var(--wv-ink);
+  border: 1px solid var(--wv-line);
+  border-radius: var(--wv-radius-m);
+  box-shadow: var(--wv-shadow-2);
+}
+.wv-dialog::backdrop { background: color-mix(in srgb, var(--wv-dye-indigo) 45%, transparent); }
+.wv-dialog h2 { font-size: var(--wv-text-lg); margin-bottom: var(--wv-space-2); }
+.wv-dialog p { color: var(--wv-ink-soft); margin-bottom: var(--wv-space-4); }
+.wv-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--wv-space-2);
+  margin-top: var(--wv-space-4);
+}

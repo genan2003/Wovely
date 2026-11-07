@@ -1,10 +1,14 @@
-import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { OrderItem } from '../models/order.model';
 
 const API_URL = environment.apiUrl + '/returns';
+
+export interface ReturnItem extends OrderItem {
+    returnQuantity: number;
+}
 
 export interface ReturnRequest {
     id?: string;
@@ -13,7 +17,7 @@ export interface ReturnRequest {
     buyerId: string;
     sellerId: string;
     sellerName: string;
-    items: any[];
+    items: ReturnItem[];
     reason: string;
     status: 'PICKED_UP' | 'ARRIVED' | 'INSPECTION' | 'REFUNDED' | 'DENIED';
     totalAmount: number;
@@ -25,7 +29,6 @@ export interface ReturnRequest {
 })
 export class ReturnService {
     private http = inject(HttpClient);
-    private platformId = inject(PLATFORM_ID);
     private returns = signal<ReturnRequest[]>([]);
 
     public getReturns = this.returns.asReadonly();
@@ -52,7 +55,7 @@ export class ReturnService {
         );
     }
 
-    public updateStatus(id: string, status: string): Observable<any> {
-        return this.http.patch(`${API_URL}/${id}/status`, { status });
+    public updateStatus(id: string, status: string): Observable<ReturnRequest> {
+        return this.http.patch<ReturnRequest>(`${API_URL}/${id}/status`, { status });
     }
 }

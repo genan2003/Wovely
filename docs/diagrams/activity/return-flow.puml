@@ -1,0 +1,51 @@
+@startuml return-flow
+!include ../_theme.puml
+title Return flow
+
+' Derived from: frontend cart.component.ts, models/order-returns.ts; wovely services/ReturnService,
+' services/OrderService#transition (deliveredAt), models/Order#getReturnDeadline,
+' models/EReturnStatus, controllers/ReturnRequestController
+|Buyer|
+start
+:Pick items from a delivered order and give a reason;
+note right
+  The SPA lists only orders whose server-computed
+  returnDeadline (delivery + 30 days) is ahead.
+end note
+:POST /api/returns;
+|Core service|
+if (Buyer's own order, DELIVERED or COMPLETED,\nwithin 30 days of delivery,\nitems not already returned?) then (no)
+  :403, 409 (status or window closed) or 400;
+  stop
+else (yes)
+endif
+:Mark items returned, total from order prices;
+:Save request as PICKED_UP and audit it;
+|Seller or admin|
+repeat
+  :PATCH /api/returns/{id}/status;
+  |Core service|
+  if (Own return and EReturnStatus#canMoveTo?) then (no)
+    :403 or 409;
+    stop
+  else (yes)
+  endif
+  |Seller or admin|
+repeat while (Reached REFUNDED or DENIED?) is (no) not (yes)
+|Core service|
+if (Decision?) then (DENIED)
+  :Save and audit;
+  stop
+else (REFUNDED)
+  :Release returned items to inventory;
+  :Refund the wallet;
+  if (Everything refunded?) then (yes)
+    :Order moves to REFUNDED;
+  else (no)
+  endif
+  :Save and audit;
+endif
+|Buyer|
+:Money is back in the wallet;
+stop
+@enduml

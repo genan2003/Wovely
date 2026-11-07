@@ -1,0 +1,54 @@
+@startuml seller-onboarding
+!include ../_theme.puml
+title Seller onboarding
+
+' Derived from: wovely AuthController#registerUser, config/DataSeeder; frontend register.component.ts,
+' seller-inventory.component.ts, settings.component.ts; products services/ListingService, AdminProductController
+|Seller|
+start
+:Open "Join" and choose\n"Shop and sell my work";
+|SPA|
+:POST /api/auth/signup\nroles ["seller"];
+|Core service|
+if (Valid, unique, roles only "user" / "seller"?) then (no)
+  :400 with the reason;
+  stop
+else (yes)
+  :Account gets ROLE_SELLER;
+endif
+|Seller|
+:Log in;
+:Add workshop city, photo and story in Settings;
+:Add a product with stock and delivery details;
+|Products service|
+:Save as PENDING and register stock with inventory;
+note right
+  Self-service seller accounts are safe because
+  nothing reaches buyers before a moderator
+  approves the listing.
+end note
+|Admin|
+repeat
+  :Review the listing;
+  if (Decision?) then (approve)
+    |Products service|
+    :APPROVED: listing joins the catalog;
+    |Seller|
+    :Receive orders;
+    stop
+  elseif (reject) then
+    |Products service|
+    :REJECTED (final; edits return 409);
+    |Seller|
+    stop
+  else (request changes)
+    |Products service|
+    :NEEDS_CHANGES;
+    |Seller|
+    :Edit the listing ("Changes requested" badge);
+    |Products service|
+    :Back to PENDING (PRODUCT_RESUBMITTED);
+  endif
+  |Admin|
+repeat while (Back in the queue)
+@enduml

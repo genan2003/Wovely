@@ -50,28 +50,22 @@ public class ReviewController {
    * never taken from the body (PLAN.md 3.3).
    */
   @PostMapping
-  public ResponseEntity<Review> createReview(@RequestBody Review review) {
+  public ResponseEntity<Review> createReview(@jakarta.validation.Valid @RequestBody com.wovely.products.payload.ReviewRequest review) {
     JwtPrincipal caller = OwnershipGuard.current();
     if (caller == null || caller.userId() == null) {
       throw ApiException.forbidden("Token has no user id; please sign in again");
     }
-    if (review.getProductId() == null || review.getProductId().isBlank()) {
-      throw ApiException.badRequest("productId is required");
-    }
-    if (review.getRating() < 1 || review.getRating() > 5) {
-      throw ApiException.badRequest("rating must be between 1 and 5");
-    }
-    if (reviewRepository.existsByProductIdAndUserId(review.getProductId(), caller.userId())) {
+    if (reviewRepository.existsByProductIdAndUserId(review.productId(), caller.userId())) {
       throw ApiException.conflict("You have already reviewed this product");
     }
     Review toSave = new Review(
-        review.getProductId(),
+        review.productId(),
         caller.userId(),
         caller.username(),
-        review.getRating(),
-        review.getComment(),
-        review.getPhotoUrls());
-    toSave.setVerifiedPurchase(purchaseVerification.hasReceived(caller.userId(), review.getProductId()));
+        review.rating(),
+        review.comment(),
+        review.photoUrls() == null ? List.of() : List.copyOf(review.photoUrls()));
+    toSave.setVerifiedPurchase(purchaseVerification.hasReceived(caller.userId(), review.productId()));
     return new ResponseEntity<>(reviewRepository.save(toSave), HttpStatus.CREATED);
   }
 }

@@ -45,19 +45,20 @@ public class ReturnService {
     }
 
     /** Buyer opens a return on a delivered/completed order; ids, prices and totals come from the order. */
-    public ReturnRequest create(ReturnRequest request) {
-        if (request.getOrderId() == null) {
-            throw ApiException.badRequest("orderId is required");
-        }
-        Order order = orderRepository.findById(request.getOrderId())
+    public ReturnRequest create(com.wovely.wovely.payload.request.CreateReturnRequest request) {
+        Order order = orderRepository.findById(request.orderId())
                 .orElseThrow(() -> ApiException.badRequest("Original order not found."));
         ownership.requireAnyOf(order.getBuyerId());
         if (order.getStatus() != EOrderStatus.DELIVERED && order.getStatus() != EOrderStatus.COMPLETED) {
             throw ApiException.conflict("Only delivered orders can be returned (current status: " + order.getStatus() + ")");
         }
+        Date deadline = order.getReturnDeadline();
+        if (deadline == null || new Date().after(deadline)) {
+            throw ApiException.conflict("The " + Order.RETURN_WINDOW_DAYS
+                    + "-day return window for this order has closed");
+        }
 
-        List<String> requested = request.getItems() == null ? List.of()
-                : request.getItems().stream().map(OrderItem::getProductId).toList();
+        List<String> requested = request.productIds();
         List<OrderItem> returned = new ArrayList<>();
         for (OrderItem item : order.getItems()) {
             if (requested.contains(item.getProductId())) {
@@ -79,9 +80,9 @@ public class ReturnService {
         toSave.setSellerId(order.getSellerId());
         toSave.setSellerName(order.getSellerName());
         toSave.setItems(returned);
-        toSave.setReason(request.getReason());
+        toSave.setReason(request.reason());
         toSave.setStatus(EReturnStatus.PICKED_UP.name());
-        toSave.setTotalAmount(round(returned.stream().mapToDouble(i -> i.getPrice() * i.getQuantity()).sum()));
+        toSave.setTotalCents(returned.stream().mapToLong(OrderItem::lineTotalCents).reduce(0L, Math::addExact));
 
         orderRepository.save(order);
         ReturnRequest saved = returnRepository.save(toSave);
@@ -124,11 +125,13 @@ public class ReturnService {
             inventoryClient.release(ret.getSellerId(), item.getProductId(), item.getQuantity());
         }
         orderRepository.findById(ret.getOrderId()).ifPresent(order -> {
-            double refunded = round((order.getRefundedAmount() != null ? order.getRefundedAmount() : 0) + ret.getTotalAmount());
-            order.setRefundedAmount(refunded);
-            walletService.refundReturn(order, ret.getTotalAmount());
-            if (order.getTotalAmount() != null && refunded >= order.getTotalAmount() - 0.005
-                    && !OrderStatusPolicy.isTerminal(order.getStatus())) {
+            long returnCents = ret.getTotalCents() == null ? 0 : ret.getTotalCents();
+            long refunded = Math.addExact(order.getRefundedCents() == null ? 0 : order.getRefundedCents(), returnCents);
+            order.setRefundedCents(refunded);
+            walletService.refundReturn(order, returnCents);
+            // Every item came back: the order becomes REFUNDED, whose transition hook refunds what is left
+            // of the payment — the delivery fee (returns themselves refund item prices only).
+            if (refunded >= order.itemsTotalCents() && !OrderStatusPolicy.isTerminal(order.getStatus())) {
                 // Goods are back and restocked above, so this must not restock again (restocksOn is false
                 // for DELIVERED/COMPLETED → REFUNDED).
                 orderService.transition(order, EOrderStatus.REFUNDED, Actor.SYSTEM, "All items returned");
@@ -136,9 +139,5 @@ public class ReturnService {
             order.setUpdatedAt(new Date());
             orderRepository.save(order);
         });
-    }
-
-    private static double round(double v) {
-        return Math.round(v * 100.0) / 100.0;
     }
 }

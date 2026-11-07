@@ -2,18 +2,18 @@
 .wallet-title { margin: 0 0 0.5rem; font-size: 1.25rem; }
 .wallet-balance { margin: 0; display: flex; align-items: baseline; gap: 0.5rem; }
 .wallet-balance .amount {
-  font-family: 'Montserrat', serif; font-size: clamp(2.25rem, 6vw, 3rem); font-weight: 700; line-height: 1.1;
+  font-family: var(--wv-font-display); font-size: clamp(2.25rem, 6vw, 3rem); font-weight: 700; line-height: 1.1;
   color: var(--wv-verified-ink); font-variant-numeric: tabular-nums;
 }
 .wallet-balance .currency { font-weight: 600; color: var(--wv-verified-ink); }
-.muted { color: var(--bs-secondary-color, #5c6b60); font-size: 0.9rem; }
+.muted { color: var(--bs-secondary-color, var(--wv-ink-soft)); font-size: 0.9rem; }
 .demo-note { margin: 0.5rem 0 1.25rem; max-width: 60ch; }
 .topup { padding: 1rem 0; border-top: 1px dashed var(--wv-verified-stitch); border-bottom: 1px dashed var(--wv-verified-stitch); }
 .topup-label { display: block; font-weight: 700; margin-bottom: 0.5rem; }
 .topup-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .topup-input { width: 9rem; }
 .btn-wallet { background: var(--wv-eco-zero-bg); color: var(--wv-eco-zero-ink); border: 0; font-weight: 600; }
-.wallet-error { color: #9b2c1f; font-weight: 600; margin: 0.75rem 0 0; }
+.wallet-error { color: var(--wv-danger); font-weight: 600; margin: 0.75rem 0 0; }
 .activity-title { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
 .activity { list-style: none; margin: 0; padding: 0; }
 .activity-row {
@@ -25,7 +25,7 @@
 .activity-desc { overflow-wrap: anywhere; }
 .activity-amount { font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
 .activity-amount.in { color: var(--wv-verified-ink); }
-.activity-amount.out { color: #8a3b1d; }
+.activity-amount.out { color: var(--wv-danger); }
 @media (max-width: 480px) {
   .activity-row { grid-template-columns: 1fr auto; }
   .activity-when { grid-column: 1; }

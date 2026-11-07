@@ -1,86 +1,88 @@
-<nav class="navbar navbar-expand px-3 mt-0 mb-4">
-  <a routerLink="/" class="navbar-brand">Wovely</a>
-  <div class="navbar-nav me-auto">
-    <li class="nav-item dropdown">
-      <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        Categories
-      </a>
-      <ul class="dropdown-menu dropdown-menu-dark shadow-lg border-0 rounded-4" aria-labelledby="navbarDropdown">
-        <li><a class="dropdown-item py-2" href="#" (click)="filterByCategory('', $event)">All Products</a></li>
-        <li><hr class="dropdown-divider opacity-10"></li>
-        @for (cat of categories(); track cat.id) {
-            <li class="dropdown-submenu">
-                <a class="dropdown-item d-flex justify-content-between align-items-center py-2" href="#" (click)="filterByCategory(cat.name, $event)">
-                    {{ cat.name }}
-                    @if (cat.children.length > 0) {
-                        <i class="bi bi-chevron-right small"></i>
-                    }
-                </a>
-                @if (cat.children.length > 0) {
-                    <ul class="dropdown-menu dropdown-menu-dark shadow-lg border-0 rounded-4 ms-0">
-                        @for (sub of cat.children; track sub.id) {
-                            <li><a class="dropdown-item py-2" href="#" (click)="filterByCategory(cat.name + ' > ' + sub.name, $event)">{{ sub.name }}</a></li>
-                        }
-                    </ul>
+<button type="button" class="wv-skip" (click)="skipToContent()">Skip to content</button>
+
+<header class="shell">
+  <span class="wv-selvedge weave-in" aria-hidden="true"></span>
+  <nav class="shell__bar" aria-label="Main">
+    <a routerLink="/" class="wv-brand">Wovely</a>
+
+    <div class="shell__menu">
+      <button type="button" class="shell__link" aria-controls="menu-categories"
+              [attr.aria-expanded]="openMenu() === 'categories'" (click)="toggleMenu('categories')">
+        Shop <i class="bi bi-chevron-down" aria-hidden="true"></i>
+      </button>
+      @if (openMenu() === 'categories') {
+        <div id="menu-categories" class="shell__panel shell__panel--wide">
+          <a routerLink="/products" class="shell__all">All products</a>
+          <div class="shell__columns">
+            @for (cat of categories(); track cat.id) {
+              <div>
+                <a routerLink="/products" [queryParams]="{ categoryPath: cat.name }" class="shell__group">{{ cat.name }}</a>
+                @for (sub of cat.children; track sub.id) {
+                  <a routerLink="/products" [queryParams]="{ categoryPath: cat.name + ' > ' + sub.name }">{{ sub.name }}</a>
                 }
-            </li>
-        }
-      </ul>
-    </li>
-    @if (isLoggedIn()) {
-      <li class="nav-item">
-        <a class="nav-link position-relative px-3" routerLink="/messages" routerLinkActive="active"
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="shell__actions">
+      @if (isLoggedIn()) {
+        <a class="shell__icon" routerLink="/messages" routerLinkActive="active"
            [attr.aria-label]="realtime.unreadCount() > 0 ? 'Messages, ' + realtime.unreadCount() + ' unread' : 'Messages'">
-          <i class="bi bi-chat-dots fs-5" aria-hidden="true"></i>
+          <i class="bi bi-chat" aria-hidden="true"></i>
           @if (realtime.unreadCount() > 0) {
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill unread-badge" aria-hidden="true">
-              {{ realtime.unreadCount() > 99 ? '99+' : realtime.unreadCount() }}
-            </span>
+            <span class="shell__count unread-badge" aria-hidden="true">{{ realtime.unreadCount() > 99 ? '99+' : realtime.unreadCount() }}</span>
           }
         </a>
-      </li>
-    }
-    <li class="nav-item">
-      <a class="nav-link position-relative px-3" routerLink="/cart" routerLinkActive="active">
-        <i class="bi bi-cart3 fs-5"></i>
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" *ngIf="cartService.getItemCount() > 0">
-          {{ cartService.getItemCount() }}
-        </span>
+      }
+      <a class="shell__icon" routerLink="/cart" routerLinkActive="active"
+         [attr.aria-label]="cartService.getItemCount() > 0 ? 'Cart, ' + cartService.getItemCount() + ' items' : 'Cart'">
+        <i class="bi bi-bag" aria-hidden="true"></i>
+        @if (cartService.getItemCount() > 0) {
+          <span class="shell__count" aria-hidden="true">{{ cartService.getItemCount() }}</span>
+        }
       </a>
-    </li>
-  </div>
 
-  <div class="navbar-nav ms-auto align-items-center">
-    <!-- User Profile Dropdown -->
-    <li class="nav-item dropdown">
-      <div class="user-menu-wrapper" id="userMenuDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <img src="icons/user.png" alt="User" class="user-icon-img">
-      </div>
-      
-      <ul class="dropdown-menu dropdown-menu-dark user-dropdown-menu shadow-lg border-0 rounded-4 mt-2" aria-labelledby="userMenuDropdown">
-        <!-- Guest Links -->
-        <ng-container *ngIf="!isLoggedIn()">
-          <li><a routerLink="/register" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-person-plus me-2"></i> Sign Up</a></li>
-          <li><a routerLink="/login" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-box-arrow-in-right me-2"></i> Login</a></li>
-        </ng-container>
+      @if (isLoggedIn()) {
+        <div class="shell__menu">
+          <button type="button" class="shell__link" aria-controls="menu-account"
+                  [attr.aria-expanded]="openMenu() === 'account'" (click)="toggleMenu('account')">
+            <span class="shell__name">{{ user()?.username }}</span>
+            <i class="bi bi-person shell__person" aria-hidden="true"></i>
+            <span class="visually-hidden">Account menu</span>
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+          </button>
+          @if (openMenu() === 'account') {
+            <div id="menu-account" class="shell__panel shell__panel--end">
+              @if (isAdmin()) {
+                <a routerLink="/admin">Moderation</a>
+              }
+              @if (isSeller()) {
+                <a routerLink="/seller/inventory">Inventory</a>
+                <a routerLink="/seller/orders">Orders received</a>
+                <a routerLink="/seller/manual-order">Record a sale</a>
+              }
+              <a routerLink="/cart" [queryParams]="{ tab: 'shipped' }">My orders</a>
+              <a routerLink="/cart" [queryParams]="{ tab: 'favourites' }">Favourites</a>
+              <a routerLink="/settings">Settings</a>
+              <hr class="wv-stitch" />
+              <button type="button" (click)="logout()">Log out</button>
+            </div>
+          }
+        </div>
+      } @else {
+        <a class="shell__link shell__link--text" routerLink="/login">Log in</a>
+        <a class="btn btn-primary btn-sm shell__join" routerLink="/register">Join</a>
+      }
+    </div>
+  </nav>
+</header>
 
-        <!-- Logged-in User Links -->
-        <ng-container *ngIf="isLoggedIn()">
-          <li *ngIf="isAdmin()"><a routerLink="/admin" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-shield-check me-2"></i> Moderation Hub</a></li>
-          <li *ngIf="isSeller()"><a routerLink="/seller/inventory" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-box-seam me-2"></i> My Inventory</a></li>
-          <li *ngIf="isSeller()"><a routerLink="/seller/orders" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-receipt me-2"></i> My Orders</a></li>
-          <li *ngIf="isSeller()"><a routerLink="/seller/manual-order" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-pencil-square me-2"></i> Manual Order</a></li>
-          <li><a routerLink="/messages" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-chat-dots-fill me-2"></i> Messages</a></li>
-          <li><a routerLink="/settings" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-gear-fill me-2"></i> Settings</a></li>
-          <li><a routerLink="/products" class="dropdown-item py-2" routerLinkActive="active"><i class="bi bi-grid me-2"></i> Products</a></li>
-          <li><hr class="dropdown-divider opacity-10"></li>
-          <li><a href="#" class="dropdown-item py-2 text-danger" (click)="logout($event)"><i class="bi bi-power me-2"></i> LogOut</a></li>
-        </ng-container>
-      </ul>
-    </li>
-  </div>
-</nav>
-
-<div class="container">
+<main #main id="main" tabindex="-1">
   <router-outlet />
-</div>
+</main>
+
+<app-toast-outlet />
+<app-confirm-dialog />

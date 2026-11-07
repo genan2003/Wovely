@@ -31,7 +31,7 @@ public class CatalogQueryService {
      * @param deliveryEmission the dirtiest acceptable level: ZERO = zero-emission only, LOW = zero or low
      */
     public record Filter(String category, String categoryPath, Boolean isEco, EDeliveryEmission deliveryEmission,
-            Boolean localPickup, Boolean isHandmade, String city, String region, Double minPrice, Double maxPrice) {
+            Boolean localPickup, Boolean isHandmade, String city, String region, java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice) {
 
         /** The effective emission ceiling, or {@code null} when not filtering. */
         EDeliveryEmission emissionCeiling() {
@@ -91,9 +91,9 @@ public class CatalogQueryService {
             and.add(where("region").regex(Pattern.quote(f.region().trim()), "i"));
         }
         if (f.minPrice() != null || f.maxPrice() != null) {
-            Criteria price = where("price");
-            if (f.minPrice() != null) price = price.gte(f.minPrice());
-            if (f.maxPrice() != null) price = price.lte(f.maxPrice());
+            Criteria price = where("priceCents"); // filter bounds are RON, rounded half up to cents
+            if (f.minPrice() != null) price = price.gte(com.wovely.common.money.Money.legacyCents(f.minPrice()));
+            if (f.maxPrice() != null) price = price.lte(com.wovely.common.money.Money.legacyCents(f.maxPrice()));
             and.add(price);
         }
         return new Criteria().andOperator(and.toArray(Criteria[]::new));

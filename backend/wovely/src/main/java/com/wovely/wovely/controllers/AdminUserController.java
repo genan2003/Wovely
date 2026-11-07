@@ -1,6 +1,5 @@
 package com.wovely.wovely.controllers;
 
-import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.wovely.wovely.models.EAccountStatus;
 import com.wovely.wovely.models.User;
 import com.wovely.wovely.payload.request.PenaltyRequest;
-import com.wovely.wovely.payload.response.MessageResponse;
 import com.wovely.wovely.payload.response.UserCrmDTO;
 import com.wovely.wovely.repository.UserRepository;
 
@@ -39,6 +37,9 @@ public class AdminUserController {
 
     @Autowired
     com.wovely.wovely.services.UserQueryService userQueryService;
+
+    @Autowired
+    com.wovely.wovely.services.UserPenaltyService penaltyService;
 
     /** {@code ?query=} matches username/email/full name (case-insensitive), {@code ?status=} filters (PLAN.md 3.1). */
     @GetMapping
@@ -60,43 +61,10 @@ public class AdminUserController {
         }
     }
 
+    /** STRIKE, or STATUS with {@code newStatus} (SUSPENDED needs {@code suspendDays} 1–365). */
     @PostMapping("/{id}/penalty")
-    public ResponseEntity<?> applyPenalty(@PathVariable("id") String id, @RequestBody PenaltyRequest request) {
-        Optional<User> userData = userRepository.findById(id);
-
-        if (userData.isPresent()) {
-            User _user = userData.get();
-            String before = "strikes=" + _user.getStrikes() + ", status=" + _user.getAccountStatus();
-            
-            if ("STRIKE".equals(request.getAction())) {
-                _user.setStrikes(_user.getStrikes() + 1);
-            } else if ("STATUS".equals(request.getAction())) {
-                if (request.getNewStatus() == null) {
-                    return ResponseEntity.badRequest().body(new MessageResponse("Error: newStatus is required!"));
-                }
-                _user.setAccountStatus(request.getNewStatus());
-                if (request.getNewStatus() == EAccountStatus.SUSPENDED && request.getSuspendDays() != null) {
-                    Calendar cal = Calendar.getInstance();
-                    cal.add(Calendar.DATE, request.getSuspendDays());
-                    _user.setSuspendedUntil(cal.getTime());
-                } else {
-                    _user.setSuspendedUntil(null);
-                }
-            } else {
-                return ResponseEntity.badRequest().body(new MessageResponse("Error: Invalid action!"));
-            }
-            
-            userRepository.save(_user);
-            if (_user.getAccountStatus() == EAccountStatus.BANNED || _user.getAccountStatus() == EAccountStatus.SUSPENDED) {
-                // Sign the user out everywhere: no refresh → access dies within the token TTL (PLAN.md 2.9)
-                refreshTokenService.revokeAll(_user.getId());
-            }
-            auditService.record("USER_PENALTY", id, request.getAction() + ": " + before + " -> strikes="
-                    + _user.getStrikes() + ", status=" + _user.getAccountStatus());
-            return new ResponseEntity<>(convertToDto(_user), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+    public UserCrmDTO applyPenalty(@PathVariable("id") String id, @RequestBody(required = false) PenaltyRequest request) {
+        return convertToDto(penaltyService.apply(id, request));
     }
 
     private UserCrmDTO convertToDto(User user) {
@@ -110,8 +78,8 @@ public class AdminUserController {
                 user.getEmail(),
                 roles,
                 user.getStrikes(),
-                user.getAccountStatus(),
-                user.getSuspendedUntil()
+                user.effectiveStatus(new java.util.Date()),
+                user.effectiveStatus(new java.util.Date()) == EAccountStatus.SUSPENDED ? user.getSuspendedUntil() : null
         );
     }
 }

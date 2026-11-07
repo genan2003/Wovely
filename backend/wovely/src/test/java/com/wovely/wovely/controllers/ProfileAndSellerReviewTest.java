@@ -121,4 +121,17 @@ class ProfileAndSellerReviewTest extends SecuredWebMvcTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.verifiedPurchase").value(false));
     }
+
+    @Test
+    void sellerReviewNeedsAllThreeRatingsInRange() throws Exception {
+        for (String body : new String[] {
+                "{\"overallRating\":5,\"communicationRating\":5}",
+                "{\"overallRating\":6,\"communicationRating\":5,\"shippingRating\":5}",
+                "{\"overallRating\":5,\"communicationRating\":5,\"shippingRating\":5,\"comment\":\"" + "x".repeat(2001) + "\"}" }) {
+            mvc.perform(post("/api/public/users/seller/" + TestTokens.SELLER_ID + "/reviews").header(AUTH, bearer(TestTokens.buyer()))
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        }
+        verify(sellerReviewRepository, never()).save(any());
+    }
 }

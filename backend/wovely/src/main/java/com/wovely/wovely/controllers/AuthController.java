@@ -127,26 +127,23 @@ public class AuthController {
                     .badRequest()
                     .body(new MessageResponse("Error: Role 'admin' cannot be self-assigned."));
         }
-        Set<Role> roles = new HashSet<>();
-
-        if (strRoles == null) {
-            Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
-        } else {
-            strRoles.forEach(role -> {
-                switch (role) {
-                    case "seller":
-                        Role sellerRole = roleRepository.findByName(ERole.ROLE_SELLER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(sellerRole);
-                        break;
-                    default:
-                        Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
+        // Self-service accounts are buyers ("user", the default) or makers ("seller"). Listings still need an
+        // admin's approval before buyers see them, so becoming a seller grants no reach on its own.
+        Set<ERole> wanted = new HashSet<>();
+        for (String role : strRoles == null || strRoles.isEmpty() ? Set.of("user") : strRoles) {
+            switch (role == null ? "" : role.trim().toLowerCase(java.util.Locale.ROOT)) {
+                case "user" -> wanted.add(ERole.ROLE_USER);
+                case "seller" -> wanted.add(ERole.ROLE_SELLER);
+                default -> {
+                    return ResponseEntity.badRequest()
+                            .body(new MessageResponse("Error: Unknown role '" + role + "'. Use 'user' or 'seller'."));
                 }
-            });
+            }
+        }
+        Set<Role> roles = new HashSet<>();
+        for (ERole name : wanted) {
+            roles.add(roleRepository.findByName(name)
+                    .orElseThrow(() -> new IllegalStateException("Role " + name + " is not seeded")));
         }
 
         user.setRoles(roles);

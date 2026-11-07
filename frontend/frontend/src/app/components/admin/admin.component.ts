@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../services/admin.service';
@@ -9,19 +10,43 @@ import { OrderResolutionComponent } from './order-resolution/order-resolution.co
 import { AdminReturnsComponent } from './returns-management/returns-management.component';
 import { FlaggedContentComponent } from './flagged-content/flagged-content.component';
 import { AuditTrailComponent } from './audit-trail/audit-trail.component';
+import { ToastService } from '../../services/toast.service';
+import { EmptyStateComponent } from '../shared/empty-state/empty-state.component';
+import { ImageFallbackDirective } from '../../directives/image-fallback.directive';
+
+export type AdminTab = 'ads' | 'users' | 'orders' | 'returns' | 'flags' | 'audit';
+const TABS: AdminTab[] = ['ads', 'users', 'orders', 'returns', 'flags', 'audit'];
 
 @Component({
   selector: 'app-admin',
-  standalone: true,
-  imports: [CommonModule, FormsModule, UserCrmComponent, OrderResolutionComponent, AdminReturnsComponent, FlaggedContentComponent, AuditTrailComponent],
+  imports: [DecimalPipe, 
+    FormsModule,
+    UserCrmComponent,
+    OrderResolutionComponent,
+    AdminReturnsComponent,
+    FlaggedContentComponent,
+    AuditTrailComponent,
+    EmptyStateComponent,
+    ImageFallbackDirective,
+  ],
   templateUrl: './admin.component.html',
-  styleUrls: ['./admin.component.css']
+  styleUrls: ['./admin.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminComponent implements OnInit {
   private adminService = inject(AdminService);
   private route = inject(ActivatedRoute);
+  private toast = inject(ToastService);
 
-  activeTab = signal<'ads' | 'users' | 'orders' | 'returns' | 'flags' | 'audit'>('ads');
+  readonly tabs: { id: AdminTab; label: string }[] = [
+    { id: 'ads', label: 'Listings to approve' },
+    { id: 'users', label: 'Users' },
+    { id: 'orders', label: 'Orders' },
+    { id: 'returns', label: 'Refunds' },
+    { id: 'flags', label: 'Reports' },
+    { id: 'audit', label: 'Audit trail' },
+  ];
+  activeTab = signal<AdminTab>('ads');
 
   pendingAds = signal<Product[]>([]);
   selectedAd = signal<Product | null>(null);
@@ -37,16 +62,14 @@ export class AdminComponent implements OnInit {
     co2EmissionScore: '',
     shippingMethod: '',
     isHandmade: false,
-    status: ''
+    status: '',
   });
 
   ngOnInit(): void {
     // Check for tab query param
-    const tab = this.route.snapshot.queryParamMap.get('tab');
-    if (tab === 'users') {
-      this.activeTab.set('users');
-    } else if (tab === 'orders') {
-      this.activeTab.set('orders');
+    const tab = this.route.snapshot.queryParamMap.get('tab') as AdminTab | null;
+    if (tab && TABS.includes(tab)) {
+      this.activeTab.set(tab);
     }
     this.loadPendingAds();
   }
@@ -56,20 +79,30 @@ export class AdminComponent implements OnInit {
       next: (ads) => {
         this.pendingAds.set(ads || []);
       },
-      error: (err) => console.error('Failed to load pending ads', err)
+      error: (err: unknown) => this.toast.apiError(err, 'The approval queue couldn’t be loaded.'),
     });
   }
 
   approveAd(id: string): void {
-    this.adminService.updateAdStatus(id, 'APPROVED').subscribe(() => this.loadPendingAds());
+    this.setAdStatus(id, 'APPROVED', 'Listing approved.');
   }
 
   rejectAd(id: string): void {
-    this.adminService.updateAdStatus(id, 'REJECTED').subscribe(() => this.loadPendingAds());
+    this.setAdStatus(id, 'REJECTED', 'Listing rejected.');
   }
 
   requestChanges(id: string): void {
-    this.adminService.updateAdStatus(id, 'NEEDS_CHANGES').subscribe(() => this.loadPendingAds());
+    this.setAdStatus(id, 'NEEDS_CHANGES', 'Changes requested from the seller.');
+  }
+
+  private setAdStatus(id: string, status: string, done: string): void {
+    this.adminService.updateAdStatus(id, status).subscribe({
+      next: () => {
+        this.toast.success(done);
+        this.loadPendingAds();
+      },
+      error: (err: unknown) => this.toast.apiError(err, 'The listing wasn’t updated. Try again.'),
+    });
   }
 
   openEditModal(ad: Product): void {
@@ -91,12 +124,12 @@ export class AdminComponent implements OnInit {
           this.closeEditModal();
           this.loadPendingAds();
         },
-        error: (err) => console.error('Failed to save edits', err)
+        error: (err: unknown) => this.toast.apiError(err, 'Your edits weren’t saved. Try again.'),
       });
     }
   }
 
-  switchTab(tab: 'ads' | 'users' | 'orders' | 'returns' | 'flags' | 'audit'): void {
+  switchTab(tab: AdminTab): void {
     this.activeTab.set(tab);
   }
 }

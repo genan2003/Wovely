@@ -25,9 +25,10 @@
                         "minimum": 0,
                         "type": "integer"
                     },
-                    "price": {
-                        "format": "double",
-                        "type": "number"
+                    "priceCents": {
+                        "format": "int64",
+                        "minimum": 0,
+                        "type": "integer"
                     },
                     "productName": {
                         "type": "string"
@@ -104,6 +105,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -142,6 +144,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -172,6 +175,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -202,6 +206,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -232,6 +237,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -270,6 +276,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -314,14 +321,14 @@
                                 "type": "object"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }
@@ -366,14 +373,14 @@
                                 "type": "object"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
                         "content": {
                             "*/*": {
                                 "schema": {
+                                    "additionalProperties": {},
                                     "type": "object"
                                 }
                             }

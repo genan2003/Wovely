@@ -1,74 +1,44 @@
-import { Injectable, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable } from '@angular/core';
+import { AuthUser } from '../models/auth.model';
 
 const USER_KEY = 'auth-user';
 const TOKEN_KEY = 'auth-token';
 const REFRESH_KEY = 'auth-refresh';
 
-@Injectable({
-  providedIn: 'root'
-})
+/** The session lives in sessionStorage: it ends with the tab and is never shared between users. */
+@Injectable({ providedIn: 'root' })
 export class StorageService {
-  private platformId = inject(PLATFORM_ID);
-
-  constructor() { }
-
   clean(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      window.sessionStorage.clear();
-    }
+    sessionStorage.clear();
   }
 
-  public saveToken(token: string): void {
-    if (isPlatformBrowser(this.platformId)) {
-      window.sessionStorage.removeItem(TOKEN_KEY);
-      window.sessionStorage.setItem(TOKEN_KEY, token);
-    }
+  saveToken(token: string): void {
+    sessionStorage.setItem(TOKEN_KEY, token);
   }
 
-  public getToken(): string | null {
-    if (isPlatformBrowser(this.platformId)) {
-      return window.sessionStorage.getItem(TOKEN_KEY);
-    }
-    return null;
+  getToken(): string | null {
+    return sessionStorage.getItem(TOKEN_KEY);
   }
 
   /** Opaque refresh token (PLAN.md 2.9); rotated by the server on every refresh. */
-  public saveRefreshToken(token: string): void {
-    if (isPlatformBrowser(this.platformId)) {
-      window.sessionStorage.setItem(REFRESH_KEY, token);
-    }
+  saveRefreshToken(token: string): void {
+    sessionStorage.setItem(REFRESH_KEY, token);
   }
 
-  public getRefreshToken(): string | null {
-    if (isPlatformBrowser(this.platformId)) {
-      return window.sessionStorage.getItem(REFRESH_KEY);
-    }
-    return null;
+  getRefreshToken(): string | null {
+    return sessionStorage.getItem(REFRESH_KEY);
   }
 
-  public saveUser(user: any): void {
-    if (isPlatformBrowser(this.platformId)) {
-      window.sessionStorage.removeItem(USER_KEY);
-      window.sessionStorage.setItem(USER_KEY, JSON.stringify(user));
-    }
+  saveUser(user: AuthUser): void {
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
-  public getUser(): any {
-    if (isPlatformBrowser(this.platformId)) {
-      const user = window.sessionStorage.getItem(USER_KEY);
-      if (user) {
-        return JSON.parse(user);
-      }
-    }
-    return null;
+  getUser(): AuthUser | null {
+    const user = sessionStorage.getItem(USER_KEY);
+    return user ? (JSON.parse(user) as AuthUser) : null;
   }
 
-  public isLoggedIn(): boolean {
-    if (isPlatformBrowser(this.platformId)) {
-      const user = window.sessionStorage.getItem(USER_KEY);
-      return user !== null;
-    }
-    return false;
+  isLoggedIn(): boolean {
+    return sessionStorage.getItem(USER_KEY) !== null;
   }
 }

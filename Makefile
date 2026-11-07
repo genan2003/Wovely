@@ -6,7 +6,7 @@ NEWMAN     := npx --yes newman@6
 POSTMAN    := postman
 ENV        ?= local
 
-.PHONY: help up down logs test test-backend test-it test-frontend test-e2e test-api seed postman diagrams openapi
+.PHONY: help up down logs infra test test-backend test-it test-frontend test-e2e test-api seed postman diagrams openapi
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -19,6 +19,9 @@ down: ## Stop the stack
 
 logs: ## Follow logs of all services
 	docker compose logs -f
+
+infra: ## Start only MongoDB, Redis and RabbitMQ, with ports on 127.0.0.1, for running services on the host
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait wp2-project redis rabbitmq
 
 test: test-backend test-frontend ## Fast tests (unit + web slice, no Docker needed)
 

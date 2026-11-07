@@ -27,6 +27,13 @@ public class CreateOrderRequest {
     @Size(max = 64)
     private String addressId;
 
+    /** Required: its fee (server price list) is added to the total and charged with it. */
+    @jakarta.validation.constraints.NotNull(message = "deliveryOption is required (BICYCLE, ELECTRIC_VAN or CARBON_NEUTRAL_COURIER)")
+    private com.wovely.wovely.models.EDeliveryOption deliveryOption;
+
+    public com.wovely.wovely.models.EDeliveryOption getDeliveryOption() { return deliveryOption; }
+    public void setDeliveryOption(com.wovely.wovely.models.EDeliveryOption deliveryOption) { this.deliveryOption = deliveryOption; }
+
     public String getAddressId() { return addressId; }
     public void setAddressId(String addressId) { this.addressId = addressId; }
 

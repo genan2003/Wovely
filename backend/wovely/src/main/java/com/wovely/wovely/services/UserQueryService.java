@@ -32,6 +32,18 @@ public class UserQueryService {
      * Case-insensitive substring match on username, email or full name (user input is regex-quoted),
      * optionally restricted to one account status. Both filters are optional.
      */
+    /** Matches {@link User#effectiveStatus}: expired suspensions count as ACTIVE. */
+    static Criteria effectiveStatusIs(EAccountStatus status, java.util.Date now) {
+        Criteria expired = new Criteria().andOperator(where("accountStatus").is(EAccountStatus.SUSPENDED),
+                where("suspendedUntil").lte(now));
+        return switch (status) {
+            case ACTIVE -> new Criteria().orOperator(where("accountStatus").is(EAccountStatus.ACTIVE), expired);
+            case SUSPENDED -> new Criteria().andOperator(where("accountStatus").is(EAccountStatus.SUSPENDED),
+                    new Criteria().orOperator(where("suspendedUntil").is(null), where("suspendedUntil").gt(now)));
+            default -> where("accountStatus").is(status);
+        };
+    }
+
     public List<User> search(String query, EAccountStatus status) {
         List<Criteria> filters = new ArrayList<>();
         if (query != null && !query.isBlank()) {
@@ -40,7 +52,7 @@ public class UserQueryService {
                     where("username").regex(p), where("email").regex(p), where("fullName").regex(p)));
         }
         if (status != null) {
-            filters.add(where("accountStatus").is(status));
+            filters.add(effectiveStatusIs(status, new java.util.Date()));
         }
         Query q = filters.isEmpty() ? new Query() : new Query(new Criteria().andOperator(filters));
         q.with(Sort.by("username")).limit(MAX_RESULTS);

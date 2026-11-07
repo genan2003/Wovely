@@ -1,61 +1,49 @@
-<div class="settings-page">
-    <div class="container py-5">
-        <h1 class="display-4 fw-bold mb-5 text-center">Settings</h1>
+<div class="wv-page settings-page">
+  <header class="wv-page-head">
+    <h1>Settings</h1>
+    <p>Your profile, addresses and wallet.</p>
+  </header>
 
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                
-                <!-- Profile Section -->
-                <div class="card settings-card p-4">
-                    <h3 class="card-title d-flex align-items-center">
-                        <i class="bi bi-person-circle section-icon"></i>
-                        Profile Information
-                    </h3>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" class="form-control" [(ngModel)]="profile.fullName" placeholder="Enter your full name">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-control" [value]="username()" disabled>
-                        </div>
-                        @if (isSeller()) {
-                            <div class="col-md-6">
-                                <label class="form-label" for="workshopCity">Workshop city</label>
-                                <input id="workshopCity" type="text" class="form-control" [(ngModel)]="profile.city" placeholder="Sibiu">
-                                <small class="text-muted">Shown on your public seller profile.</small>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Workshop / Profile Image URL</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white"><i class="bi bi-image"></i></span>
-                                    <input type="text" class="form-control" [(ngModel)]="profile.workshopImageUrl" placeholder="https://example.com/your-image.jpg">
-                                </div>
-                                <small class="text-muted">This image will be shown to customers in the 'About Seller' section.</small>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Maker Bio / Story</label>
-                                <textarea class="form-control" [(ngModel)]="profile.makerStory" rows="4" placeholder="Share your story with your customers..."></textarea>
-                            </div>
-                        }
-                    </div>
-                    <div class="mt-4 text-end">
-                        <button class="btn btn-save" (click)="saveProfile()">Save Changes</button>
-                    </div>
-                </div>
-
-                <!-- Address book (checkout destinations) -->
-                <div class="card settings-card p-4" id="addresses">
-                    <app-address-book />
-                </div>
-
-                <!-- Wallet (PLAN.md 3.7) — replaces the old card/IBAN form, which never saved anything -->
-                <div class="card settings-card p-4" id="wallet">
-                    <app-wallet-panel [seller]="!!isSeller()" />
-                </div>
-
-            </div>
+  <section class="settings-section" aria-labelledby="profile-title">
+    <h2 id="profile-title">Profile</h2>
+    <form [formGroup]="form" (ngSubmit)="saveProfile()">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="fullName">Full name</label>
+          <input id="fullName" type="text" class="form-control" formControlName="fullName" autocomplete="name">
         </div>
-    </div>
+        <div class="col-md-6">
+          <label class="form-label" for="username">Username</label>
+          <input id="username" type="text" class="form-control" [value]="username()" disabled>
+        </div>
+        @if (isSeller()) {
+          <div class="col-md-6">
+            <label class="form-label" for="workshopCity">Workshop city</label>
+            <input id="workshopCity" type="text" class="form-control" formControlName="city" aria-describedby="city-help">
+            <div class="form-text" id="city-help">Shown on your public maker profile.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="workshopImage">Workshop photo URL</label>
+            <input id="workshopImage" type="url" class="form-control" formControlName="workshopImageUrl" aria-describedby="image-help">
+            <div class="form-text" id="image-help">Buyers see this next to your products.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="makerStory">Your story</label>
+            <textarea id="makerStory" class="form-control" formControlName="makerStory" rows="4"></textarea>
+          </div>
+        }
+      </div>
+      <div class="settings-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="form.pristine || form.invalid">Save changes</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="settings-section" id="addresses">
+    <app-address-book />
+  </section>
+
+  <section class="settings-section" id="wallet">
+    <app-wallet-panel [seller]="!!isSeller()" />
+  </section>
 </div>

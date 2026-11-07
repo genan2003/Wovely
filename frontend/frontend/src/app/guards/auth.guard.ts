@@ -1,21 +1,30 @@
+import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { StorageService } from '../services/storage.service';
+import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
+import { Role } from '../models/auth.model';
 
-export const authGuard: CanActivateFn = (route, state) => {
-    const storageService = inject(StorageService);
-    const router = inject(Router);
-    const platformId = inject(PLATFORM_ID);
+/** Signed-in users only; everyone else goes to /login and comes back afterwards. */
+export const authGuard: CanActivateFn = (_route, state) => {
+  const router = inject(Router);
+  return inject(AuthService).isLoggedIn()
+    ? true
+    : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+};
 
-    if (isPlatformBrowser(platformId)) {
-        if (storageService.isLoggedIn()) {
-            return true;
-        }
-        // Redirect to login page only on browser
-        return router.parseUrl('/login');
-    }
-
-    // On server, allow it to pass so the browser can check correctly
+/**
+ * Hides a whole area from the wrong role. This is a convenience for honest users:
+ * the services enforce the same rule on every request.
+ */
+export const roleGuard = (...roles: Role[]): CanActivateFn => (_route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (!auth.isLoggedIn()) {
+    return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  }
+  if (auth.hasRole(...roles)) {
     return true;
+  }
+  inject(ToastService).error('Your account doesn’t have access to that page.');
+  return router.createUrlTree(['/products']);
 };

@@ -101,4 +101,16 @@ class ReviewControllerTest extends SecuredWebMvcTest {
             .andExpect(status().isConflict());
         verify(purchaseVerification, never()).hasReceived(any(), any());
     }
+
+    @Test
+    void reviewsAreValidated() throws Exception {
+        String sevenPhotos = "[" + String.join(",", java.util.Collections.nCopies(7, "\"https://x.test/a.jpg\"")) + "]";
+        for (String body : new String[] { "{\"productId\":\"p-1\"}", "{\"productId\":\"p-1\",\"rating\":0}",
+                "{\"rating\":4}", "{\"productId\":\"p-1\",\"rating\":4,\"photoUrls\":" + sevenPhotos + "}" }) {
+            mvc.perform(post("/api/reviews").header(AUTH, bearer(TestTokens.buyer()))
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        }
+        verify(reviewRepository, never()).save(any());
+    }
 }

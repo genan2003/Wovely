@@ -1,70 +1,49 @@
-import { Injectable, signal, inject, PLATFORM_ID, computed, effect } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
-import { StorageService } from './storage.service';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { AuthService } from './auth.service';
 import { Product } from '../models/product.model';
 
-@Injectable({
-    providedIn: 'root'
-})
+/** Favorites are stored per user in this browser and follow whoever is signed in. */
+@Injectable({ providedIn: 'root' })
 export class FavoriteService {
-    private platformId = inject(PLATFORM_ID);
-    private storageService = inject(StorageService);
-    private favorites = signal<Product[]>([]);
+  private auth = inject(AuthService);
+  private favorites = signal<Product[]>([]);
 
-    public getFavorites = computed(() => this.favorites());
+  public getFavorites = computed(() => this.favorites());
 
-    constructor() {
-        // Initial load
-        this.loadFavorites();
-        
-        // Listen for login/logout to reload favorites
-        effect(() => {
-            if (this.storageService.isLoggedIn()) {
-                this.loadFavorites();
-            } else {
-                this.favorites.set([]);
-            }
-        });
+  constructor() {
+    effect(() => {
+      const userId = this.auth.user()?.id;
+      untracked(() => this.favorites.set(userId ? this.read(userId) : []));
+    });
+  }
+
+  private read(userId: string): Product[] {
+    const data = localStorage.getItem(`favorites_${userId}`);
+    return data ? (JSON.parse(data) as Product[]) : [];
+  }
+
+  private save(favorites: Product[]): void {
+    const userId = this.auth.user()?.id;
+    if (userId) {
+      localStorage.setItem(`favorites_${userId}`, JSON.stringify(favorites));
     }
+    this.favorites.set(favorites);
+  }
 
-    private loadFavorites(): void {
-        if (isPlatformBrowser(this.platformId)) {
-            const user = this.storageService.getUser();
-            if (user && user.id) {
-                const key = `favorites_${user.id}`;
-                const data = localStorage.getItem(key);
-                this.favorites.set(data ? JSON.parse(data) : []);
-            }
-        }
-    }
+  public toggleFavorite(product: Product): void {
+    const current = this.favorites();
+    this.save(
+      current.some((p) => p.id === product.id)
+        ? current.filter((p) => p.id !== product.id)
+        : [...current, product]
+    );
+  }
 
-    private saveFavorites(favs: Product[]): void {
-        if (isPlatformBrowser(this.platformId)) {
-            const user = this.storageService.getUser();
-            if (user && user.id) {
-                const key = `favorites_${user.id}`;
-                localStorage.setItem(key, JSON.stringify(favs));
-            }
-        }
-        this.favorites.set(favs);
-    }
+  public isFavorite(productId: string): boolean {
+    return this.favorites().some((p) => p.id === productId);
+  }
 
-    public toggleFavorite(product: Product): void {
-        const current = this.favorites();
-        const index = current.findIndex(p => p.id === product.id);
-        if (index > -1) {
-            this.saveFavorites(current.filter(p => p.id !== product.id));
-        } else {
-            this.saveFavorites([...current, product]);
-        }
-    }
-
-    public isFavorite(productId: string): boolean {
-        return this.favorites().some(p => p.id === productId);
-    }
-
-    public removeFavorite(productId: string): void {
-        const current = this.favorites();
-        this.saveFavorites(current.filter(p => p.id !== productId));
-    }
+  public removeFavorite(productId: string): void {
+    this.save(this.favorites().filter((p) => p.id !== productId));
+  }
 }

@@ -5,6 +5,8 @@ export interface Product {
     name: string;
     description: string;
     price: number;
+    /** Same amount in whole cents (PLAN.md 7.5); read-only, the server derives it from `price`. */
+    priceCents?: number;
     sellerId: string;
     imageUrl: string;
     category: string;

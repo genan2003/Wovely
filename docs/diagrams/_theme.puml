@@ -31,3 +31,41 @@ skinparam note {
   BorderColor #B8AC9C
   BackgroundColor #FFFDF8
 }
+skinparam class {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+  ArrowColor #4A4A4A
+  HeaderBackgroundColor #F1EADF
+}
+skinparam stereotypeCBackgroundColor #E8F1E4
+skinparam stereotypeEBackgroundColor #F1EADF
+skinparam usecase {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+  ArrowColor #4A4A4A
+}
+skinparam actor {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+}
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #9C8B78
+}
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #9C8B78
+}
+skinparam activity {
+  BackgroundColor #FAF6EF
+  BorderColor #6B5B4B
+  DiamondBackgroundColor #F1EADF
+  DiamondBorderColor #6B5B4B
+  StartColor #6B5B4B
+  EndColor #6B5B4B
+  BarColor #6B5B4B
+}
+skinparam swimlane {
+  BorderColor #9C8B78
+  TitleFontStyle bold
+}

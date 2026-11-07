@@ -89,9 +89,25 @@ class SellerOrderControllerTest extends SecuredWebMvcTest {
     }
 
     @Test
+    void processingOrderIsStillEditableUntilALabelExists() throws Exception {
+        var processing = Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.PROCESSING);
+        when(orderRepository.findById("o-1")).thenReturn(Optional.of(processing));
+        when(orderRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(inv -> inv.getArgument(0));
+        mvc.perform(put("/api/seller/orders/o-1/edit").header(AUTH, bearer(TestTokens.seller()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"shippingAddress\":\"Str. Nouă 2\"}"))
+            .andExpect(status().isOk());
+
+        processing.setEcoShippingLabel("WVL-ECP-123");
+        mvc.perform(put("/api/seller/orders/o-1/edit").header(AUTH, bearer(TestTokens.seller()))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"shippingAddress\":\"too late\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("shipping label")));
+    }
+
+    @Test
     void editingLockedOrderIsConflict() throws Exception {
         when(orderRepository.findById("o-1")).thenReturn(
-            Optional.of(Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.PROCESSING)));
+            Optional.of(Orders.order("o-1", TestTokens.BUYER_ID, TestTokens.SELLER_ID, EOrderStatus.SHIPPED)));
         mvc.perform(put("/api/seller/orders/o-1/edit").header(AUTH, bearer(TestTokens.seller()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"shippingAddress\":\"late\"}"))
             .andExpect(status().isConflict())
@@ -117,6 +133,25 @@ class SellerOrderControllerTest extends SecuredWebMvcTest {
         mvc.perform(post("/api/seller/orders/manual").header(AUTH, bearer(TestTokens.seller()))
                 .contentType(MediaType.APPLICATION_JSON).content(body.formatted(TestTokens.SELLER_ID)))
             .andExpect(status().isCreated());
+    }
+
+    @Test
+    void manualSalePricesAreExactCents() throws Exception {
+        String body = """
+            {"sellerId":"%s","sellerName":"seller","buyerName":"Fair visitor","shippingAddress":"Stand 4",
+             "items":[{"productId":"p-1","productName":"Basket","quantity":3,"price":%s},
+                      {"productId":"p-2","productName":"Mug","quantity":1,"price":0.1}]}""";
+        mvc.perform(post("/api/seller/orders/manual").header(AUTH, bearer(TestTokens.seller()))
+                .contentType(MediaType.APPLICATION_JSON).content(body.formatted(TestTokens.SELLER_ID, "19.99")))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.order.totalCents").value(6007)) // 3 × 19.99 + 0.10, no float drift
+            .andExpect(jsonPath("$.order.totalAmount").value(60.07))
+            .andExpect(jsonPath("$.order.items[0].priceCents").value(1999));
+        for (String bad : new String[] { "19.999", "-1" }) {
+            mvc.perform(post("/api/seller/orders/manual").header(AUTH, bearer(TestTokens.seller()))
+                    .contentType(MediaType.APPLICATION_JSON).content(body.formatted(TestTokens.SELLER_ID, bad)))
+                .andExpect(status().isBadRequest());
+        }
     }
 
     // ---------------------------------------------------------------- 3.6 ship with platform

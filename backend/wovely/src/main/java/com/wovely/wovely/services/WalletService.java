@@ -72,7 +72,7 @@ public class WalletService {
 
     /** Checkout: debit the buyer the order total; 409 when the balance is too low. */
     public void chargeOrder(Order order) {
-        long cents = toCents(order.getTotalAmount());
+        long cents = nz(order.getTotalCents());
         debit(order.getBuyerId(), cents, EWalletTransactionType.PAYMENT, order.getId(),
                 "Order " + order.getOrderNumber());
         order.setPaidCents(cents);
@@ -83,7 +83,7 @@ public class WalletService {
         if (order.getPaidCents() == null) {
             return;
         }
-        long target = toCents(order.getTotalAmount());
+        long target = nz(order.getTotalCents());
         long delta = target - order.getPaidCents();
         if (delta > 0) {
             debit(order.getBuyerId(), delta, EWalletTransactionType.PAYMENT, order.getId(),
@@ -117,12 +117,12 @@ public class WalletService {
     }
 
     /** Return refunded: credit the returned amount (capped at what is still refundable). */
-    public void refundReturn(Order order, double amount) {
+    public void refundReturn(Order order, long cents) {
         if (order.getPaidCents() == null) {
             return;
         }
         long refundable = order.getPaidCents() - nz(order.getWalletRefundedCents());
-        refund(order, Math.min(toCents(amount), refundable), "Return refund for order ");
+        refund(order, Math.min(cents, refundable), "Return refund for order ");
     }
 
     private void refund(Order order, long cents, String what) {
@@ -170,10 +170,6 @@ public class WalletService {
         }
         ledger.save(new WalletTransaction(userId, type, deltaCents, w.getBalanceCents(), orderId, description));
         return w.getBalanceCents();
-    }
-
-    public static long toCents(Double amount) {
-        return amount == null ? 0 : BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP).movePointRight(2).longValue();
     }
 
     private static long nz(Long v) {

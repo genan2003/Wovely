@@ -1,0 +1,47 @@
+@startuml seller
+!include ../_theme.puml
+title Seller use cases
+
+' Derived from: README.md Story 2; products ProductController; wovely SellerOrderController, ReturnRequestController,
+' ChatController, WalletController, UserController
+left to right direction
+actor "Seller\nROLE_SELLER" as Seller
+actor "Admin" as Admin
+
+rectangle "Wovely" {
+  usecase "List a product" as List
+  usecase "Wait for approval" as Approval
+  usecase "Edit a listing" as Edit
+  usecase "Remove a listing" as Remove
+  usecase "See stock dashboard" as Dashboard
+  usecase "Restock or set stock" as Stock
+  usecase "See orders received" as Orders
+  usecase "Edit order until it ships\n(locked by a shipping label)" as EditOrder
+  usecase "Advance order status" as Status
+  usecase "Cancel an order" as Cancel
+  usecase "Buy eco shipping label" as Label
+  usecase "Record an off-platform sale" as Manual
+  usecase "Handle a return" as Return
+  usecase "Answer buyers" as Chat
+  usecase "Edit maker profile" as Profile
+  usecase "Receive payout to wallet" as Payout
+}
+
+Seller --> List
+Seller --> Edit
+Seller --> Remove
+Seller --> Dashboard
+Seller --> Stock
+Seller --> Orders
+Seller --> EditOrder
+Seller --> Status
+Seller --> Cancel
+Seller --> Manual
+Seller --> Return
+Seller --> Chat
+Seller --> Profile
+List .> Approval : <<include>>
+Approval <-- Admin
+Label .> Status : <<extend>>
+Payout .> Status : <<extend>>
+@enduml

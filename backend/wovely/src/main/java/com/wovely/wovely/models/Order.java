@@ -30,8 +30,9 @@ public class Order {
     @Field("items")
     private OrderItem[] items;
 
-    @Field("total_amount")
-    private Double totalAmount;
+    /** Items + delivery in RON cents (PLAN.md 7.5); always set through {@link #recomputeTotal()}. */
+    @Field("total_cents")
+    private Long totalCents;
 
     @Field("status")
     private EOrderStatus status;
@@ -39,8 +40,22 @@ public class Order {
     @Field("created_at")
     private Date createdAt;
 
+    /** Every status change in order (PLAN.md 7.1); empty for orders created before the timeline existed. */
+    @Field("status_history")
+    private java.util.List<OrderStatusChange> statusHistory = new java.util.ArrayList<>();
+
     @Field("updated_at")
     private Date updatedAt;
+
+    /** Delivery chosen at checkout and its fee in RON (included in totalAmount); null/0 for manual sales. */
+    private EDeliveryOption deliveryOption;
+    private Long deliveryFeeCents;
+
+    /** When the order reached DELIVERED (set by OrderService#transition); starts the return window. */
+    private Date deliveredAt;
+
+    /** Buyers may open a return for this many days after delivery (enforced in ReturnService). */
+    public static final int RETURN_WINDOW_DAYS = 30;
 
     @Field("shipping_address")
     private String shippingAddress;
@@ -72,8 +87,9 @@ public class Order {
     @Field("is_reviewed")
     private boolean isReviewed = false;
 
-    @Field("refunded_amount")
-    private Double refundedAmount;
+    /** Item prices refunded through returns, in cents. */
+    @Field("refunded_cents")
+    private Long refundedCents;
 
     // "Ship with Platform" label (PLAN.md 3.6)
     private String carrierName;
@@ -149,12 +165,17 @@ public class Order {
         this.items = items;
     }
 
-    public Double getTotalAmount() {
-        return totalAmount;
+    public Long getTotalCents() {
+        return totalCents;
     }
 
-    public void setTotalAmount(Double totalAmount) {
-        this.totalAmount = totalAmount;
+    public void setTotalCents(Long totalCents) {
+        this.totalCents = totalCents;
+    }
+
+    @org.springframework.data.annotation.Transient
+    public java.math.BigDecimal getTotalAmount() {
+        return com.wovely.common.money.Money.toDecimal(totalCents);
     }
 
     public EOrderStatus getStatus() {
@@ -261,12 +282,17 @@ public class Order {
         isReviewed = reviewed;
     }
 
-    public Double getRefundedAmount() {
-        return refundedAmount;
+    public Long getRefundedCents() {
+        return refundedCents;
     }
 
-    public void setRefundedAmount(Double refundedAmount) {
-        this.refundedAmount = refundedAmount;
+    public void setRefundedCents(Long refundedCents) {
+        this.refundedCents = refundedCents;
+    }
+
+    @org.springframework.data.annotation.Transient
+    public java.math.BigDecimal getRefundedAmount() {
+        return com.wovely.common.money.Money.toDecimal(refundedCents);
     }
 
     public String getCarrierName() { return carrierName; }
@@ -286,4 +312,102 @@ public class Order {
     public void setWalletRefundedCents(Long walletRefundedCents) { this.walletRefundedCents = walletRefundedCents; }
     public Long getPayoutCents() { return payoutCents; }
     public void setPayoutCents(Long payoutCents) { this.payoutCents = payoutCents; }
+
+    public Date getDeliveredAt() { return deliveredAt; }
+    public void setDeliveredAt(Date deliveredAt) { this.deliveredAt = deliveredAt; }
+
+    /**
+     * Last moment a return can be opened, or null before delivery. Orders delivered before
+     * {@code deliveredAt} existed fall back to {@code createdAt} (the stricter choice).
+     * Read-only in JSON; not stored (Spring Data maps fields, not getters).
+     */
+    public Date getReturnDeadline() {
+        if (status != EOrderStatus.DELIVERED && status != EOrderStatus.COMPLETED) {
+            return null;
+        }
+        Date start = deliveredAt != null ? deliveredAt : createdAt;
+        return start == null ? null
+                : Date.from(start.toInstant().plus(java.time.Duration.ofDays(RETURN_WINDOW_DAYS)));
+    }
+
+    public EDeliveryOption getDeliveryOption() { return deliveryOption; }
+    public void setDeliveryOption(EDeliveryOption deliveryOption) { this.deliveryOption = deliveryOption; }
+    public Long getDeliveryFeeCents() { return deliveryFeeCents; }
+    public void setDeliveryFeeCents(Long deliveryFeeCents) { this.deliveryFeeCents = deliveryFeeCents; }
+    @org.springframework.data.annotation.Transient
+    public java.math.BigDecimal getDeliveryFee() { return com.wovely.common.money.Money.toDecimal(deliveryFeeCents); }
+
+    /** Sum of item prices × quantities in cents (excludes delivery). */
+    public long itemsTotalCents() {
+        long sum = 0;
+        if (this.items != null) {
+            for (OrderItem i : this.items) {
+                sum = Math.addExact(sum, i.lineTotalCents());
+            }
+        }
+        return sum;
+    }
+
+    /** Items plus delivery, in cents: the one place the order total is computed. */
+    public void recomputeTotal() {
+        this.totalCents = Math.addExact(itemsTotalCents(), deliveryFeeCents == null ? 0 : deliveryFeeCents);
+    }
+
+    public java.util.List<OrderStatusChange> getStatusHistory() {
+        return statusHistory;
+    }
+
+    public void setStatusHistory(java.util.List<OrderStatusChange> statusHistory) {
+        this.statusHistory = statusHistory == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(statusHistory);
+    }
+
+    /**
+     * Appends a timeline entry; callers set the status itself (only OrderService does both). The first change of an
+     * order created before the timeline existed first stores the steps derived from its dates (lazy backfill), so
+     * the earlier history isn't lost once real entries start.
+     */
+    public void recordStatusChange(OrderStatusChange change) {
+        if (statusHistory == null) {
+            statusHistory = new java.util.ArrayList<>();
+        }
+        if (statusHistory.isEmpty() && change.from() != null) {
+            statusHistory.addAll(derivedTimeline(change.from()));
+        }
+        statusHistory.add(change);
+    }
+
+    /**
+     * The recorded history, or — for orders created before it existed — the steps that can be read from stored
+     * dates: created (PENDING), delivered ({@code deliveredAt}) and the current status ({@code updatedAt}).
+     * Derived entries have {@code actorRole == null}. Reading never writes; see {@link #recordStatusChange}.
+     */
+    public java.util.List<OrderStatusChange> timeline() {
+        if (statusHistory != null && !statusHistory.isEmpty()) {
+            return java.util.List.copyOf(statusHistory);
+        }
+        return derivedTimeline(status);
+    }
+
+    private java.util.List<OrderStatusChange> derivedTimeline(EOrderStatus current) {
+        java.util.List<OrderStatusChange> derived = new java.util.ArrayList<>();
+        EOrderStatus last = null;
+        if (createdAt != null) {
+            derived.add(new OrderStatusChange(null, EOrderStatus.PENDING, createdAt, null, null, null));
+            last = EOrderStatus.PENDING;
+        }
+        if (deliveredAt != null && current != EOrderStatus.DELIVERED) {
+            derived.add(new OrderStatusChange(last, EOrderStatus.DELIVERED, deliveredAt, null, null, null));
+            last = EOrderStatus.DELIVERED;
+        }
+        if (current != null && current != last) {
+            Date when = current == EOrderStatus.DELIVERED && deliveredAt != null ? deliveredAt
+                    : (updatedAt != null ? updatedAt : createdAt);
+            derived.add(new OrderStatusChange(last, current, when, null, null, reasonFor(current)));
+        }
+        return derived;
+    }
+
+    private String reasonFor(EOrderStatus s) {
+        return s == EOrderStatus.CANCELLED ? cancellationReason : s == EOrderStatus.REFUNDED ? refundReason : null;
+    }
 }

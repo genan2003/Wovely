@@ -88,9 +88,8 @@ public class UserDetailsImpl implements UserDetails {
             return false;
         }
         if (accountStatus == com.wovely.wovely.models.EAccountStatus.SUSPENDED) {
-            if (suspendedUntil != null && suspendedUntil.after(new java.util.Date())) {
-                return false;
-            }
+            // no end date (legacy data) → locked until an admin lifts it: fail closed
+            return suspendedUntil != null && !suspendedUntil.after(new java.util.Date());
         }
         return true;
     }

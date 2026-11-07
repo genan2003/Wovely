@@ -1,18 +1,31 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
+import { OrderTimelineComponent } from '../../shared/order-timeline/order-timeline.component';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { Observable, map } from 'rxjs';
+
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../../services/admin.service';
 import { Order, OrderStatus, OrderInterventionRequest } from '../../../models/order.model';
+import { ToastService } from '../../../services/toast.service';
+
+type InterventionAction =
+  | 'UPDATE_STATUS'
+  | 'FORCE_REFUND'
+  | 'CANCEL_ORDER'
+  | 'UPDATE_TRACKING'
+  | 'MARK_DISPUTED'
+  | 'RESOLVE_DISPUTE';
 
 @Component({
   selector: 'app-order-resolution',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [DecimalPipe, FormsModule, OrderTimelineComponent],
   templateUrl: './order-resolution.component.html',
-  styleUrls: ['./order-resolution.component.css']
+  styleUrls: ['./order-resolution.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderResolutionComponent implements OnInit {
   private adminService = inject(AdminService);
+  private toast = inject(ToastService);
 
   orders = signal<Order[]>([]);
   filteredOrders = signal<Order[]>([]);
@@ -24,7 +37,7 @@ export class OrderResolutionComponent implements OnInit {
   error = signal<string | null>(null);
 
   showInterventionModal = signal(false);
-  interventionAction = signal<'UPDATE_STATUS' | 'FORCE_REFUND' | 'CANCEL_ORDER' | 'UPDATE_TRACKING' | 'MARK_DISPUTED' | 'RESOLVE_DISPUTE'>('UPDATE_STATUS');
+  interventionAction = signal<InterventionAction>('UPDATE_STATUS');
   interventionReason = signal('');
   interventionNotes = signal('');
   interventionTracking = signal('');
@@ -44,11 +57,10 @@ export class OrderResolutionComponent implements OnInit {
         this.filteredOrders.set(data);
         this.isLoading.set(false);
       },
-      error: (err: any) => {
-        this.error.set('Failed to load orders');
+      error: () => {
+        this.error.set('Orders couldn’t be loaded.');
         this.isLoading.set(false);
-        console.error('Failed to load orders', err);
-      }
+      },
     });
   }
 
@@ -60,55 +72,29 @@ export class OrderResolutionComponent implements OnInit {
     }
 
     this.isLoading.set(true);
-    
-    if (this.searchType() === 'orderNumber') {
-      this.adminService.getOrderByOrderNumber(query).subscribe({
-        next: (order: Order) => {
-          this.filteredOrders.set(order ? [order] : []);
-          this.isLoading.set(false);
-        },
-        error: (err: any) => {
-          this.filteredOrders.set([]);
-          this.isLoading.set(false);
-          console.error('Search error', err);
-        }
-      });
-    } else if (this.searchType() === 'buyer') {
-      this.adminService.getOrdersByBuyerId(query).subscribe({
-        next: (data: Order[]) => {
-          this.filteredOrders.set(data);
-          this.isLoading.set(false);
-        },
-        error: (err: any) => {
-          this.filteredOrders.set([]);
-          this.isLoading.set(false);
-          console.error('Search error', err);
-        }
-      });
-    } else if (this.searchType() === 'seller') {
-      this.adminService.getOrdersBySellerId(query).subscribe({
-        next: (data: Order[]) => {
-          this.filteredOrders.set(data);
-          this.isLoading.set(false);
-        },
-        error: (err: any) => {
-          this.filteredOrders.set([]);
-          this.isLoading.set(false);
-          console.error('Search error', err);
-        }
-      });
-    } else {
-      this.adminService.searchOrders(query).subscribe({
-        next: (data: Order[]) => {
-          this.filteredOrders.set(data);
-          this.isLoading.set(false);
-        },
-        error: (err: any) => {
-          this.filteredOrders.set([]);
-          this.isLoading.set(false);
-          console.error('Search error', err);
-        }
-      });
+    this.searchRequest(query).subscribe({
+      next: (data) => {
+        this.filteredOrders.set(data);
+        this.isLoading.set(false);
+      },
+      error: (err: unknown) => {
+        this.filteredOrders.set([]);
+        this.isLoading.set(false);
+        this.toast.apiError(err, 'The search failed. Try again.');
+      },
+    });
+  }
+
+  private searchRequest(query: string): Observable<Order[]> {
+    switch (this.searchType()) {
+      case 'orderNumber':
+        return this.adminService.getOrderByOrderNumber(query).pipe(map((order) => (order ? [order] : [])));
+      case 'buyer':
+        return this.adminService.getOrdersByBuyerId(query);
+      case 'seller':
+        return this.adminService.getOrdersBySellerId(query);
+      default:
+        return this.adminService.searchOrders(query);
     }
   }
 
@@ -117,7 +103,7 @@ export class OrderResolutionComponent implements OnInit {
     if (status === 'all') {
       this.filteredOrders.set(this.orders());
     } else {
-      this.filteredOrders.set(this.orders().filter(o => o.status === status));
+      this.filteredOrders.set(this.orders().filter((o) => o.status === status));
     }
   }
 
@@ -129,7 +115,7 @@ export class OrderResolutionComponent implements OnInit {
     this.selectedOrder.set(null);
   }
 
-  openInterventionModal(action: 'UPDATE_STATUS' | 'FORCE_REFUND' | 'CANCEL_ORDER' | 'UPDATE_TRACKING' | 'MARK_DISPUTED' | 'RESOLVE_DISPUTE'): void {
+  openInterventionModal(action: InterventionAction): void {
     this.interventionAction.set(action);
     this.interventionReason.set('');
     this.interventionNotes.set('');
@@ -151,18 +137,16 @@ export class OrderResolutionComponent implements OnInit {
       reason: this.interventionReason(),
       adminNotes: this.interventionNotes(),
       trackingNumber: this.interventionTracking(),
-      newStatus: this.interventionStatus()
+      newStatus: this.interventionStatus(),
     };
 
     this.adminService.applyIntervention(order.id, request).subscribe({
-      next: (updatedOrder: Order) => {
+      next: () => {
+        this.toast.success('Intervention applied and logged.');
         this.loadAllOrders();
         this.closeInterventionModal();
       },
-      error: (err: any) => {
-        console.error('Intervention failed', err);
-        alert('Failed to apply intervention');
-      }
+      error: (err: unknown) => this.toast.apiError(err, 'The intervention wasn’t applied. Try again.'),
     });
   }
 
@@ -174,12 +158,9 @@ export class OrderResolutionComponent implements OnInit {
       next: (updatedOrder: Order) => {
         this.loadAllOrders();
         this.selectedOrder.set(updatedOrder);
-        alert(`New tracking number generated: ${updatedOrder.trackingNumber}`);
+        this.toast.success(`New tracking number: ${updatedOrder.trackingNumber}`);
       },
-      error: (err: any) => {
-        console.error('Label regeneration failed', err);
-        alert('Failed to regenerate shipping label');
-      }
+      error: (err: unknown) => this.toast.apiError(err, 'The label wasn’t regenerated. Try again.'),
     });
   }
 
@@ -190,9 +171,10 @@ export class OrderResolutionComponent implements OnInit {
       [OrderStatus.PROCESSING]: 'status-processing',
       [OrderStatus.SHIPPED]: 'status-shipped',
       [OrderStatus.DELIVERED]: 'status-delivered',
+      [OrderStatus.COMPLETED]: 'status-delivered',
       [OrderStatus.CANCELLED]: 'status-cancelled',
       [OrderStatus.REFUNDED]: 'status-refunded',
-      [OrderStatus.DISPUTED]: 'status-disputed'
+      [OrderStatus.DISPUTED]: 'status-disputed',
     };
     return statusMap[status] || '';
   }
@@ -203,7 +185,7 @@ export class OrderResolutionComponent implements OnInit {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 }

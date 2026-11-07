@@ -1,130 +1,142 @@
-<div class="product-dashboard container-fluid px-4">
-    <div class="header-section text-center my-5">
-        <h1 class="display-4 fw-bold wovely-title">Curated & Crafted</h1>
-        <p class="lead text-muted wovely-subtitle">Discover unique finds with a low carbon footprint.</p>
-    </div>
+<section class="hero" aria-labelledby="catalog-title">
+  <div class="hero__inner">
+    <h1 id="catalog-title" class="wovely-title">Made by hand, sent with care</h1>
+    <p>Goods from independent makers. Filter by how they’re made and how cleanly they reach you.</p>
+  </div>
+  <span class="wv-selvedge" aria-hidden="true"></span>
+</section>
 
-    <div class="row">
-        <!-- Sidebar Filters -->
-        <div class="col-lg-3 col-md-4 mb-4">
-            <div class="card discovery-sidebar border-0 shadow-sm p-4 sticky-top" style="top: 2rem; z-index: 100;">
-                <h5 class="fw-bold mb-4">Discovery Engine</h5>
-                
-                <div class="filter-group mb-4">
-                    <label class="form-label small text-muted text-uppercase fw-bold">Product Attributes</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="attr2" [(ngModel)]="filters.isHandmade" (change)="applyFilters()">
-                        <label class="form-check-label" for="attr2">Handcrafted</label>
-                    </div>
-                </div>
+<div class="catalog">
+  <aside class="filters" aria-label="Filter products">
+    <button type="button" class="btn btn-outline-primary filters__toggle" aria-controls="filter-fields"
+            [attr.aria-expanded]="filtersOpen()" (click)="filtersOpen.set(!filtersOpen())">
+      <i class="bi bi-sliders" aria-hidden="true"></i> Filters
+    </button>
 
-                <fieldset class="filter-group delivery-filter mb-4">
-                    <legend class="form-label small text-muted text-uppercase fw-bold">Delivery</legend>
-                    @for (opt of deliveryOptions; track opt.value) {
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="deliveryEmission" [id]="'delivery-' + (opt.value || 'any')"
-                                [value]="opt.value" [(ngModel)]="filters.deliveryEmission" (change)="applyFilters()">
-                            <label class="form-check-label" [for]="'delivery-' + (opt.value || 'any')">
-                                {{ opt.label }}
-                                @if (opt.hint) { <span class="delivery-hint">{{ opt.hint }}</span> }
-                            </label>
-                        </div>
-                    }
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="localPickup" [(ngModel)]="filters.localPickup" (change)="applyFilters()">
-                        <label class="form-check-label" for="localPickup">Local pickup available</label>
-                    </div>
-                </fieldset>
+    <form id="filter-fields" class="filters__fields" [class.filters__fields--open]="filtersOpen()" (ngSubmit)="applyFilters()">
+      <fieldset class="delivery-filter">
+        <legend>Delivery</legend>
+        @for (opt of deliveryOptions; track opt.value) {
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="deliveryEmission" [id]="'delivery-' + (opt.value || 'any')"
+                   [value]="opt.value" [(ngModel)]="filters.deliveryEmission" (change)="applyFilters()">
+            <label class="form-check-label" [for]="'delivery-' + (opt.value || 'any')">
+              {{ opt.label }}
+              @if (opt.hint) { <span class="delivery-hint">{{ opt.hint }}</span> }
+            </label>
+          </div>
+        }
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="localPickup" name="localPickup"
+                 [(ngModel)]="filters.localPickup" (change)="applyFilters()">
+          <label class="form-check-label" for="localPickup">Local pickup available</label>
+        </div>
+      </fieldset>
 
-                <div class="filter-group mb-4">
-                    <label class="form-label small text-muted text-uppercase fw-bold">Artisan Location</label>
-                    <input type="text" class="form-control border-0 bg-light" placeholder="City or Region" [(ngModel)]="filters.city" (keyup.enter)="applyFilters()">
-                </div>
+      <fieldset>
+        <legend>Made</legend>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="handmade" name="isHandmade"
+                 [(ngModel)]="filters.isHandmade" (change)="applyFilters()">
+          <label class="form-check-label" for="handmade">Handcrafted only</label>
+        </div>
+      </fieldset>
 
-                <div class="filter-group mb-4">
-                    <label class="form-label small text-muted text-uppercase fw-bold">Price Range</label>
-                    <div class="d-flex gap-2">
-                        <input type="number" class="form-control border-0 bg-light" placeholder="Min" [(ngModel)]="filters.minPrice">
-                        <input type="number" class="form-control border-0 bg-light" placeholder="Max" [(ngModel)]="filters.maxPrice">
-                    </div>
-                </div>
+      <div>
+        <label class="form-label" for="filter-city">City or region</label>
+        <input id="filter-city" type="text" class="form-control" name="city" [(ngModel)]="filters.city">
+      </div>
 
-                <button class="btn btn-dark w-100 rounded-pill mt-2" (click)="applyFilters()">Apply Filters</button>
+      <fieldset>
+        <legend>Price, in RON</legend>
+        <div class="filters__range">
+          <div>
+            <label class="visually-hidden" for="filter-min">Lowest price</label>
+            <input id="filter-min" type="number" min="0" class="form-control" placeholder="From" name="minPrice" [(ngModel)]="filters.minPrice">
+          </div>
+          <div>
+            <label class="visually-hidden" for="filter-max">Highest price</label>
+            <input id="filter-max" type="number" min="0" class="form-control" placeholder="To" name="maxPrice" [(ngModel)]="filters.maxPrice">
+          </div>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="btn btn-primary">Show results</button>
+    </form>
+  </aside>
+
+  <section class="results" aria-label="Products" [attr.aria-busy]="loading()">
+    @if (filters.categoryPath) {
+      <p class="results__category">{{ filters.categoryPath }}</p>
+    }
+
+    @if (loading()) {
+      <div class="grid" aria-hidden="true">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div>
+            <span class="wv-skeleton skeleton-media"></span>
+            <span class="wv-skeleton skeleton-line"></span>
+            <span class="wv-skeleton skeleton-line skeleton-line--short"></span>
+          </div>
+        }
+      </div>
+      <span class="visually-hidden" role="status">Loading products</span>
+    } @else if (loadFailed()) {
+      <app-empty-state icon="bi-wifi-off" title="The catalog didn’t load"
+                       message="Check your connection and try again.">
+        <button type="button" class="btn btn-primary" (click)="fetchProducts()">Try again</button>
+      </app-empty-state>
+    } @else {
+      @for (product of products(); track product.id) {
+        @if ($first) {
+          <p class="visually-hidden" role="status">{{ products().length }} products</p>
+        }
+      } @empty {
+        @if (hasFilters()) {
+          <app-empty-state icon="bi-search" title="Nothing matches these filters"
+                           message="Try a wider price range or a different delivery option.">
+            <button type="button" class="btn btn-primary" (click)="clearFilters()">Clear filters</button>
+          </app-empty-state>
+        } @else {
+          <app-empty-state icon="bi-basket" title="No products yet"
+                           message="Makers’ work appears here once it’s approved. Check back soon." />
+        }
+      }
+
+      <div class="grid">
+        @for (product of products(); track product.id) {
+          <article class="product-card">
+            <div class="product-card__media">
+              <img [src]="product.imageUrl || 'placeholder-product.svg'" appFallback alt="" loading="lazy" width="400" height="500">
+              <app-emission-badge class="product-card__eco" [level]="emissionOf(product)" [compact]="true" />
             </div>
-        </div>
-
-        <!-- Product Grid -->
-        <div class="col-lg-9 col-md-8">
-            @if (loading()) {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading amazing products...</span>
-                    </div>
-                </div>
+            <h2 class="product-title">
+              <a [routerLink]="['/products', product.id]">{{ product.name }}</a>
+            </h2>
+            <p class="product-card__maker">
+              {{ product.sellerName || 'Independent maker' }}
+              @if (product.city) { <span>in {{ product.city }}</span> }
+            </p>
+            @if (product.totalReviews) {
+              <app-rating [value]="product.averageRating ?? 0" [count]="product.totalReviews" />
             }
-
-            @if (!loading() && products().length === 0) {
-                <div class="text-center py-5">
-                    <h3 class="text-muted">No products found with these filters.</h3>
-                    <button class="btn btn-link text-success" (click)="clearFilters()">Clear all filters</button>
-                </div>
-            }
-
-            @if (!loading() && products().length > 0) {
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                    @for(product of products(); track product.id) {
-                    <div class="col">
-                        <div class="card h-100 border-0 shadow-sm product-card" (click)="openDetails(product)">
-                            <div class="position-relative overflow-hidden card-img-container">
-                                <img [src]="product.imageUrl" class="card-img-top product-image" [alt]="product.name">
-
-                                <div class="position-absolute top-0 end-0 p-2 d-flex flex-column gap-2">
-                                    <app-emission-badge [level]="emissionOf(product)" [compact]="true" />
-                                    @if (product.handmade || product.isHandmade) {
-                                        <span class="badge rounded-pill handmade-badge shadow-sm" title="Handcrafted">
-                                            Handcrafted
-                                        </span>
-                                    }
-                                </div>
-                            </div>
-
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title fw-bold mb-0 product-title text-truncate">{{ product.name }}</h5>
-                                    <span class="fw-bold product-price">${{ product.price | number:'1.2-2' }}</span>
-                                </div>
-
-                                <div class="mb-2 text-warning small">
-                                    @for (i of [1,2,3,4,5]; track i) {
-                                        <i class="bi" [class.bi-star-fill]="i <= (product.averageRating || 0)" 
-                                           [class.bi-star-half]="i > (product.averageRating || 0) && i - 0.5 <= (product.averageRating || 0)"
-                                           [class.bi-star]="i > (product.averageRating || 0) && i - 0.5 > (product.averageRating || 0)"></i>
-                                    }
-                                    <span class="text-muted ms-1">({{ product.totalReviews || 0 }})</span>
-                                </div>
-
-                                <p class="card-text text-muted small flex-grow-1 text-truncate-2">{{ product.description }}</p>
-
-                                <div class="mt-3 d-flex align-items-center justify-content-between brand-footer">
-                                    <small class="text-muted d-flex align-items-center me-2 text-truncate">
-                                        <i class="bi bi-person-fill me-1"></i> {{ product.sellerName || 'Artisan' }}
-                                    </small>
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-sm btn-outline-danger rounded-pill px-2" (click)="toggleFavorite(product, $event)" [title]="favoriteService.isFavorite(product.id!) ? 'Remove from Favorites' : 'Add to Favorites'">
-                                            <i class="bi" [class.bi-heart-fill]="favoriteService.isFavorite(product.id!)" [class.bi-heart]="!favoriteService.isFavorite(product.id!)"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-dark rounded-pill px-2" (click)="addToCart(product, $event)" title="Add to Cart">
-                                            <i class="bi bi-cart-plus"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-dark rounded-pill px-3 buy-btn">View</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    }
-                </div>
-            }
-        </div>
-    </div>
+            <div class="product-card__foot">
+              <span class="product-price">{{ product.price | number: '1.2-2' }} RON</span>
+              <span class="product-card__actions">
+                <button type="button" class="icon-btn" (click)="toggleFavorite(product, $event)"
+                        [attr.aria-pressed]="favoriteService.isFavorite(product.id!)"
+                        [attr.aria-label]="'Favourite ' + product.name">
+                  <i class="bi" [class]="favoriteService.isFavorite(product.id!) ? 'bi-heart-fill' : 'bi-heart'" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="icon-btn" (click)="addToCart(product, $event)"
+                        [attr.aria-label]="'Add ' + product.name + ' to cart'">
+                  <i class="bi bi-bag-plus" aria-hidden="true"></i>
+                </button>
+              </span>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
 </div>

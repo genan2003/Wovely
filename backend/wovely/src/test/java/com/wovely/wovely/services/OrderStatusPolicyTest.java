@@ -59,4 +59,23 @@ class OrderStatusPolicyTest {
     void restockOnlyWhileGoodsAreWithTheSeller(EOrderStatus from, EOrderStatus to, boolean restocks) {
         assertThat(OrderStatusPolicy.restocksOn(from, to)).isEqualTo(restocks);
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(EOrderStatus.class)
+    void editableUntilTheOrderMovesBeyondProcessing(EOrderStatus status) {
+        boolean expected = status == EOrderStatus.PENDING || status == EOrderStatus.CONFIRMED
+                || status == EOrderStatus.PROCESSING;
+        org.assertj.core.api.Assertions.assertThat(OrderStatusPolicy.isEditable(status)).isEqualTo(expected);
+    }
+
+    @org.junit.jupiter.api.Test
+    void aLabelOrTrackingNumberLocksTheOrder() {
+        var o = com.wovely.wovely.support.Orders.order("o", "b", "s", EOrderStatus.PROCESSING);
+        org.assertj.core.api.Assertions.assertThat(OrderStatusPolicy.isEditable(o)).isTrue();
+        o.setTrackingNumber("WVL-X");
+        org.assertj.core.api.Assertions.assertThat(OrderStatusPolicy.isEditable(o)).isFalse();
+        o.setTrackingNumber(null);
+        o.setEcoShippingLabel("label");
+        org.assertj.core.api.Assertions.assertThat(OrderStatusPolicy.isEditable(o)).isFalse();
+    }
 }

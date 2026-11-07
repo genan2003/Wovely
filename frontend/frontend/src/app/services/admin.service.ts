@@ -1,9 +1,9 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Product } from '../models/product.model';
 import { Order, OrderInterventionRequest } from '../models/order.model';
-import { AccountStatusFilter, UserCrm } from '../models/user-crm.model';
+import { AccountStatusFilter, AuditLog, PenaltyRequest, UserCrm } from '../models/user-crm.model';
 import { CreateReportRequest, Report } from '../models/report.model';
 import { ChatMessage } from '../models/chat.model';
 import { environment } from '../../environments/environment';
@@ -16,14 +16,11 @@ const ORDER_API_URL = environment.apiUrl + '/admin/orders';
 
 const REPORTS_API_URL = environment.apiUrl + '/reports';
 
-const AUDIT_API_URL = environment.apiUrl + '/admin/audit-logs'; // Assuming this endpoint will be created
-
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AdminService {
-
-  constructor(private http: HttpClient) { }
+  private http = inject(HttpClient);
 
   // Reports API
 
@@ -45,8 +42,8 @@ export class AdminService {
 
   // Audit Log API
 
-  getAuditLogs(): Observable<any[]> {
-    return this.http.get<any[]>(ORDER_API_URL + '/audit'); // Adding it to order controller for simplicity
+  getAuditLogs(): Observable<AuditLog[]> {
+    return this.http.get<AuditLog[]>(ORDER_API_URL + '/audit');
   }
 
   getPendingAds(): Observable<Product[]> {
@@ -75,12 +72,12 @@ export class AdminService {
     return this.http.get<UserCrm[]>(AUTH_API_URL, { params });
   }
 
-  getUserById(id: string): Observable<any> {
-    return this.http.get<any>(AUTH_API_URL + `/${id}`);
+  getUserById(id: string): Observable<UserCrm> {
+    return this.http.get<UserCrm>(AUTH_API_URL + `/${id}`);
   }
 
-  applyPenalty(id: string, payload: any): Observable<any> {
-    return this.http.post<any>(AUTH_API_URL + `/${id}/penalty`, payload);
+  applyPenalty(id: string, payload: PenaltyRequest): Observable<UserCrm> {
+    return this.http.post<UserCrm>(AUTH_API_URL + `/${id}/penalty`, payload);
   }
 
   getSellerProducts(sellerId: string): Observable<Product[]> {
@@ -102,7 +99,7 @@ export class AdminService {
   }
 
   searchOrders(query: string): Observable<Order[]> {
-    return this.http.get<Order[]>(ORDER_API_URL + `/search?query=${query}`);
+    return this.http.get<Order[]>(ORDER_API_URL + '/search', { params: { query } });
   }
 
   getOrdersByBuyerId(buyerId: string): Observable<Order[]> {

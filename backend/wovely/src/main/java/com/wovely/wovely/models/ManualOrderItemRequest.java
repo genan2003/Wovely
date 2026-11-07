@@ -17,8 +17,11 @@ public class ManualOrderItemRequest {
     @NotNull(message = "Quantity is required")
     private Integer quantity;
 
+    /** RON with at most two decimals (PLAN.md 7.5): more decimals are a 400, never rounded. */
     @NotNull(message = "Price is required")
-    private Double price;
+    @jakarta.validation.constraints.PositiveOrZero
+    @jakarta.validation.constraints.Digits(integer = 7, fraction = 2, message = "Price can have at most 2 decimals")
+    private java.math.BigDecimal price;
 
     private String imageUrl;
 
@@ -32,8 +35,8 @@ public class ManualOrderItemRequest {
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
 
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
+    public java.math.BigDecimal getPrice() { return price; }
+    public void setPrice(java.math.BigDecimal price) { this.price = price; }
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
